@@ -129,6 +129,27 @@ function packStateForPlayer(pid) {
 
 io.on("connection", (socket) => {
 
+ socket.on("input", data => {
+    const p = players[socket.id];
+    if (!p || p.isDead || p.isSpirit) return;
+
+    const speed = FORM_STATS[p.form]?.spd || 5;
+
+    p.vx = data.x * speed;
+    p.vy = data.y * speed;
+    p.angle = data.angle;
+
+    if (data.charge) {
+        p.state = "CHARGING";
+    } else if (data.block) {
+        p.state = "BLOCKING";
+    } else if (data.holdAtk || data.holdBlast) {
+        p.state = "ATTACKING";
+    } else {
+        p.state = "IDLE";
+    }
+});
+
     socket.on("login", async (data) => {
         try {
             const res = await pool.query(
