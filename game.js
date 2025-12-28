@@ -78,6 +78,7 @@ window.addEventListener("keydown", e => {
     if(e.code === "KeyG") window.socket.emit("transform"); 
     if(e.code === "KeyT") scouterActive = !scouterActive; 
     if(e.code === "KeyM") showMap = !showMap; 
+    if(e.code === "KeyP") window.socket.emit("toggle_pvp"); // TECLA P PARA PVP
 });
 window.addEventListener("keyup", e => keys[e.code] = false);
 
@@ -134,14 +135,9 @@ function initMobileControls() {
     joystick.on('end', () => { joystickMove.x = 0; joystickMove.y = 0; });
 }
 
-// ==========================================
-// RENDERIZAÇÃO ATMOSFÉRICA E RICA DO MAPA
-// ==========================================
 function drawBackground(camX, camY) {
     const viewW = canvas.width / ZOOM_SCALE;
     const viewH = canvas.height / ZOOM_SCALE;
-    
-    // Buffer GIGANTE para garantir que o fundo cubra tudo, mesmo com screenshake ou zoom out
     const buffer = 1000; 
     const startX = camX - viewW / 2 - buffer;
     const startY = camY - viewH / 2 - buffer;
@@ -153,30 +149,17 @@ function drawBackground(camX, camY) {
     const dist = Math.hypot(camX, camY);
     const angle = Math.atan2(camY, camX);
     
-    // --- PALETA DE CORES ATMOSFÉRICAS ---
-    // Padrão: Terra (Verde Dragon Ball -> Preto)
     let c1 = "#1a3a1a", c2 = "#000500"; 
     let starOpacity = 0;
-    let cloudOpacity = 0.3;
 
     if (dist >= 5000) {
         starOpacity = 0.8;
-        cloudOpacity = 0;
-        if (Math.abs(angle) > 2.35) { // OESTE: Espaço Namek (Teal/Escuro)
-            c1 = "#001a1a"; c2 = "#000205"; 
-        } 
-        else if (Math.abs(angle) < 0.78) { // LESTE: Futuro (Cinza Metálico/Escuro)
-            c1 = "#1a1a22"; c2 = "#05050a"; 
-        } 
-        else if (angle >= 0.78 && angle <= 2.35) { // SUL: Demon (Vermelho/Roxo Profundo)
-            c1 = "#220000"; c2 = "#0a0005"; 
-        } 
-        else { // NORTE: Divino (Roxo/Dourado Cósmico)
-            c1 = "#1a0033"; c2 = "#020005"; 
-        }
+        if (Math.abs(angle) > 2.35) { c1 = "#001a1a"; c2 = "#000205"; } 
+        else if (Math.abs(angle) < 0.78) { c1 = "#1a1a22"; c2 = "#05050a"; } 
+        else if (angle >= 0.78 && angle <= 2.35) { c1 = "#220000"; c2 = "#0a0005"; } 
+        else { c1 = "#1a0033"; c2 = "#020005"; } 
     }
 
-    // GRADIENTE RADIAL DINÂMICO (Segue o jogador, criando "luz" local)
     const grd = ctx.createRadialGradient(camX, camY, viewH * 0.1, camX, camY, viewH * 1.5);
     grd.addColorStop(0, c1);
     grd.addColorStop(1, c2);
@@ -184,19 +167,14 @@ function drawBackground(camX, camY) {
     ctx.fillStyle = grd;
     ctx.fillRect(startX, startY, width, height);
 
-    // --- ESTRELAS E NEBULOSAS PROCEDURAIS (FIXAS NO MUNDO) ---
-    // Elas usam coordenadas do mundo (x, y) para gerar o "random", então ficam paradas enquanto você voa.
     if (dist > 4000) {
-        const starGrid = 600; // Tamanho da célula para otimização
+        const starGrid = 600; 
         const sx = Math.floor(startX / starGrid) * starGrid;
         const sy = Math.floor(startY / starGrid) * starGrid;
 
         for (let x = sx; x < endX; x += starGrid) {
             for (let y = sy; y < endY; y += starGrid) {
-                // Semente determinística baseada na posição
                 let seed = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-                
-                // Desenhar estrelas
                 ctx.fillStyle = `rgba(255, 255, 255, ${starOpacity})`;
                 for(let k=0; k<4; k++) {
                     seed = Math.sin(seed) * 43758.5453;
@@ -204,17 +182,13 @@ function drawBackground(camX, camY) {
                     seed = Math.sin(seed) * 43758.5453;
                     const rY = y + (Math.abs(seed) % starGrid);
                     const size = (Math.abs(seed) % 2.5) + 0.5;
-                    // Cintilação simples baseada no tempo
                     const twinkle = Math.sin(Date.now() * 0.005 + seed) * 0.3 + 0.7;
-                    
                     ctx.globalAlpha = twinkle * starOpacity;
                     ctx.beginPath(); ctx.arc(rX, rY, size, 0, Math.PI*2); ctx.fill();
                 }
-                
-                // Nebulosas (Manchas coloridas sutis)
                 if (Math.abs(seed) % 100 < 15) {
                     ctx.globalAlpha = 0.04;
-                    ctx.fillStyle = (Math.abs(seed) % 10 > 5) ? "#00ffff" : "#ff00ff"; // Cores Sci-Fi
+                    ctx.fillStyle = (Math.abs(seed) % 10 > 5) ? "#00ffff" : "#ff00ff"; 
                     const blobSize = (Math.abs(seed) % 400) + 200;
                     ctx.beginPath(); ctx.arc(x + starGrid/2, y + starGrid/2, blobSize, 0, Math.PI*2); ctx.fill();
                 }
@@ -223,24 +197,6 @@ function drawBackground(camX, camY) {
         ctx.globalAlpha = 1.0;
     }
 
-    // --- TERRENO/TEXTURA DA TERRA ---
-    if (cloudOpacity > 0) {
-        ctx.fillStyle = "rgba(0, 40, 0, 0.15)"; // Manchas de terreno mais escuro
-        const groundGrid = 400;
-        const gx = Math.floor(startX / groundGrid) * groundGrid;
-        const gy = Math.floor(startY / groundGrid) * groundGrid;
-        
-        for (let x = gx; x < endX; x += groundGrid) {
-            for (let y = gy; y < endY; y += groundGrid) {
-                let seed = Math.sin(x * 45.11 + y * 99.22) * 12345.67;
-                if (Math.abs(seed) % 10 > 6) {
-                    ctx.beginPath(); ctx.arc(x + 200, y + 200, 150, 0, Math.PI*2); ctx.fill();
-                }
-            }
-        }
-    }
-
-    // --- GRID HOLOGRÁFICO SUTIL ---
     const gridCell = 400;
     const gridOffsetX = Math.floor(startX / gridCell) * gridCell;
     const gridOffsetY = Math.floor(startY / gridCell) * gridCell;
@@ -252,18 +208,13 @@ function drawBackground(camX, camY) {
     for(let y = gridOffsetY; y < endY; y += gridCell) { ctx.moveTo(startX, y); ctx.lineTo(endX, y); }
     ctx.stroke();
 
-    // --- SCREEN SPACE DUST (Sensação de velocidade) ---
-    // Renderizado relativo à câmera, mas com wrap-around
     ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
     dustParticles.forEach(p => {
         p.x += p.vx; p.y += p.vy;
         if(p.x > 2000) p.x = 0; if(p.x < 0) p.x = 2000;
         if(p.y > 1000) p.y = 0; if(p.y < 0) p.y = 1000;
-
-        // Parallax falso
         const screenPx = camX - viewW/2 + ((p.x + camX * 0.2) % viewW);
         const screenPy = camY - viewH/2 + ((p.y + camY * 0.2) % viewH);
-        
         ctx.beginPath(); ctx.arc(screenPx, screenPy, p.size, 0, Math.PI*2); ctx.fill();
     });
 }
@@ -272,7 +223,6 @@ function drawOtherWorld(camX, camY) {
     if (camY > -4000 && camY < 20000) return; 
     ctx.save();
     
-    // Brilho na estrada da serpente (Glow Intenso)
     ctx.shadowBlur = 30; ctx.shadowColor = "#e6b800";
     ctx.strokeStyle = "#e6b800"; ctx.lineWidth = 60; ctx.lineCap = "round"; ctx.beginPath();
     const startY = -6000; const endY = -20000;
@@ -282,7 +232,6 @@ function drawOtherWorld(camX, camY) {
     }
     ctx.stroke();
     
-    // Detalhe interno da serpente
     ctx.shadowBlur = 0; 
     ctx.strokeStyle = "#b38f00"; ctx.lineWidth = 6; ctx.beginPath();
     for (let y = startY; y >= endY; y -= 200) {
@@ -292,22 +241,20 @@ function drawOtherWorld(camX, camY) {
     ctx.stroke();
     ctx.restore();
 
-    // Posto Enma
     ctx.save(); ctx.translate(0, -6000);
     ctx.fillStyle = "#8B4513"; ctx.fillRect(-150, -50, 300, 100); 
     ctx.fillStyle = "#d22"; ctx.beginPath(); ctx.moveTo(-180, -50); ctx.lineTo(0, -150); ctx.lineTo(180, -50); ctx.fill();
     ctx.fillStyle = "#fff"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center"; ctx.fillText("ENMA", 0, 20);
     ctx.restore();
 
-    // Planeta Kaioh
     ctx.save(); ctx.translate(0, -20000); 
     ctx.shadowBlur = 60; ctx.shadowColor = "rgba(100, 255, 100, 0.6)"; 
-    ctx.fillStyle = "#4a4"; ctx.beginPath(); ctx.arc(0, 0, 350, 0, Math.PI * 2); ctx.fill(); // Planeta
+    ctx.fillStyle = "#4a4"; ctx.beginPath(); ctx.arc(0, 0, 350, 0, Math.PI * 2); ctx.fill(); 
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = "#dcb"; ctx.lineWidth = 40; ctx.beginPath(); ctx.arc(0, 0, 280, 0, Math.PI * 2); ctx.stroke(); // Estrada
+    ctx.strokeStyle = "#dcb"; ctx.lineWidth = 40; ctx.beginPath(); ctx.arc(0, 0, 280, 0, Math.PI * 2); ctx.stroke(); 
     ctx.fillStyle = "#532"; ctx.fillRect(-30, -350, 60, 100); 
-    ctx.fillStyle = "#282"; ctx.beginPath(); ctx.arc(0, -400, 120, 0, Math.PI*2); ctx.fill(); // Árvore
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(100, -100, 80, 0, Math.PI, true); ctx.fill(); // Casa
+    ctx.fillStyle = "#282"; ctx.beginPath(); ctx.arc(0, -400, 120, 0, Math.PI*2); ctx.fill(); 
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(100, -100, 80, 0, Math.PI, true); ctx.fill(); 
     ctx.fillStyle = "#d22"; ctx.beginPath(); ctx.moveTo(20, -100); ctx.lineTo(100, -180); ctx.lineTo(180, -100); ctx.fill(); 
     ctx.fillStyle = "#ff0"; ctx.font = "bold 50px Orbitron"; ctx.textAlign = "center"; ctx.shadowBlur = 10; ctx.shadowColor="#ff0"; ctx.fillText("KAIOH", 0, 500);
     ctx.restore();
@@ -339,7 +286,6 @@ function drawEntity(e) {
 
     ctx.save(); ctx.translate(e.x, e.y); 
     
-    // --- AURA BRILHANTE (Multilayer Glow) ---
     if(e.form !== "BASE" || e.state === "CHARGING") {
         ctx.shadowBlur = 20; ctx.shadowColor = auraColor;
     }
@@ -352,7 +298,6 @@ function drawEntity(e) {
         ctx.restore();
     }
 
-    // --- ANIMAÇÃO DE CARREGAMENTO (IMPACTANTE) ---
     if (e.state === "CHARGING") {
         ctx.save();
         const pulse = Math.sin(Date.now() / 50) * 0.1 + 1; const auraSize = 50 * sizeMult * pulse;
@@ -361,11 +306,10 @@ function drawEntity(e) {
         grd.addColorStop(0.4, auraColor);
         grd.addColorStop(1, "rgba(0, 0, 0, 0)");
         
-        ctx.globalCompositeOperation = 'lighter'; // Modo de mistura para brilho intenso
+        ctx.globalCompositeOperation = 'lighter'; 
         ctx.fillStyle = grd; 
         ctx.beginPath(); ctx.arc(0, -10, auraSize, 0, Math.PI * 2); ctx.fill();
         
-        // Raios de energia
         ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath();
         for(let i=0; i<3; i++) {
             const angle = Math.random() * Math.PI * 2;
@@ -376,11 +320,10 @@ function drawEntity(e) {
         ctx.restore();
     }
 
-    // --- HOLOGRAMA ESTILOSO (AR) ---
     if (!scouterActive && !isSpirit) {
         ctx.save();
         ctx.translate(30 * sizeMult, -50 * sizeMult);
-        ctx.transform(1, -0.2, 0, 1, 0, 0); // Inclinação sci-fi
+        ctx.transform(1, -0.2, 0, 1, 0, 0); 
         
         ctx.strokeStyle = "rgba(0, 255, 255, 0.4)"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(-30, 20); ctx.lineTo(0, 0); ctx.lineTo(100, 0); ctx.stroke();
@@ -399,26 +342,26 @@ function drawEntity(e) {
         if(!e.isNPC) {
              ctx.fillStyle = "#fff"; ctx.font = "12px Orbitron";
              ctx.fillText(`BP: ${e.bp.toLocaleString()}`, 5, 20);
+             // Indicador de PVP
+             if(e.pvpMode) {
+                 ctx.fillStyle = "#f00"; ctx.font = "bold 10px Arial"; ctx.fillText("PVP ON", 5, 32);
+             }
         }
         ctx.restore();
     }
 
     ctx.rotate(e.angle);
-    
-    // --- ESTILO CEL SHADING (CONTORNO PRETO) ---
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2; ctx.strokeStyle = "#000";
 
     ctx.fillStyle = e.color; 
     ctx.beginPath(); ctx.rect(-15*sizeMult, -12*sizeMult, 30*sizeMult, 24*sizeMult); 
-    ctx.fill(); ctx.stroke(); // Corpo
+    ctx.fill(); ctx.stroke(); 
 
     ctx.fillStyle = e.isNPC ? (e.isBoss ? "#311" : "#2d2") : "#ffdbac"; 
     if(e.name && (e.name.includes("FRIEZA"))) ctx.fillStyle = "#fff";
     ctx.beginPath(); ctx.arc(0, -5*sizeMult, 12*sizeMult, 0, Math.PI*2); 
-    ctx.fill(); ctx.stroke(); // Cabeça
+    ctx.fill(); ctx.stroke(); 
 
-    // Cabelo
     if(!e.isNPC) { 
         let hColor = "#111"; 
         if(e.form.includes("SSJ")) hColor = "#ffea00"; if(e.form==="GOD") hColor="#f00"; if(e.form==="BLUE") hColor="#00bbff";
@@ -444,7 +387,6 @@ function drawScouterHUD(me) {
     ctx.save();
     ctx.globalCompositeOperation = "source-over"; 
     
-    // Vinheta Verde Tecnológica
     let grad = ctx.createRadialGradient(cx, cy, H/2, cx, cy, H);
     grad.addColorStop(0, "rgba(0, 255, 0, 0)");
     grad.addColorStop(1, "rgba(0, 255, 0, 0.3)");
@@ -456,7 +398,6 @@ function drawScouterHUD(me) {
     ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(cx, cy, 40, 0, Math.PI*2); ctx.stroke();
     
-    // Dados rolando na lateral
     ctx.save();
     ctx.translate(W - 150, 100);
     ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
@@ -478,10 +419,11 @@ function drawScouterHUD(me) {
         
         if (e.bp > me.bp * 1.5 && dist < 3000) dangerDetected = true;
 
+        // Se estiver na tela OU se for scouter ativo e estiver "perto" (4000)
+        // Alteração: Ler QUALQUER inimigo na tela, não só no centro
         if (onScreen) {
             const bracketSize = 30 + Math.sin(time/200)*5;
-            const isTarget = Math.hypot(screenX-cx, screenY-cy) < 100;
-            const color = isTarget ? "#ff0000" : (e.isNPC ? "#00ff00" : "#00ffff"); 
+            const color = (e.isNPC) ? (e.isBoss ? "#ff0000" : "#00ff00") : "#00ffff"; 
 
             ctx.save(); ctx.translate(screenX, screenY);
             ctx.strokeStyle = color; ctx.lineWidth = 2;
@@ -490,14 +432,21 @@ function drawScouterHUD(me) {
             ctx.beginPath(); ctx.moveTo(bracketSize, bracketSize-10); ctx.lineTo(bracketSize, bracketSize); ctx.lineTo(bracketSize-10, bracketSize); ctx.stroke();
 
             ctx.fillStyle = color; ctx.font = "bold 12px Orbitron"; 
-            const bpDisplay = isTarget ? e.bp.toLocaleString() : Math.floor(Math.random()*99999);
+            const bpDisplay = e.bp.toLocaleString();
             ctx.fillText(`BP: ${bpDisplay}`, bracketSize+5, -10);
             ctx.font = "10px Orbitron";
             ctx.fillText(e.name, bracketSize+5, 5);
-            if(!e.isNPC) ctx.fillText("[PLAYER]", bracketSize+5, 15);
+            
+            // INDICADOR DE HUMANO
+            if(!e.isNPC) {
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 10px Arial";
+                ctx.fillText("⚠️ HUMAN", bracketSize+5, 20);
+            }
+            
             ctx.restore();
         } else {
-            // Indicador de borda (off-screen)
+            // Seta indicadora fora da tela
             if (dist < 4000) {
                 const angle = Math.atan2(screenY - cy, screenX - cx);
                 const radius = Math.min(W, H) / 2 - 30;
@@ -505,11 +454,12 @@ function drawScouterHUD(me) {
                 const iy = cy + Math.sin(angle) * radius;
                 
                 ctx.save(); ctx.translate(ix, iy); ctx.rotate(angle);
-                ctx.fillStyle = e.isBoss ? "#ff0000" : "#00ff00"; 
+                ctx.fillStyle = (!e.isNPC) ? "#00ffff" : (e.isBoss ? "#ff0000" : "#00ff00"); 
                 ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-10, 5); ctx.lineTo(-10, -5); ctx.fill();
                 ctx.rotate(-angle);
                 ctx.fillStyle = "#fff"; ctx.font = "10px Arial"; ctx.textAlign = "center";
                 ctx.fillText(`${Math.floor(dist)}m`, 0, 20);
+                if(!e.isNPC) ctx.fillText("P", 0, 5); // P de Player
                 ctx.restore();
             }
         }
@@ -580,6 +530,7 @@ function drawSchematicMap(me) {
         if(p.id !== myId && !p.isDead) {
             const ox = p.x * scale; const oy = p.y * scale;
             if(Math.hypot(ox, oy) < size) {
+                // Jogadores são pontos Ciano no radar
                 ctx.fillStyle = "#00ffff"; ctx.beginPath(); ctx.arc(ox, oy, 2, 0, Math.PI*2); ctx.fill();
             }
         }
@@ -619,7 +570,6 @@ function draw() {
     npcs.forEach(drawEntity);
     Object.values(players).forEach(drawEntity);
     
-    // Projéteis com Brilho Intenso (Light Composite)
     projectiles.forEach(pr => { 
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
@@ -662,6 +612,14 @@ function update() {
             else zoneName = "SETOR NORTE (DIVINO)";
         }
         document.getElementById("stat-bp").innerText = `LVL ${me.level} | ${zoneName}`;
+        
+        // Indicador PVP no HUD
+        if(me.pvpMode) {
+             document.getElementById("stat-bp").innerText += " [PVP ON]";
+             document.getElementById("stat-bp").style.color = "#f00";
+        } else {
+             document.getElementById("stat-bp").style.color = "#ffcc00";
+        }
 
         let ang = Math.atan2(mouse.y, mouse.x); 
         if (isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) ang = Math.atan2(joystickMove.y, joystickMove.x);

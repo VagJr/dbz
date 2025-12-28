@@ -17,7 +17,7 @@ let rocks = [];
 let craters = [];
 
 // ==================================================================================
-// ESTATÍSTICAS RPG E BESTIÁRIO
+// ESTATÍSTICAS RPG
 // ==================================================================================
 const FORM_STATS = {
     "BASE": { spd: 5,  dmg: 1.0, hpMult: 1.0, kiMult: 1.0 },
@@ -29,17 +29,9 @@ const FORM_STATS = {
     "UI":   { spd: 16, dmg: 6.0, hpMult: 5.0, kiMult: 5.0 }
 };
 
-// ===============================
-// BP CAP POR NIVEL + FORMA
-// ===============================
 const BP_TRAIN_CAP = {
-    BASE:  1200,
-    SSJ:   2500,
-    SSJ2:  5000,
-    SSJ3:  9000,
-    GOD:   16000,
-    BLUE:  28000,
-    UI:    45000
+    BASE:  1200, SSJ: 2500, SSJ2: 5000, SSJ3: 9000,
+    GOD: 16000, BLUE: 28000, UI: 45000
 };
 
 const BESTIARY = {
@@ -53,7 +45,6 @@ const BESTIARY = {
 function getMaxBP(p) {
     const form = p.form || "BASE";
     const formCap = BP_TRAIN_CAP[form] || BP_TRAIN_CAP.BASE;
-    // BP máximo TOTAL permitido
     return p.level * formCap;
 }
 
@@ -158,8 +149,16 @@ function packStateForPlayer(pid) {
     const p = players[pid];
     if (!p) return null;
     const R = 4500; 
+    // Jogadores são vistos de muito mais longe para o scouter (15000)
+    // NPCs continuam com range normal (4500) para otimização
     const inRange = (o) => Math.hypot(o.x - p.x, o.y - p.y) < R;
-    return { players, npcs: npcs.filter(inRange), projectiles: projectiles.filter(inRange), rocks: rocks.filter(inRange), craters };
+    const playersInRange = Object.values(players).filter(pl => Math.hypot(pl.x - p.x, pl.y - p.y) < 15000); 
+    
+    // Converte lista de players para objeto para manter compatibilidade
+    const playersObj = {};
+    playersInRange.forEach(pl => playersObj[pl.id] = pl);
+
+    return { players: playersObj, npcs: npcs.filter(inRange), projectiles: projectiles.filter(inRange), rocks: rocks.filter(inRange), craters };
 }
 
 io.on("connection", (socket) => {
@@ -170,8 +169,24 @@ io.on("connection", (socket) => {
             db.get('users').push(user).write();
         } else if(user.pass !== data.pass) return;
         const xpToNext = user.level * 800;
-        players[socket.id] = { ...user, id: socket.id, r: 20, x: 0, y: 0, vx: 0, vy: 0, angle: 0, baseMaxHp: 1000 + (user.level * 200), baseMaxKi: 100 + (user.level * 10), hp: 1000 + (user.level * 200), maxHp: 1000 + (user.level * 200), ki: 100, maxKi: 100 + (user.level * 10), form: "BASE", xpToNext: xpToNext, state: "IDLE", combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk: 0, isDead: false, isSpirit: false, stun: 0, color: "#ff9900", chargeStart: 0 };
+        players[socket.id] = { 
+            ...user, id: socket.id, r: 20, x: 0, y: 0, vx: 0, vy: 0, angle: 0, 
+            baseMaxHp: 1000 + (user.level * 200), baseMaxKi: 100 + (user.level * 10), 
+            hp: 1000 + (user.level * 200), maxHp: 1000 + (user.level * 200), 
+            ki: 100, maxKi: 100 + (user.level * 10), form: "BASE", 
+            xpToNext: xpToNext, state: "IDLE", combo: 0, comboTimer: 0, 
+            attackLock: 0, counterWindow: 0, lastAtk: 0, isDead: false, isSpirit: false, 
+            stun: 0, color: "#ff9900", chargeStart: 0, pvpMode: false, lastTransform: 0 
+        };
         socket.emit("auth_success", players[socket.id]);
+    });
+
+    socket.on("toggle_pvp", () => {
+        const p = players[socket.id];
+        if(p) {
+            p.pvpMode = !p.pvpMode;
+            // Efeito visual ao ligar/desligar PVP (opcional)
+        }
     });
 
     socket.on("input", (input) => {
@@ -194,7 +209,13 @@ io.on("connection", (socket) => {
         let target = findSnapTarget(p);
         if (!target) {
             let best = null, bestDist = 220;
-            [...Object.values(players), ...npcs].forEach(t => { if(t.id === p.id || t.isDead || t.isSpirit) return; const d = Math.hypot(t.x - p.x, t.y - p.y); if(d < bestDist) { bestDist = d; best = t; } });
+            [...Object.values(players), ...npcs].forEach(t => { 
+                if(t.id === p.id || t.isDead || t.isSpirit) return; 
+                // Prioriza NPCs se PVP estiver desligado
+                if(!t.isNPC && !p.pvpMode) return; 
+                const d = Math.hypot(t.x - p.x, t.y - p.y); 
+                if(d < bestDist) { bestDist = d; best = t; } 
+            });
             target = best;
         }
         if (target) {
@@ -212,6 +233,9 @@ io.on("connection", (socket) => {
 
         [...Object.values(players), ...npcs].forEach(t => {
             if(t.id === p.id || t.isDead || t.isSpirit) return;
+            // REGRA PVP: Só bate em jogador se o ATACANTE estiver com PVP ligado
+            if(!t.isNPC && !p.pvpMode) return;
+
             const dx = t.x - p.x; const dy = t.y - p.y;
             const dist = Math.hypot(dx, dy);
             if (dist > hitRadius) return;
@@ -221,7 +245,8 @@ io.on("connection", (socket) => {
             hitSomeone = true;
             let baseDmg = (50 + p.level * 9);
             let dmg = Math.floor(baseDmg * damageMult * (charged ? 3.2 : (1 + p.combo * 0.3)));
-            if (!t.isNPC) dmg *= 0.5;
+            
+            if (!t.isNPC) dmg *= 0.5; // Dano reduzido em jogadores
             if(t.state === "BLOCKING") { dmg *= 0.25; t.ki -= 12; t.counterWindow = 12; }
             t.hp -= dmg; t.stun = charged ? 26 : 14;
             const push = charged ? 140 : 65;
@@ -245,7 +270,12 @@ io.on("connection", (socket) => {
         const formStats = FORM_STATS[p.form] || FORM_STATS["BASE"];
         const damageMult = formStats.dmg;
         let color = "#0cf"; if(p.form === "SSJ") color = "#ff0"; if(p.form === "GOD") color = "#f00";
-        projectiles.push({ id: Math.random(), owner: p.id, x: p.x, y: p.y, vx: Math.cos(p.angle) * (isSuper ? 30 : 45), vy: Math.sin(p.angle) * (isSuper ? 30 : 45), dmg: (50 + p.level*6) * damageMult * (isSuper ? 3 : 1), size: isSuper ? 80 : 12, isSuper, life: 90, color });
+        projectiles.push({ 
+            id: Math.random(), owner: p.id, x: p.x, y: p.y, 
+            vx: Math.cos(p.angle) * (isSuper ? 30 : 45), vy: Math.sin(p.angle) * (isSuper ? 30 : 45), 
+            dmg: (50 + p.level*6) * damageMult * (isSuper ? 3 : 1), 
+            size: isSuper ? 80 : 12, isSuper, life: 90, color, pvp: p.pvpMode 
+        });
     });
 
     socket.on("vanish", () => {
@@ -258,6 +288,10 @@ io.on("connection", (socket) => {
     socket.on("transform", () => {
         const p = players[socket.id];
         if(!p || p.isSpirit) return;
+        
+        // CORREÇÃO GLITCH: COOLDOWN NA TRANSFORMAÇÃO (10s)
+        if(p.lastTransform && Date.now() - p.lastTransform < 10000) return;
+
         let nextForm = "BASE";
         if(p.form === "BASE" && p.level >= 5) nextForm = "SSJ";
         else if(p.form === "SSJ" && p.level >= 20) nextForm = "SSJ2";
@@ -269,6 +303,8 @@ io.on("connection", (socket) => {
         
         if(nextForm !== p.form && p.ki >= 50) {
             p.form = nextForm; p.ki -= 50;
+            p.lastTransform = Date.now(); // Marca tempo
+
             const stats = FORM_STATS[nextForm];
             p.maxHp = p.baseMaxHp * stats.hpMult;
             p.maxKi = p.baseMaxKi * stats.kiMult;
@@ -323,166 +359,104 @@ setInterval(() => {
     craters = craters.filter(c => { c.life--; return c.life > 0; });
 
     Object.values(players).forEach(p => {
-
-        // Timers
         if(p.stun > 0) p.stun--;
         if(p.attackLock > 0) p.attackLock--;
         if(p.comboTimer > 0) p.comboTimer--;
         if(p.counterWindow > 0) p.counterWindow--;
-
-        // Movimento
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.82;
-        p.vy *= 0.82;
-
-        // ===============================
-        // TREINO / REGEN / LEVEL UP
-        // ===============================
+        p.x += p.vx; p.y += p.vy; p.vx *= 0.82; p.vy *= 0.82; 
+		if (p.state === "CHARGING") {
+    p.bp += 1;
+    clampBP(p);
+}
+        
         if (!p.isDead && !p.isSpirit) {
-
-            // TREINO
             if (p.state === "CHARGING") {
-                if (Math.random() > 0.85) {
-                    p.xp += 1;
-                    p.bp += 5;
-                    clampBP(p);
+                if (Math.random() > 0.85) { p.xp += 1; p.bp += 5; clampBP(p); }
+                const xpReq = p.level * 800;
+                if(p.xp >= xpReq) {
+                   p.level++; p.xp = 0; p.bp += 5000; clampBP(p);
+                   p.baseMaxHp += 1000; p.baseMaxKi += 100;
+                   const stats = FORM_STATS[p.form] || FORM_STATS["BASE"];
+                   p.maxHp = p.baseMaxHp * stats.hpMult; p.maxKi = p.baseMaxKi * stats.kiMult;
+                   p.hp = p.maxHp; p.ki = p.maxKi; p.xpToNext = p.level * 800;
+                   io.emit("fx", { type: "levelup", x: p.x, y: p.y });
+                   const user = db.get('users').find({ name: p.name }).value();
+                   if(user) { user.level = p.level; user.bp = p.bp; db.write(); }
                 }
-            }
-
-            // LEVEL UP
-            const xpReq = p.level * 800;
-            if (p.xp >= xpReq) {
-                p.level++;
-                p.xp = 0;
-                p.bp += 5000;
-                clampBP(p);
-
-                p.baseMaxHp += 1000;
-                p.baseMaxKi += 100;
-
-                const stats = FORM_STATS[p.form] || FORM_STATS["BASE"];
-                p.maxHp = p.baseMaxHp * stats.hpMult;
-                p.maxKi = p.baseMaxKi * stats.kiMult;
-                p.hp = p.maxHp;
-                p.ki = p.maxKi;
-                p.xpToNext = p.level * 800;
-
-                io.emit("fx", { type: "levelup", x: p.x, y: p.y });
-
-                const user = db.get('users').find({ name: p.name }).value();
-                if(user) {
-                    user.level = p.level;
-                    user.bp = p.bp;
-                    db.write();
-                }
-            }
-
-            // REGEN KI
-            if (p.state === "IDLE" && p.ki < p.maxKi) {
-                p.ki += 0.5;
-            }
+            } else if(p.ki < p.maxKi && p.state === "IDLE") { p.ki += 0.5; }
         }
         
-        if (p.bp >= getMaxBP(p)) {
-            io.to(p.id).emit("fx", {
-                type: "bp_limit",
-                x: p.x,
-                y: p.y,
-                text: "BP NO LIMITE"
-            });
-        }
+        if (p.bp >= getMaxBP(p)) { io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "BP NO LIMITE" }); }
 
-        // ===============================
-        // ESPÍRITO / KAIO
-        // ===============================
+        // LÓGICA DE ESPÍRITO / PLANETA DO KAIOH (CURA)
         if (p.isSpirit) {
-            const dist = Math.hypot(p.x - 0, p.y + 20000);
-            if (dist < 400) {
-                p.isSpirit = false;
-                p.hp = p.maxHp;
-                p.ki = p.maxKi;
-                p.x = 0;
-                p.y = 0;
-                p.vx = 0;
-                p.vy = 0;
-                io.emit("fx", { type: "transform", x: 0, y: 0, form: "BASE" });
+            const distToKingKai = Math.hypot(p.x - 0, p.y + 20000); // 0, -20000
+            
+            // CURA NO PLANETA (Se estiver muito perto, regenera)
+            if (distToKingKai < 1000) {
+                p.hp = Math.min(p.maxHp, p.hp + 20); // Cura rápido
+                p.ki = Math.min(p.maxKi, p.ki + 5);
+                
+                // Se tocar no centro (casinha), revive
+                if (distToKingKai < 300) {
+                    p.isSpirit = false; p.hp = p.maxHp; p.ki = p.maxKi; p.x = 0; p.y = 0; p.vx = 0; p.vy = 0;
+                    io.emit("fx", { type: "transform", x: 0, y: 0, form: "BASE" }); 
+                    io.emit("fx", { type: "levelup", x: 0, y: 0 });
+                }
             }
         }
     });
 
     npcs.forEach(n => {
         if(n.isDead) return;
-        if(n.stun > 0) {
-            n.stun--;
-            n.x += n.vx;
-            n.y += n.vy;
-            n.vx *= 0.85;
-            n.vy *= 0.85;
-            return;
-        }
+        if(n.stun > 0) { n.stun--; n.x += n.vx; n.y += n.vy; n.vx *= 0.85; n.vy *= 0.85; return; }
         let target = null, minDist = n.aggro || 700;
-        Object.values(players).forEach(p => {
-            if(!p.isSpirit) {
-                const d = Math.hypot(n.x-p.x, n.y-p.y);
-                if(d < minDist) { minDist=d; target=p; }
-            }
-        });
+        Object.values(players).forEach(p => { if(!p.isSpirit) { const d = Math.hypot(n.x-p.x, n.y-p.y); if(d < minDist) { minDist=d; target=p; } } });
         if(target) {
-            const dx = target.x - n.x;
-            const dy = target.y - n.y;
-            const ang = Math.atan2(dy, dx);
-            n.angle = ang;
+            const dx = target.x - n.x; const dy = target.y - n.y;
+            const ang = Math.atan2(dy, dx); n.angle = ang;
             const dist = Math.hypot(dx, dy);
-            if(dist > (n.isBoss ? 150 : 60)) {
-                n.vx += Math.cos(ang)*3.5;
-                n.vy += Math.sin(ang)*3.5;
-            } else if(Date.now() - n.lastAtk > 1000) {
-                n.lastAtk = Date.now();
+            if(dist > (n.isBoss ? 150 : 60)) { n.vx += Math.cos(ang)*3.5; n.vy += Math.sin(ang)*3.5; n.state = "MOVING"; } 
+            else if(Date.now() - n.lastAtk > 1000) {
+                n.lastAtk = Date.now(); n.state = "ATTACKING";
                 let dmg = n.level * 10;
                 if(target.state === "BLOCKING") { dmg *= 0.2; target.ki -= 10; target.counterWindow = 10; }
-                target.hp -= dmg;
-                target.stun = 10;
+                target.hp -= dmg; target.stun = 10;
                 target.vx = Math.cos(ang)*40; target.vy = Math.sin(ang)*40;
-                io.emit("fx", { type: "hit", x: target.x, y: target.y, dmg });
+                io.emit("fx", { type: "hit", x: target.x, y: target.y, dmg }); 
                 if(target.hp <= 0) handleKill(n, target);
             }
         } else { n.state = "IDLE"; }
-        n.x += n.vx;
-        n.y += n.vy;
-        n.vx *= 0.85;
-        n.vy *= 0.85;
+        n.x += n.vx; n.y += n.vy; n.vx *= 0.85; n.vy *= 0.85;
     });
 
+    // PROJÉTEIS (CORREÇÃO DE COLISÃO)
     projectiles.forEach((pr, i) => {
-        pr.x += pr.vx;
-        pr.y += pr.vy;
-        pr.life--;
-        
+        pr.x += pr.vx; pr.y += pr.vy; pr.life--;
         let hit = false;
-        // Colisão com Players e NPCs
+        
         [...Object.values(players), ...npcs].forEach(t => {
             if (!hit && t.id !== pr.owner && !t.isSpirit && !t.isDead) {
                 const dist = Math.hypot(pr.x - t.x, pr.y - t.y);
-                if (dist < (20 + pr.size)) { // Hitbox simples baseada no tamanho
+                
+                // CORREÇÃO: Hitbox aumentada para compensar velocidade alta (Tunneling)
+                // Se o projetil anda 45px por tick, a hitbox precisa ser pelo menos > 25+raio
+                if (dist < (45 + pr.size)) { 
+                    
+                    // PVP CHECK: Se ambos players, só acerta se attacker tiver PVP ligado
+                    if(!t.isNPC && !pr.pvp) return;
+
                     let dmg = pr.dmg;
-                    if (!t.isNPC) dmg *= 0.5; // Redução de dano PvP
+                    if (!t.isNPC) dmg *= 0.5;
 
-                    t.hp -= dmg;
-                    t.stun = 8;
-                    hit = true;
-
+                    t.hp -= dmg; t.stun = 8; hit = true;
                     io.emit("fx", { type: pr.isSuper ? "heavy" : "hit", x: pr.x, y: pr.y, dmg: Math.floor(dmg) });
-
                     const owner = players[pr.owner] || npcs.find(n => n.id === pr.owner) || {};
                     if (t.hp <= 0) handleKill(owner, t);
                 }
             }
         });
-
-        if (hit || pr.life <= 0) {
-            projectiles.splice(i, 1);
-        }
+        if (hit || pr.life <= 0) projectiles.splice(i, 1);
     });
 
     Object.keys(players).forEach(id => {
