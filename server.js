@@ -223,6 +223,15 @@ io.on("connection", (socket) => {
    ========================= */
 setInterval(() => {
 
+ Object.values(players).forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Fricção leve estilo anime
+    p.vx *= 0.85;
+    p.vy *= 0.85;
+});
+
     // 1. Atualiza lógica dos players
     Object.values(players).forEach(p => {
         if (!p.isDead && !p.isSpirit) {
