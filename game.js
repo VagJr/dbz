@@ -595,99 +595,113 @@ function draw() {
 }
 
 let lastInputSent = 0;
+
 function update() {
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    if(!myId) { requestAnimationFrame(update); return; }
-    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    if (!myId) {
+        requestAnimationFrame(update);
+        return;
+    }
+
     const me = players[myId];
-    if(me) {
+    if (me) {
+
         // ===============================
-// HP BAR COM NÚMERO + ANIMAÇÃO
-// ===============================
-const hpPerc = Math.max(0, me.hp / me.maxHp) * 100;
-const hpBar = document.getElementById("hp-bar");
-hpBar.style.width = hpPerc + "%";
+        // BARRAS DE STATUS (HP / KI)
+        // ===============================
+        const hpBar = document.getElementById("hp-bar");
+        const kiBar = document.getElementById("ki-bar");
 
-let hpText = hpBar.querySelector(".value-text");
-if (!hpText) {
-    hpText = document.createElement("div");
-    hpText.className = "value-text";
-    hpBar.parentElement.appendChild(hpText);
-}
-hpText.innerText = `${Math.floor(me.hp)} / ${me.maxHp}`;
+        // HP
+        const hpPerc = Math.max(0, me.hp / me.maxHp) * 100;
+        hpBar.style.width = hpPerc + "%";
 
-hpBar.parentElement.classList.remove("power-pulse");
-if (me.hp < me.maxHp) {
-    // HP pode pulsar
-hpBar.parentElement.classList.remove("hp-pulse");
-hpBar.parentElement.classList.add("hp-pulse");
+        let hpText = hpBar.parentElement.querySelector(".value-text.hp-text");
+        if (!hpText) {
+            hpText = document.createElement("div");
+            hpText.className = "value-text hp-text";
+            hpBar.parentElement.appendChild(hpText);
+        }
+        hpText.innerText = `${Math.floor(me.hp)} / ${me.maxHp}`;
 
-// KI NÃO escala texto (só brilho visual)
-kiBar.parentElement.classList.remove("hp-pulse");
-}
-// ===============================
-// KI BAR COM NÚMERO + ANIMAÇÃO
-// ===============================
-const kiPerc = Math.max(0, me.ki / me.maxKi) * 100;
-const kiBar = document.getElementById("ki-bar");
-kiBar.style.width = kiPerc + "%";
+        hpBar.parentElement.classList.remove("hp-pulse");
+        if (me.hp < me.maxHp) {
+            hpBar.parentElement.classList.add("hp-pulse");
+        }
 
-let kiText = kiBar.querySelector(".value-text");
-if (!kiText) {
-    kiText = document.createElement("div");
-    kiText.className = "value-text ki-bar-text";
-    kiBar.parentElement.appendChild(kiText);
-}
+        // KI
+        const kiPerc = Math.max(0, me.ki / me.maxKi) * 100;
+        kiBar.style.width = kiPerc + "%";
 
-kiText.innerText = `${Math.floor(me.ki)} / ${me.maxKi}`;
+        let kiText = kiBar.parentElement.querySelector(".value-text.ki-bar-text");
+        if (!kiText) {
+            kiText = document.createElement("div");
+            kiText.className = "value-text ki-bar-text";
+            kiBar.parentElement.appendChild(kiText);
+        }
+        kiText.innerText = `${Math.floor(me.ki)} / ${me.maxKi}`;
 
-kiBar.parentElement.classList.remove("power-pulse");
-if (me.state === "CHARGING") {
-    kiBar.parentElement.classList.add("power-pulse");
-}
-        const xpPerc = (me.xp / (me.level*800)) * 100;
+        kiBar.parentElement.classList.remove("hp-pulse");
+
+        // XP
+        const xpPerc = (me.xp / (me.level * 800)) * 100;
         document.getElementById("xp-bar").style.width = xpPerc + "%";
-        
-        // Atualiza HUD com Zona Geográfica (Omnidirecional)
+
+        // ZONA + BP
         const dist = Math.hypot(me.x, me.y);
         const angle = Math.atan2(me.y, me.x);
         let zoneName = "PLANETA TERRA";
-        
-        if(dist >= 5000) {
-            if (Math.abs(angle) > 2.35) zoneName = "ESPAÇO PROFUNDO"; // Oeste
-            else if (Math.abs(angle) < 0.78) zoneName = "LINHA DO TEMPO FUTURA"; // Leste
-            else if (angle >= 0.78 && angle <= 2.35) zoneName = "REINO DEMONÍACO"; // Sul
-            else zoneName = "DOMÍNIO DIVINO"; // Norte
-        }
-        
-        document.getElementById("stat-bp").innerText =
-    `LVL ${me.level} | PB ${me.bp.toLocaleString()}`;
-const bpEl = document.getElementById("stat-bp");
-if (me.bp > 50000) bpEl.style.color = "#ff9900";
-if (me.bp > 150000) bpEl.style.color = "#ff3333";
 
-        
-        let ang = Math.atan2(mouse.y, mouse.x); 
+        if (dist >= 5000) {
+            if (Math.abs(angle) > 2.35) zoneName = "ESPAÇO PROFUNDO";
+            else if (Math.abs(angle) < 0.78) zoneName = "LINHA DO TEMPO FUTURA";
+            else if (angle >= 0.78 && angle <= 2.35) zoneName = "REINO DEMONÍACO";
+            else zoneName = "DOMÍNIO DIVINO";
+        }
+
+        document.getElementById("stat-zone").innerText = zoneName;
+
+        const bpEl = document.getElementById("stat-bp");
+        bpEl.innerText = `LVL ${me.level} | PB ${me.bp.toLocaleString()}`;
+        bpEl.style.color =
+            me.bp > 150000 ? "#ff3333" :
+            me.bp > 50000  ? "#ff9900" :
+                             "#ffcc00";
+
+        // INPUT
+        let ang = Math.atan2(mouse.y, mouse.x);
         if (isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) {
             ang = Math.atan2(joystickMove.y, joystickMove.x);
         }
 
-        let inputX = (keys["KeyD"]?1:0)-(keys["KeyA"]?1:0);
-        let inputY = (keys["KeyS"]?1:0)-(keys["KeyW"]?1:0);
+        let inputX = (keys["KeyD"] ? 1 : 0) - (keys["KeyA"] ? 1 : 0);
+        let inputY = (keys["KeyS"] ? 1 : 0) - (keys["KeyW"] ? 1 : 0);
+
         if (isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) {
-            inputX = joystickMove.x; inputY = joystickMove.y;
+            inputX = joystickMove.x;
+            inputY = joystickMove.y;
         }
 
-        const now = performance.now(); 
-        if(now-lastInputSent>45){ 
-            lastInputSent=now; 
-            window.socket.emit("input", { 
-                x: inputX, y: inputY, angle: ang, 
-                block: keys["KeyQ"], charge: keys["KeyC"], 
-                holdAtk: mouseLeft, holdBlast: mouseRight 
-            }); 
+        const now = performance.now();
+        if (now - lastInputSent > 45) {
+            lastInputSent = now;
+            window.socket.emit("input", {
+                x: inputX,
+                y: inputY,
+                angle: ang,
+                block: keys["KeyQ"],
+                charge: keys["KeyC"],
+                holdAtk: mouseLeft,
+                holdBlast: mouseRight
+            });
         }
     }
-    draw(); requestAnimationFrame(update);
+
+    draw();
+    requestAnimationFrame(update);
 }
+
+// 🚀 INICIA O LOOP
 update();
