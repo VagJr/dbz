@@ -10,13 +10,14 @@ let particles = [], shockwaves = [], trails = [], texts = [];
 let screenShake = 0, flash = 0, hitStop = 0;
 let joystickMove = { x: 0, y: 0 };
 
-// ESTADO DO SCOUTER (Começa desligado para manter a forma original)
+// ESTADO DO SCOUTER
 let scouterActive = false; 
 
 // ==========================================
 // CONFIGURAÇÃO DE ZOOM E CÂMERA
 // ==========================================
-const ZOOM_SCALE = 0.7; 
+const ZOOM_SCALE = 0.7; // Zoom ajustado para o mapa gigante
+
 const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
 
 // =====================================================
@@ -70,7 +71,7 @@ window.addEventListener("keydown", e => {
     keys[e.code] = true; 
     if(e.code === "Space") window.socket.emit("vanish"); 
     if(e.code === "KeyG") window.socket.emit("transform"); 
-    if(e.code === "KeyT") scouterActive = !scouterActive; // Tecla T para PC
+    if(e.code === "KeyT") scouterActive = !scouterActive; 
 });
 window.addEventListener("keyup", e => keys[e.code] = false);
 
@@ -133,6 +134,9 @@ function initMobileControls() {
     joystick.on('end', () => { joystickMove.x = 0; joystickMove.y = 0; });
 }
 
+// =========================================================
+// BACKGROUND INTELIGENTE (TODAS AS SAGAS)
+// =========================================================
 function drawBackground(camX, camY) {
     const viewW = canvas.width / ZOOM_SCALE;
     const viewH = canvas.height / ZOOM_SCALE;
@@ -141,21 +145,48 @@ function drawBackground(camX, camY) {
     const endX = camX + (viewW / 2);
     const endY = camY + (viewH / 2);
 
-    let bgColor = "#122a12"; let gridColor = "rgba(100,255,100,0.1)";
+    // Lógica de Cores baseada na distância (Match com Server.js)
     const dist = Math.hypot(camX, camY);
-    if (dist > 50000) { bgColor = "#050015"; gridColor = "rgba(100,0,255,0.2)"; } 
-    else if (camY < -4000 && Math.abs(camX) < Math.abs(camY)) { bgColor = "#220000"; gridColor = "rgba(255,50,50,0.1)"; }
-    else if (camY > 4000 && Math.abs(camX) < Math.abs(camY)) { bgColor = "#331133"; gridColor = "rgba(255,100,255,0.1)"; } 
-    else if (camX > 4000 && Math.abs(camY) < camX) { bgColor = "#004444"; gridColor = "rgba(100,255,255,0.1)"; } 
-    else if (camX < -4000 && Math.abs(camY) < Math.abs(camX)) { bgColor = "#1a1a1a"; gridColor = "rgba(200,200,200,0.1)"; }
+    
+    let bgColor = "#122a12"; // Origins (Centro)
+    let gridColor = "rgba(100,255,100,0.1)";
 
-    ctx.fillStyle = bgColor; ctx.fillRect(startX - 200, startY - 200, viewW + 400, viewH + 400);
-
-    if(camX > 4000 && Math.abs(camY) < camX && dist < 50000) {
-        ctx.fillStyle = "rgba(100,255,200, 0.15)";
-        ctx.beginPath(); ctx.arc(6000, 0, 800, 0, Math.PI*2); ctx.fill();
+    // ANEL 1: DBZ (5k - 15k)
+    if (dist >= 5000 && dist < 15000) {
+        if(camX > 0 && Math.abs(camY) < camX) { bgColor = "#004444"; gridColor = "rgba(100,255,255,0.1)"; } // Namek
+        else if(camY > 0) { bgColor = "#331133"; gridColor = "rgba(255,100,255,0.1)"; } // Majin
+        else { bgColor = "#222"; gridColor = "rgba(200,200,200,0.1)"; } // Android/Saiyan
+    }
+    // ANEL 2: GT & MOVIES (15k - 30k)
+    else if (dist >= 15000 && dist < 30000) {
+        bgColor = "#1a1a2e"; // Espaço Profundo/Metálico
+        gridColor = "rgba(100,100,150,0.15)";
+    }
+    // ANEL 3: SUPER (30k - 50k)
+    else if (dist >= 30000 && dist < 50000) {
+        bgColor = "#1a0b2e"; // Roxo Divino
+        gridColor = "rgba(255,215,0,0.1)"; // Grid Dourado
+    }
+    // BORDA: DAIMA & ANJOS (> 50k)
+    else if (dist >= 50000) {
+        bgColor = "#050015"; // Void
+        gridColor = "rgba(255,255,255,0.05)";
     }
 
+    ctx.fillStyle = bgColor; 
+    ctx.fillRect(startX - 200, startY - 200, viewW + 400, viewH + 400);
+
+    // DETALHES DE FUNDO (PLANETAS/LUAS)
+    if(dist < 50000 && camX > 4000 && Math.abs(camY) < camX) { // Namek Suns
+        ctx.fillStyle = "rgba(100,255,200, 0.1)";
+        ctx.beginPath(); ctx.arc(8000, 0, 1500, 0, Math.PI*2); ctx.fill();
+    }
+    if(dist > 30000 && camY < -10000) { // Super Shenron Shadow (Exemplo)
+        ctx.fillStyle = "rgba(255,215,0, 0.05)";
+        ctx.beginPath(); ctx.arc(0, -40000, 5000, 0, Math.PI*2); ctx.fill();
+    }
+
+    // GRID
     const gridSize = 200;
     const firstLineX = Math.floor(startX / gridSize) * gridSize;
     const firstLineY = Math.floor(startY / gridSize) * gridSize;
@@ -164,32 +195,35 @@ function drawBackground(camX, camY) {
     for(let x = firstLineX; x < endX + gridSize; x += gridSize) { ctx.moveTo(x, startY - 100); ctx.lineTo(x, endY + 100); }
     for(let y = firstLineY; y < endY + gridSize; y += gridSize) { ctx.moveTo(startX - 100, y); ctx.lineTo(endX + 100, y); }
     ctx.stroke();
-
-    if(camY < -1000 && camY > -9000 && Math.abs(camX) < 3000) {
-        ctx.save();
-        ctx.strokeStyle = "#ffaa00"; ctx.lineWidth = 40; ctx.shadowBlur = 20; ctx.shadowColor = "#ffaa00";
-        ctx.beginPath();
-        const startSnake = Math.max(-10000, startY - 200);
-        const endSnake = Math.min(-1000, endY + 200);
-        for(let y = endSnake; y > startSnake; y -= 100){ ctx.lineTo(Math.sin(y/400)*300, y); }
-        ctx.stroke(); ctx.restore();
-    }
 }
 
 function drawEntity(e) {
     if(e.isDead && e.isNPC) return;
     const isSpirit = e.isSpirit;
-    const sizeMult = e.isBoss ? 3.5 : 1;
+    const sizeMult = e.isBoss ? 4.0 : 1; // Bosses maiores
     const time = Date.now();
     
+    // ==========================================
+    // LÓGICA DE CORES E AURAS AVANÇADA
+    // ==========================================
     let auraColor = "#00ffff"; 
     if(e.color) auraColor = e.color; 
+    
+    // Formas Clássicas
     if(e.form === "SSJ" || e.form === "SSJ2") auraColor = "#ffea00";
     if(e.form === "SSJ3") auraColor = "#ffcc00";
     if(e.form === "GOD") auraColor = "#ff0000";
     if(e.form === "BLUE") auraColor = "#00bbff";
     if(e.form === "UI") auraColor = "#ffffff";
-    if(e.name && e.name.includes("BLACK")) auraColor = "#9000ff"; 
+    
+    // Detecção por Nome (Sagas)
+    if(e.name) {
+        if(e.name.includes("BLACK") || e.name.includes("ROSE")) auraColor = "#ff0088"; // Rosé
+        if(e.name.includes("BROLY") || e.name.includes("KEFLA")) auraColor = "#00ff00"; // Lendário
+        if(e.name.includes("GOMAH") || e.name.includes("DEMON")) auraColor = "#9900ff"; // Daima
+        if(e.name.includes("TOPPO") || e.name.includes("EGO")) auraColor = "#8800ff"; // Hakaishin
+        if(e.name.includes("ANGEL")) auraColor = "#aaaaff"; // Anjo
+    }
 
     if(hitStop <= 0 && (Math.hypot(e.vx, e.vy) > 10)) {
         trails.push({ x: e.x, y: e.y, angle: e.angle, color: auraColor, alpha: 0.4, sizeMult });
@@ -197,7 +231,36 @@ function drawEntity(e) {
 
     ctx.save(); 
     ctx.translate(e.x, e.y); 
+	
+	// ==========================================
+// TRECHO: AURÉOLA DE ESPÍRITO (MORTO)
+// ==========================================
+if (isSpirit) {
+    ctx.save();
+    // Posiciona acima da cabeça (ajustado pelo tamanho do boss se necessário)
+    ctx.translate(0, -50 * sizeMult); 
+    
+    // Efeito de brilho da auréola
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#fff";
+    
+    // Desenha a elipse branca/dourada
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    // x, y, raioX, raioY, rotação, anguloInicial, anguloFinal
+    ctx.ellipse(0, 0, 15 * sizeMult, 5 * sizeMult, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Adiciona um brilho interno leve
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+    ctx.restore();
+}
+// ==========================================
 
+    // EFEITOS DE CARREGAMENTO
     if (e.state === "CHARGING") {
         ctx.save();
         const pulse = Math.sin(time / 50) * 0.1 + 1; const auraSize = 45 * sizeMult * pulse;
@@ -207,6 +270,7 @@ function drawEntity(e) {
         ctx.beginPath(); ctx.arc(0, -10, auraSize, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
+        // Raios
         ctx.save(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.globalAlpha = 0.8; ctx.beginPath();
         for(let i=0; i<2; i++) {
             const px = (Math.random() - 0.5) * 50 * sizeMult; const py = (Math.random() - 0.5) * 50 * sizeMult;
@@ -214,12 +278,6 @@ function drawEntity(e) {
         }
         ctx.stroke(); ctx.restore();
 
-        if(Math.random() > 0.7) {
-            const rx = (Math.random() - 0.5) * 60 * sizeMult;
-            particles.push({
-                x: e.x + rx, y: e.y + 10, vx: 0, vy: -2 - Math.random()*3, life: 0.5, color: "#888", size: Math.random() * 3 + 1
-            });
-        }
         if(e.id === myId && Math.random() > 0.8) screenShake = 2;
     }
     else if (e.state === "CHARGING_ATK") {
@@ -227,43 +285,27 @@ function drawEntity(e) {
         const ringSize = (time % 500) / 500 * 60 * sizeMult; const invertRing = (60 * sizeMult) - ringSize;
         ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(0, 0, invertRing, 0, Math.PI*2); ctx.stroke();
-        if (Math.random() > 0.5) {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.4)"; ctx.globalCompositeOperation = "overlay";
-            ctx.beginPath(); ctx.arc(0, 0, 25*sizeMult, 0, Math.PI*2); ctx.fill();
-        }
         const shakeX = (Math.random() - 0.5) * 4; ctx.translate(shakeX, 0); ctx.restore();
     }
     else if (e.state === "CHARGING_BLAST") {
         ctx.save();
         ctx.rotate(e.angle); ctx.translate(20 * sizeMult, 0); 
         ctx.fillStyle = auraColor; ctx.shadowBlur = 20; ctx.shadowColor = auraColor;
-        const orbSize = 10 * sizeMult + Math.sin(time/20)*2;
-        ctx.beginPath(); ctx.arc(0, 0, orbSize, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = "#fff";
-        for(let i=0; i<3; i++) {
-            const r = 20 * sizeMult; const a = Math.random() * Math.PI * 2;
-            const px = Math.cos(a) * r; const py = Math.sin(a) * r; ctx.fillRect(px, py, 2, 2); 
-        }
+        ctx.beginPath(); ctx.arc(0, 0, 12 * sizeMult, 0, Math.PI*2); ctx.fill();
         ctx.restore();
     }
 
-    // ==========================================
-    // HOLOGRAMA ORIGINAL (FORMA ANTERIOR)
-    // SÓ DESENHA SE O SCOUTER ESTIVER DESLIGADO
-    // ==========================================
+    // HOLOGRAMA PADRÃO (SE SCOUTER OFF)
     if (!scouterActive && !e.isSpirit && e.id !== myId) {
         ctx.save();
         ctx.translate(30 * sizeMult, -50 * sizeMult);
         ctx.transform(1, -0.2, 0, 1, 0, 0); 
-
         ctx.strokeStyle = "rgba(0, 255, 255, 0.4)"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(-30, 20); ctx.lineTo(0, 0); ctx.lineTo(100, 0); ctx.stroke();
-
         ctx.fillStyle = e.isBoss ? "#ff3333" : "#00ffff";
         ctx.font = "bold 20px Orbitron";
         ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
-        ctx.fillText(`${e.name}`, 5, -8);
-        
+        ctx.fillText(`${e.name.substring(0,12)}`, 5, -8);
         const hpPerc = Math.max(0, e.hp / e.maxHp);
         ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 5, 100, 6);
         ctx.fillStyle = e.isBoss ? "#f00" : "#0f0"; ctx.fillRect(0, 5, 100 * hpPerc, 6);
@@ -279,10 +321,17 @@ function drawEntity(e) {
     ctx.fillStyle = e.color; 
     ctx.fillRect(-15*sizeMult, -12*sizeMult, 30*sizeMult, 24*sizeMult);
     
+    // CABEÇA
     ctx.fillStyle = e.isNPC ? (e.isBoss ? "#311" : "#2d2") : "#ffdbac"; 
-    if(e.name && e.name.includes("FRIEZA")) ctx.fillStyle = "#fff";
+    // Exceções de cor de pele
+    if(e.name && (e.name.includes("FRIEZA") || e.name.includes("METAL") || e.name.includes("WHITE"))) ctx.fillStyle = "#fff";
+    if(e.name && e.name.includes("BUU")) ctx.fillStyle = "#fbb";
+    if(e.name && e.name.includes("CELL")) ctx.fillStyle = "#dfd";
+    if(e.name && e.name.includes("JIREN")) ctx.fillStyle = "#eee";
+
     ctx.beginPath(); ctx.arc(0, -5*sizeMult, 12*sizeMult, 0, Math.PI*2); ctx.fill();
 
+    // CABELO
     if(!e.isNPC) { 
         let hColor = "#111"; 
         if(e.form === "SSJ" || e.form === "SSJ2") hColor = "#ffea00";
@@ -422,6 +471,11 @@ function draw() {
     craters.forEach(c => { ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill(); });
     rocks.forEach(r => { 
         ctx.fillStyle = r.type === "rock_namek" ? "#446" : "#543";
+        // Variação de cor de pedra por zona (Simples visual)
+        if(r.type === "rock_magic") ctx.fillStyle = "#636";
+        if(r.type === "rock_god") ctx.fillStyle = "#333";
+        if(r.type === "rock_city") ctx.fillStyle = "#556";
+
         ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI*2); ctx.fill(); 
         ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.arc(r.x-r.r/3, r.y+r.r/3, r.r/2, 0, Math.PI*2); ctx.fill();
     });
@@ -464,7 +518,6 @@ function draw() {
 
     ctx.restore();
 
-    // SÓ CHAMA O HUD SE ESTIVER ATIVADO
     if (scouterActive) {
         drawScouterHUD(me);
     }
@@ -481,7 +534,16 @@ function update() {
         document.getElementById("ki-bar").style.width = (me.ki/me.maxKi)*100 + "%";
         const xpPerc = (me.xp / (me.level*800)) * 100;
         document.getElementById("xp-bar").style.width = xpPerc + "%";
-        document.getElementById("stat-bp").innerText = `LVL ${me.level} | BP: ${me.bp}`;
+        
+        // Atualiza HUD com Zona Aproximada (Visual)
+        const dist = Math.hypot(me.x, me.y);
+        let zoneName = "TERRA";
+        if(dist > 5000 && dist < 15000) zoneName = "DBZ SAGA";
+        if(dist > 15000 && dist < 30000) zoneName = "GT / MOVIES";
+        if(dist > 30000 && dist < 50000) zoneName = "SUPER SAGA";
+        if(dist > 50000) zoneName = "DAIMA / ANGEL";
+        
+        document.getElementById("stat-bp").innerText = `LVL ${me.level} | ${zoneName}`;
         
         let ang = Math.atan2(mouse.y, mouse.x); 
         if (isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) {
