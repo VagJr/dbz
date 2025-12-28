@@ -10,42 +10,30 @@ let particles = [], shockwaves = [], trails = [], texts = [];
 let screenShake = 0, flash = 0, hitStop = 0;
 let joystickMove = { x: 0, y: 0 };
 
+// ESTADO DO SCOUTER (Começa desligado para manter a forma original)
+let scouterActive = false; 
+
 // ==========================================
 // CONFIGURAÇÃO DE ZOOM E CÂMERA
 // ==========================================
-const ZOOM_SCALE = 0.7; // 2.5x Zoom Out (Visão ampla)
-
+const ZOOM_SCALE = 0.7; 
 const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
 
 // =====================================================
 // CONTROLES E INPUTS
 // =====================================================
-
 function bindBtn(id, onPress, onRelease) {
     const el = document.getElementById(id);
     if (!el) return;
-
-    const press = e => {
-        e.preventDefault();
-        e.stopPropagation();
-        onPress && onPress();
-    };
-
-    const release = e => {
-        e.preventDefault();
-        e.stopPropagation();
-        onRelease && onRelease();
-    };
-
+    const press = e => { e.preventDefault(); e.stopPropagation(); onPress && onPress(); };
+    const release = e => { e.preventDefault(); e.stopPropagation(); onRelease && onRelease(); };
     el.addEventListener('touchstart', press, { passive: false });
     el.addEventListener('touchend', release, { passive: false });
-    el.addEventListener('touchcancel', release, { passive: false }); // ✅ CRÍTICO
-
+    el.addEventListener('touchcancel', release, { passive: false }); 
     el.addEventListener('mousedown', press);
     el.addEventListener('mouseup', release);
-    el.addEventListener('mouseleave', release); // mouse desktop
+    el.addEventListener('mouseleave', release); 
 }
-
 
 bindBtn('btn-atk', () => mouseLeft=true, () => { mouseLeft=false; socket.emit('release_attack'); });
 bindBtn('btn-blast', () => mouseRight=true, () => { mouseRight=false; socket.emit('release_blast'); });
@@ -53,6 +41,9 @@ bindBtn('btn-block', () => keys['KeyQ']=true, () => delete keys['KeyQ']);
 bindBtn('btn-charge', () => keys['KeyC']=true, () => delete keys['KeyC']);
 bindBtn('btn-vanish', () => socket.emit('vanish'));
 bindBtn('btn-transform', () => socket.emit('transform'));
+
+// TOGGLE SCOUTER
+bindBtn('btn-scouter', () => { scouterActive = !scouterActive; });
 
 const btnLogin = document.getElementById("btn-login");
 if(btnLogin) btnLogin.onclick = () => {
@@ -63,11 +54,9 @@ if(btnLogin) btnLogin.onclick = () => {
 
 window.addEventListener("contextmenu", e => e.preventDefault());
 
-// MOUSE CORRIGIDO PARA O ZOOM
 window.addEventListener("mousemove", e => { 
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
-    // O mouse agora representa a direção relativa ao centro da tela
     mouse.x = (e.clientX - centerX) / ZOOM_SCALE;
     mouse.y = (e.clientY - centerY) / ZOOM_SCALE;
 });
@@ -81,6 +70,7 @@ window.addEventListener("keydown", e => {
     keys[e.code] = true; 
     if(e.code === "Space") window.socket.emit("vanish"); 
     if(e.code === "KeyG") window.socket.emit("transform"); 
+    if(e.code === "KeyT") scouterActive = !scouterActive; // Tecla T para PC
 });
 window.addEventListener("keyup", e => keys[e.code] = false);
 
@@ -88,31 +78,17 @@ window.socket.on("auth_success", () => {
     myId = window.socket.id; 
     document.getElementById("login-screen").style.display = "none"; 
     document.getElementById("ui").style.display = "block"; 
-
     if (isMobile) {
-        const mui = document.getElementById("mobile-ui");
-        mui.style.display = "block";
-
-        // força layout antes do nipple
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                initMobileControls(); // ✅ AGORA APARECE
-            });
-        });
+        document.getElementById("mobile-ui").style.display = "block";
+        requestAnimationFrame(() => { requestAnimationFrame(() => { initMobileControls(); }); });
     }
 });
 
-
 window.socket.on("state", data => {
     if(!myId) return;
-
-    players = data.players;
-    npcs = data.npcs;
-    projectiles = data.projectiles;
-    rocks = data.rocks;
-    craters = data.craters || [];
+    players = data.players; npcs = data.npcs; projectiles = data.projectiles; 
+    rocks = data.rocks; craters = data.craters || [];
 });
-
 
 window.socket.on("fx", data => {
     if(data.type === "hit" || data.type === "heavy") {
@@ -122,10 +98,8 @@ window.socket.on("fx", data => {
         for(let i=0; i<12; i++) particles.push({ x: data.x, y: data.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1, color: "#ffaa00", size: 4 });
         if(data.dmg) {
             texts.push({
-                x: data.x, y: data.y - 40, 
-                text: data.dmg.toString(), 
-                color: data.type === "heavy" ? "#ff3333" : "#ffff00", 
-                life: 60, vy: -2, isDmg: true
+                x: data.x, y: data.y - 40, text: data.dmg.toString(), 
+                color: data.type === "heavy" ? "#ff3333" : "#ffff00", life: 60, vy: -2, isDmg: true
             });
         }
     }
@@ -133,9 +107,7 @@ window.socket.on("fx", data => {
     if(data.type === "transform") { 
         screenShake = 50; flash = 15; 
         let c = "#ff0";
-        if(data.form === "GOD") c = "#f00";
-        if(data.form === "BLUE") c = "#0ff";
-        if(data.form === "UI") c = "#fff";
+        if(data.form === "GOD") c = "#f00"; if(data.form === "BLUE") c = "#0ff"; if(data.form === "UI") c = "#fff";
         shockwaves.push({ x: data.x, y: data.y, r: 10, maxR: 400, a: 1, color: c }); 
     }
     if(data.type === "vanish") shockwaves.push({ x: data.x, y: data.y, r: 10, maxR: 80, a: 0.8, color: "#0ff" });
@@ -144,106 +116,63 @@ window.socket.on("fx", data => {
         shockwaves.push({ x: data.x, y: data.y, r: 10, maxR: 400, a: 1, color: "#fff" });
     }
 });
-let joystick = null;
 
+let joystick = null;
 function initMobileControls() {
     if (!isMobile || !window.nipplejs) return;
     if (joystick) return;
-
     const zone = document.getElementById('joystick-container');
     if (!zone) return;
-
     joystick = nipplejs.create({
-        zone,
-        mode: 'static',
-        position: { left: '50%', top: '50%' },
-        color: '#ff9900',
-        size: 120
+        zone, mode: 'static', position: { left: '50%', top: '50%' }, color: '#ff9900', size: 120
     });
-
     joystick.on('move', (evt, data) => {
         if (!data || !data.vector) return;
-        joystickMove.x = data.vector.x;
-        joystickMove.y = -data.vector.y;
+        joystickMove.x = data.vector.x; joystickMove.y = -data.vector.y;
     });
-
-    joystick.on('end', () => {
-        joystickMove.x = 0;
-        joystickMove.y = 0;
-    });
+    joystick.on('end', () => { joystickMove.x = 0; joystickMove.y = 0; });
 }
 
-// ==========================================
-// RENDERIZAÇÃO DO BACKGROUND CORRIGIDA
-// ==========================================
 function drawBackground(camX, camY) {
-    // Calculamos o tamanho da área visível no mundo (Viewport)
     const viewW = canvas.width / ZOOM_SCALE;
     const viewH = canvas.height / ZOOM_SCALE;
-
-    // Determina os limites de onde devemos desenhar
     const startX = camX - (viewW / 2);
     const startY = camY - (viewH / 2);
     const endX = camX + (viewW / 2);
     const endY = camY + (viewH / 2);
 
-    let bgColor = "#122a12"; 
-    let gridColor = "rgba(100,255,100,0.1)";
-
-    // Lógica de Biomas baseada na posição da câmera
+    let bgColor = "#122a12"; let gridColor = "rgba(100,255,100,0.1)";
     const dist = Math.hypot(camX, camY);
     if (dist > 50000) { bgColor = "#050015"; gridColor = "rgba(100,0,255,0.2)"; } 
-    else if (camY < -4000 && Math.abs(camX) < Math.abs(camY)) { bgColor = "#220000"; gridColor = "rgba(255,50,50,0.1)"; } // Gods
-    else if (camY > 4000 && Math.abs(camX) < Math.abs(camY)) { bgColor = "#331133"; gridColor = "rgba(255,100,255,0.1)"; } // Majin
-    else if (camX > 4000 && Math.abs(camY) < camX) { bgColor = "#004444"; gridColor = "rgba(100,255,255,0.1)"; } // Namek
-    else if (camX < -4000 && Math.abs(camY) < Math.abs(camX)) { bgColor = "#1a1a1a"; gridColor = "rgba(200,200,200,0.1)"; } // Android
+    else if (camY < -4000 && Math.abs(camX) < Math.abs(camY)) { bgColor = "#220000"; gridColor = "rgba(255,50,50,0.1)"; }
+    else if (camY > 4000 && Math.abs(camX) < Math.abs(camY)) { bgColor = "#331133"; gridColor = "rgba(255,100,255,0.1)"; } 
+    else if (camX > 4000 && Math.abs(camY) < camX) { bgColor = "#004444"; gridColor = "rgba(100,255,255,0.1)"; } 
+    else if (camX < -4000 && Math.abs(camY) < Math.abs(camX)) { bgColor = "#1a1a1a"; gridColor = "rgba(200,200,200,0.1)"; }
 
-    // 1. Preenche o fundo cobrindo TUDO que é visível (com sobra)
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(startX - 200, startY - 200, viewW + 400, viewH + 400);
+    ctx.fillStyle = bgColor; ctx.fillRect(startX - 200, startY - 200, viewW + 400, viewH + 400);
 
-    // 2. Desenha o Planeta/Lua se estiver em Namek e visível
     if(camX > 4000 && Math.abs(camY) < camX && dist < 50000) {
         ctx.fillStyle = "rgba(100,255,200, 0.15)";
         ctx.beginPath(); ctx.arc(6000, 0, 800, 0, Math.PI*2); ctx.fill();
     }
 
-    // 3. GRID FIXO NO MUNDO (Correção do "Bug" de deslizamento)
     const gridSize = 200;
     const firstLineX = Math.floor(startX / gridSize) * gridSize;
     const firstLineY = Math.floor(startY / gridSize) * gridSize;
 
-    ctx.strokeStyle = gridColor; 
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-
-    // Linhas Verticais
-    for(let x = firstLineX; x < endX + gridSize; x += gridSize) {
-        ctx.moveTo(x, startY - 100);
-        ctx.lineTo(x, endY + 100);
-    }
-    // Linhas Horizontais
-    for(let y = firstLineY; y < endY + gridSize; y += gridSize) {
-        ctx.moveTo(startX - 100, y);
-        ctx.lineTo(endX + 100, y);
-    }
+    ctx.strokeStyle = gridColor; ctx.lineWidth = 4; ctx.beginPath();
+    for(let x = firstLineX; x < endX + gridSize; x += gridSize) { ctx.moveTo(x, startY - 100); ctx.lineTo(x, endY + 100); }
+    for(let y = firstLineY; y < endY + gridSize; y += gridSize) { ctx.moveTo(startX - 100, y); ctx.lineTo(endX + 100, y); }
     ctx.stroke();
 
-    // 4. Caminho da Serpente
     if(camY < -1000 && camY > -9000 && Math.abs(camX) < 3000) {
         ctx.save();
-        ctx.strokeStyle = "#ffaa00"; 
-        ctx.lineWidth = 40; 
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#ffaa00";
+        ctx.strokeStyle = "#ffaa00"; ctx.lineWidth = 40; ctx.shadowBlur = 20; ctx.shadowColor = "#ffaa00";
         ctx.beginPath();
         const startSnake = Math.max(-10000, startY - 200);
         const endSnake = Math.min(-1000, endY + 200);
-        for(let y = endSnake; y > startSnake; y -= 100){ 
-            ctx.lineTo(Math.sin(y/400)*300, y); 
-        }
-        ctx.stroke(); 
-        ctx.restore();
+        for(let y = endSnake; y > startSnake; y -= 100){ ctx.lineTo(Math.sin(y/400)*300, y); }
+        ctx.stroke(); ctx.restore();
     }
 }
 
@@ -253,8 +182,7 @@ function drawEntity(e) {
     const sizeMult = e.isBoss ? 3.5 : 1;
     const time = Date.now();
     
-    // Configuração de Cores da Forma
-    let auraColor = "#00ffff"; // Base (Azul Cyan)
+    let auraColor = "#00ffff"; 
     if(e.color) auraColor = e.color; 
     if(e.form === "SSJ" || e.form === "SSJ2") auraColor = "#ffea00";
     if(e.form === "SSJ3") auraColor = "#ffcc00";
@@ -263,7 +191,6 @@ function drawEntity(e) {
     if(e.form === "UI") auraColor = "#ffffff";
     if(e.name && e.name.includes("BLACK")) auraColor = "#9000ff"; 
 
-    // AURA TRAIL (Rastro de movimento quando rápido)
     if(hitStop <= 0 && (Math.hypot(e.vx, e.vy) > 10)) {
         trails.push({ x: e.x, y: e.y, angle: e.angle, color: auraColor, alpha: 0.4, sizeMult });
     }
@@ -271,137 +198,72 @@ function drawEntity(e) {
     ctx.save(); 
     ctx.translate(e.x, e.y); 
 
-    // ============================================================
-    // 1. EFEITO: CARREGANDO KI (TECLA C) - "PODER EXPLOSIVO"
-    // ============================================================
     if (e.state === "CHARGING") {
-        // Aura Externa Pulsante (Chama Vertical)
         ctx.save();
-        const pulse = Math.sin(time / 50) * 0.1 + 1; 
-        const auraSize = 45 * sizeMult * pulse;
-        
+        const pulse = Math.sin(time / 50) * 0.1 + 1; const auraSize = 45 * sizeMult * pulse;
         const grd = ctx.createRadialGradient(0, 0, 15 * sizeMult, 0, 0, auraSize);
-        grd.addColorStop(0, "rgba(255, 255, 255, 0)");
-        grd.addColorStop(0.5, auraColor);
-        grd.addColorStop(1, "rgba(0, 0, 0, 0)");
-        
-        ctx.fillStyle = grd;
-        ctx.globalAlpha = 0.6;
-        ctx.scale(1, 1.3); // Estica para cima (fogo)
+        grd.addColorStop(0, "rgba(255, 255, 255, 0)"); grd.addColorStop(0.5, auraColor); grd.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = grd; ctx.globalAlpha = 0.6; ctx.scale(1, 1.3); 
         ctx.beginPath(); ctx.arc(0, -10, auraSize, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
 
-        // Raios subindo (Energia fluindo)
-        ctx.save();
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.globalAlpha = 0.8;
-        ctx.beginPath();
+        ctx.save(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.globalAlpha = 0.8; ctx.beginPath();
         for(let i=0; i<2; i++) {
-            const px = (Math.random() - 0.5) * 50 * sizeMult;
-            const py = (Math.random() - 0.5) * 50 * sizeMult;
-            const h = Math.random() * 40 * sizeMult;
-            ctx.moveTo(px, py); ctx.lineTo(px, py - h);
+            const px = (Math.random() - 0.5) * 50 * sizeMult; const py = (Math.random() - 0.5) * 50 * sizeMult;
+            const h = Math.random() * 40 * sizeMult; ctx.moveTo(px, py); ctx.lineTo(px, py - h);
         }
-        ctx.stroke();
-        ctx.restore();
+        ctx.stroke(); ctx.restore();
 
-        // Pedras flutuando (Debris)
         if(Math.random() > 0.7) {
             const rx = (Math.random() - 0.5) * 60 * sizeMult;
             particles.push({
-                x: e.x + rx, y: e.y + 10, 
-                vx: 0, vy: -2 - Math.random()*3, 
-                life: 0.5, color: "#888", size: Math.random() * 3 + 1
+                x: e.x + rx, y: e.y + 10, vx: 0, vy: -2 - Math.random()*3, life: 0.5, color: "#888", size: Math.random() * 3 + 1
             });
         }
         if(e.id === myId && Math.random() > 0.8) screenShake = 2;
     }
-
-    // ============================================================
-    // 2. EFEITO: SEGURAR SOCO (CLIQUE ESQ) - "CONCENTRAÇÃO FÍSICA"
-    // ============================================================
     else if (e.state === "CHARGING_ATK") {
         ctx.save();
-        
-        // Efeito de Implosão (Anéis fechando no jogador)
-        const ringSize = (time % 500) / 500 * 60 * sizeMult; // 60 -> 0
-        const invertRing = (60 * sizeMult) - ringSize;
-
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, invertRing, 0, Math.PI*2);
-        ctx.stroke();
-
-        // Brilho intenso na mão/corpo (Flash de Tensão)
+        const ringSize = (time % 500) / 500 * 60 * sizeMult; const invertRing = (60 * sizeMult) - ringSize;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, invertRing, 0, Math.PI*2); ctx.stroke();
         if (Math.random() > 0.5) {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-            ctx.globalCompositeOperation = "overlay";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.4)"; ctx.globalCompositeOperation = "overlay";
             ctx.beginPath(); ctx.arc(0, 0, 25*sizeMult, 0, Math.PI*2); ctx.fill();
         }
-
-        // Tremor lateral (Tensão muscular)
-        const shakeX = (Math.random() - 0.5) * 4;
-        ctx.translate(shakeX, 0);
-
-        ctx.restore();
+        const shakeX = (Math.random() - 0.5) * 4; ctx.translate(shakeX, 0); ctx.restore();
     }
-
-    // ============================================================
-    // 3. EFEITO: SEGURAR BLAST (CLIQUE DIR) - "ESFERA DE ENERGIA"
-    // ============================================================
-    // Nota: Requer que o e.state seja "CHARGING_BLAST" ou similar no futuro.
-    // Se usar o mesmo state do soco, cairá no efeito acima.
     else if (e.state === "CHARGING_BLAST") {
         ctx.save();
-        // Gira a esfera na frente do player
-        const orbDist = 20 * sizeMult;
-        // Posição da mão/boca (frente do angulo)
-        const handX = Math.cos(e.angle) * orbDist; // Como já estamos no translate(x,y), isso é local
-        const handY = Math.sin(e.angle) * orbDist; // Mas o rotate vem depois.
-
-        // Desenha esfera giratória pequena concentrando
-        ctx.rotate(e.angle); // Rotaciona para desenhar na frente
-        ctx.translate(20 * sizeMult, 0); // Move para frente
-        
-        // Esfera principal
-        ctx.fillStyle = auraColor;
-        ctx.shadowBlur = 20; ctx.shadowColor = auraColor;
+        ctx.rotate(e.angle); ctx.translate(20 * sizeMult, 0); 
+        ctx.fillStyle = auraColor; ctx.shadowBlur = 20; ctx.shadowColor = auraColor;
         const orbSize = 10 * sizeMult + Math.sin(time/20)*2;
         ctx.beginPath(); ctx.arc(0, 0, orbSize, 0, Math.PI*2); ctx.fill();
-        
-        // Partículas sendo sugadas para a esfera
         ctx.fillStyle = "#fff";
         for(let i=0; i<3; i++) {
-            const r = 20 * sizeMult;
-            const a = Math.random() * Math.PI * 2;
-            const px = Math.cos(a) * r;
-            const py = Math.sin(a) * r;
-            ctx.fillRect(px, py, 2, 2); // Pontinhos em volta
+            const r = 20 * sizeMult; const a = Math.random() * Math.PI * 2;
+            const px = Math.cos(a) * r; const py = Math.sin(a) * r; ctx.fillRect(px, py, 2, 2); 
         }
-        
         ctx.restore();
     }
 
-    // ============================================================
-    
-    // HOLOGRAMA DE STATUS
-    if(!e.isSpirit && e.id !== myId) {
+    // ==========================================
+    // HOLOGRAMA ORIGINAL (FORMA ANTERIOR)
+    // SÓ DESENHA SE O SCOUTER ESTIVER DESLIGADO
+    // ==========================================
+    if (!scouterActive && !e.isSpirit && e.id !== myId) {
         ctx.save();
         ctx.translate(30 * sizeMult, -50 * sizeMult);
         ctx.transform(1, -0.2, 0, 1, 0, 0); 
 
-        // Linha
-        ctx.strokeStyle = "rgba(0, 255, 255, 0.4)";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(0, 255, 255, 0.4)"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(-30, 20); ctx.lineTo(0, 0); ctx.lineTo(100, 0); ctx.stroke();
 
-        // Texto
         ctx.fillStyle = e.isBoss ? "#ff3333" : "#00ffff";
         ctx.font = "bold 20px Orbitron";
         ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
         ctx.fillText(`${e.name}`, 5, -8);
         
-        // Barra HP
         const hpPerc = Math.max(0, e.hp / e.maxHp);
         ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 5, 100, 6);
         ctx.fillStyle = e.isBoss ? "#f00" : "#0f0"; ctx.fillRect(0, 5, 100 * hpPerc, 6);
@@ -409,38 +271,25 @@ function drawEntity(e) {
     }
 
     ctx.globalAlpha = isSpirit ? 0.5 : 1.0;
-    
-    // Rotação do Personagem (Se não estivermos no bloco do Blast que já rodou, rodamos aqui)
-    // O save/restore dos blocos acima garante que a rotação não acumule errado
     ctx.rotate(e.angle);
 
-    // CORPO
     ctx.shadowBlur = 0;
-    if(e.form !== "BASE" || e.state === "CHARGING") { 
-        ctx.shadowBlur = 15; 
-        ctx.shadowColor = auraColor; 
-    }
+    if(e.form !== "BASE" || e.state === "CHARGING") { ctx.shadowBlur = 15; ctx.shadowColor = auraColor; }
     
     ctx.fillStyle = e.color; 
     ctx.fillRect(-15*sizeMult, -12*sizeMult, 30*sizeMult, 24*sizeMult);
     
-    // CABEÇA
     ctx.fillStyle = e.isNPC ? (e.isBoss ? "#311" : "#2d2") : "#ffdbac"; 
     if(e.name && e.name.includes("FRIEZA")) ctx.fillStyle = "#fff";
     ctx.beginPath(); ctx.arc(0, -5*sizeMult, 12*sizeMult, 0, Math.PI*2); ctx.fill();
 
-    // CABELO
     if(!e.isNPC) { 
         let hColor = "#111"; 
         if(e.form === "SSJ" || e.form === "SSJ2") hColor = "#ffea00";
         if(e.form === "SSJ3") hColor = "#ffcc00";
-        if(e.form === "GOD") hColor = "#aa0000";
-        if(e.form === "BLUE") hColor = "#00bbff";
-        if(e.form === "UI") hColor = "#dddddd";
-
+        if(e.form === "GOD") hColor = "#aa0000"; if(e.form === "BLUE") hColor = "#00bbff"; if(e.form === "UI") hColor = "#dddddd";
         ctx.fillStyle = hColor; 
         const hairSize = e.form === "SSJ3" ? 2.5 : 1; 
-
         for(let i=0; i<3; i++) { 
             ctx.beginPath(); ctx.moveTo(-10*sizeMult, -10*sizeMult); 
             ctx.lineTo((-15+i*15)*sizeMult, -35*sizeMult * hairSize); 
@@ -452,46 +301,125 @@ function drawEntity(e) {
         ctx.strokeStyle = "rgba(100,200,255,0.7)"; 
         ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0,0, 40*sizeMult, -1, 1); ctx.stroke(); 
     }
+    ctx.restore();
+}
+
+function drawScouterHUD(me) {
+    if (!me) return;
+    const time = Date.now();
+    const scouterColor = "#00ff00"; 
+    const dangerColor = "#ff0000";
+    const W = canvas.width; const H = canvas.height;
+
+    ctx.save();
     
+    // Filtro Verde
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "rgba(0, 255, 0, 0.03)"; ctx.fillRect(0,0,W,H);
+    const scanY = (time / 5) % H;
+    ctx.fillStyle = "rgba(0, 255, 0, 0.1)"; ctx.fillRect(0, scanY, W, 5);
+
+    // Mira
+    const cx = W / 2; const cy = H / 2;
+    ctx.strokeStyle = "rgba(0, 255, 0, 0.4)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, 30, 0.5, 2.5); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 30, 3.5, 5.5); ctx.stroke();
+    ctx.fillStyle = scouterColor; ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI*2); ctx.fill();
+
+    let bossNearby = false; let highPowerNearby = false;
+    const allEntities = [...npcs, ...Object.values(players)];
+
+    allEntities.forEach(e => {
+        if (e.id === me.id || e.isDead || e.isSpirit) return;
+        const screenX = cx + (e.x - cam.x) * ZOOM_SCALE;
+        const screenY = cy + (e.y - cam.y) * ZOOM_SCALE;
+        const dist = Math.hypot(e.x - me.x, e.y - me.y);
+        const isBoss = e.isBoss || e.level > me.level + 10;
+        if(isBoss && dist < 3000) bossNearby = true;
+        if(e.bp > me.bp * 1.5 && dist < 3000) highPowerNearby = true;
+        const onScreen = screenX > -50 && screenX < W + 50 && screenY > -50 && screenY < H + 50;
+
+        if (onScreen) {
+            ctx.save(); ctx.translate(screenX, screenY);
+            const boxSize = (e.r || 20) * ZOOM_SCALE * 2.5;
+            const bracketCol = isBoss ? dangerColor : scouterColor;
+            
+            ctx.strokeStyle = bracketCol; ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
+            const b = boxSize / 2;
+            ctx.beginPath();
+            ctx.moveTo(-b, -b + 10); ctx.lineTo(-b, -b); ctx.lineTo(-b + 10, -b); 
+            ctx.moveTo(b, -b + 10); ctx.lineTo(b, -b); ctx.lineTo(b - 10, -b);   
+            ctx.moveTo(-b, b - 10); ctx.lineTo(-b, b); ctx.lineTo(-b + 10, b);   
+            ctx.moveTo(b, b - 10); ctx.lineTo(b, b); ctx.lineTo(b - 10, b);      
+            ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(b, -b); ctx.lineTo(b + 20, -b - 20); ctx.lineTo(b + 80, -b - 20); ctx.stroke();
+
+            ctx.fillStyle = bracketCol; ctx.font = "bold 12px Orbitron";
+            ctx.shadowBlur = 4; ctx.shadowColor = bracketCol;
+            ctx.fillText(e.name.substring(0, 10), b + 25, -b - 25);
+            ctx.fillText(`BP: ${e.bp.toLocaleString()}`, b + 25, -b - 10);
+            ctx.fillText(`DST: ${Math.floor(dist)}m`, b + 25, -b + 5);
+            ctx.restore();
+        } else {
+            const angle = Math.atan2(screenY - cy, screenX - cx);
+            const edgeDistX = (W / 2) - 40; const edgeDistY = (H / 2) - 40;
+            let indX = Math.cos(angle) * 1000; let indY = Math.sin(angle) * 1000;
+            if (indX > edgeDistX) indX = edgeDistX; if (indX < -edgeDistX) indX = -edgeDistX;
+            if (indY > edgeDistY) indY = edgeDistY; if (indY < -edgeDistY) indY = -edgeDistY;
+
+            if (dist < 4000 || isBoss) {
+                ctx.save(); ctx.translate(cx + indX, cy + indY); ctx.rotate(angle);
+                ctx.fillStyle = isBoss ? dangerColor : scouterColor;
+                ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-10, 5); ctx.lineTo(-10, -5); ctx.fill();
+                if (isBoss && (Math.floor(time / 200) % 2 === 0)) {
+                    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0,0, 15, 0, Math.PI*2); ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+    });
+
+    ctx.save(); ctx.translate(W - 120, 100); ctx.fillStyle = scouterColor; ctx.font = "10px Orbitron"; ctx.globalAlpha = 0.5;
+    for(let i=0; i<10; i++) {
+        const val = Math.floor(Math.random() * 999999);
+        ctx.fillText(`${val}`, 0, i * 15); ctx.fillRect(-10, i * 15 - 8, -(Math.random()*30), 2);
+    }
+    ctx.restore();
+
+    if (bossNearby || highPowerNearby) {
+        if (Math.floor(time / 300) % 2 === 0) { 
+            ctx.save(); ctx.translate(cx, cy - 100);
+            ctx.fillStyle = dangerColor; ctx.font = "bold 20px Orbitron"; ctx.textAlign = "center";
+            ctx.shadowBlur = 10; ctx.shadowColor = dangerColor;
+            ctx.fillText("HIGH ENERGY DETECTED", 0, 0);
+            ctx.strokeStyle = dangerColor; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(130, 10); ctx.lineTo(-130, 10); ctx.lineTo(0, -30); ctx.stroke();
+            ctx.restore();
+        }
+    }
     ctx.restore();
 }
 
 function draw() {
-    // --- CORREÇÃO IMPORTANTE DO CONGELAMENTO ---
     if(hitStop > 0) hitStop--; 
-    // -------------------------------------------
-
-    if(flash > 0) { 
-        ctx.fillStyle = `rgba(255,255,255,${flash/10})`; 
-        ctx.fillRect(0,0,canvas.width,canvas.height); 
-        flash--; 
-    } else { 
-        ctx.clearRect(0,0,canvas.width,canvas.height); 
-    }
+    if(flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash/10})`; ctx.fillRect(0,0,canvas.width,canvas.height); flash--; } 
+    else { ctx.clearRect(0,0,canvas.width,canvas.height); }
 
     const me = players[myId]; if(!me) return;
 
-    // Câmera Suave
-    cam.x += (me.x - cam.x) * 0.1;
-    cam.y += (me.y - cam.y) * 0.1;
-
+    cam.x += (me.x - cam.x) * 0.1; cam.y += (me.y - cam.y) * 0.1;
     let sx = 0, sy = 0;
     if(screenShake > 0) { sx = (Math.random()-0.5)*screenShake; sy = (Math.random()-0.5)*screenShake; screenShake *= 0.9; }
 
     ctx.save();
-    
-    // 1. Centraliza
     ctx.translate(canvas.width / 2, canvas.height / 2);
-    // 2. Aplica Zoom
     ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
-    // 3. Move Câmera (Inverso da posição do player)
     ctx.translate(-cam.x + sx, -cam.y + sy);
 
-    // Renderiza Mundo
     drawBackground(cam.x, cam.y);
 
     craters.forEach(c => { ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill(); });
-    
     rocks.forEach(r => { 
         ctx.fillStyle = r.type === "rock_namek" ? "#446" : "#543";
         ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI*2); ctx.fill(); 
@@ -502,13 +430,11 @@ function draw() {
         ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.angle); 
         ctx.globalAlpha = t.alpha; ctx.fillStyle = t.color; 
         ctx.fillRect(-15*t.sizeMult, -12*t.sizeMult, 30*t.sizeMult, 24*t.sizeMult); 
-        ctx.restore(); 
-        t.alpha -= 0.08; if(t.alpha <= 0) trails.splice(i, 1); 
+        ctx.restore(); t.alpha -= 0.08; if(t.alpha <= 0) trails.splice(i, 1); 
     });
 
     shockwaves.forEach((s, i) => { 
-        s.r += 12; s.a -= 0.05; 
-        ctx.strokeStyle = s.color; ctx.lineWidth = 8; ctx.globalAlpha = s.a; 
+        s.r += 12; s.a -= 0.05; ctx.strokeStyle = s.color; ctx.lineWidth = 8; ctx.globalAlpha = s.a; 
         ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.stroke(); 
         if(s.a <= 0) shockwaves.splice(i, 1); 
     });
@@ -517,34 +443,31 @@ function draw() {
     Object.values(players).forEach(drawEntity);
 
     projectiles.forEach(pr => { 
-        ctx.fillStyle = pr.color; 
-        ctx.shadowBlur=20; ctx.shadowColor=pr.color; 
+        ctx.fillStyle = pr.color; ctx.shadowBlur=20; ctx.shadowColor=pr.color; 
         ctx.beginPath(); ctx.arc(pr.x, pr.y, pr.size, 0, Math.PI*2); ctx.fill(); 
-        ctx.shadowBlur=0; 
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(pr.x, pr.y, pr.size*0.5, 0, Math.PI*2); ctx.fill(); 
+        ctx.shadowBlur=0; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(pr.x, pr.y, pr.size*0.5, 0, Math.PI*2); ctx.fill(); 
     });
 
     particles.forEach((p, i) => { 
-        p.x += p.vx; p.y += p.vy; p.life -= 0.05; 
-        ctx.fillStyle = p.color; ctx.globalAlpha = p.life; 
-        ctx.fillRect(p.x, p.y, p.size, p.size); 
-        if(p.life <= 0) particles.splice(i, 1); 
+        p.x += p.vx; p.y += p.vy; p.life -= 0.05; ctx.fillStyle = p.color; ctx.globalAlpha = p.life; 
+        ctx.fillRect(p.x, p.y, p.size, p.size); if(p.life <= 0) particles.splice(i, 1); 
     });
 
     texts.forEach((t, i) => { 
         t.y += (t.vy || -0.5); t.life--; 
-        ctx.save();
-        ctx.translate(t.x, t.y);
+        ctx.save(); ctx.translate(t.x, t.y);
         if(t.isDmg) ctx.scale(1 + Math.sin(Date.now()/50)*0.2, 1 + Math.sin(Date.now()/50)*0.2); 
-        ctx.fillStyle = t.color; ctx.globalAlpha = t.life/60; 
-        ctx.font = "bold 28px Orbitron"; 
-        ctx.strokeStyle = "black"; ctx.lineWidth = 4; 
-        ctx.strokeText(t.text, 0, 0); ctx.fillText(t.text, 0, 0); 
-        ctx.restore();
-        if(t.life<=0) texts.splice(i,1); 
+        ctx.fillStyle = t.color; ctx.globalAlpha = t.life/60; ctx.font = "bold 28px Orbitron"; 
+        ctx.strokeStyle = "black"; ctx.lineWidth = 4; ctx.strokeText(t.text, 0, 0); ctx.fillText(t.text, 0, 0); 
+        ctx.restore(); if(t.life<=0) texts.splice(i,1); 
     });
 
     ctx.restore();
+
+    // SÓ CHAMA O HUD SE ESTIVER ATIVADO
+    if (scouterActive) {
+        drawScouterHUD(me);
+    }
 }
 
 let lastInputSent = 0;
