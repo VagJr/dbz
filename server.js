@@ -395,30 +395,51 @@ setInterval(() => {
         p.x += p.vx; p.y += p.vy; p.vx *= 0.82; p.vy *= 0.82; 
         
         if (!p.isDead && !p.isSpirit) {
-            p.bp += 1 + Math.floor(p.level * 0.1);
-clampBP(p);
-            if (p.state === "CHARGING") {
-    if (Math.random() > 0.85) {
-        p.xp += 1;
-        p.bp += 5;
-        clampBP(p);
-    }
-}
-                const xpReq = p.level * 800;
-                if(p.xp >= xpReq) {
-                   p.level++; p.xp = 0; p.bp += 5000; clampBP(p);
-                   p.baseMaxHp += 1000; p.baseMaxKi += 100;
-                   const stats = FORM_STATS[p.form] || FORM_STATS["BASE"];
-                   p.maxHp = p.baseMaxHp * stats.hpMult; p.maxKi = p.baseMaxKi * stats.kiMult;
-                   p.hp = p.maxHp; p.ki = p.maxKi; p.xpToNext = p.level * 800;
-                   io.emit("fx", { type: "levelup", x: p.x, y: p.y });
-                   
-                   // SALVAR NO BANCO
-                   pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', 
-                       [p.level, p.xp, p.bp, p.name]).catch(e => console.error(e));
-                }
-            } else if(p.ki < p.maxKi && p.state === "IDLE") { p.ki += 0.5; }
+
+    // BP passivo
+    p.bp += 1 + Math.floor(p.level * 0.1);
+    clampBP(p);
+
+    // Training / Charge
+    if (p.state === "CHARGING") {
+        if (Math.random() > 0.85) {
+            p.xp += 1;
+            p.bp += 5;
+            clampBP(p);
         }
+    }
+
+    // Level up
+    const xpReq = p.level * 800;
+    if (p.xp >= xpReq) {
+        p.level++;
+        p.xp = 0;
+        p.bp += 5000;
+        clampBP(p);
+
+        p.baseMaxHp += 1000;
+        p.baseMaxKi += 100;
+
+        const stats = FORM_STATS[p.form] || FORM_STATS["BASE"];
+        p.maxHp = p.baseMaxHp * stats.hpMult;
+        p.maxKi = p.baseMaxKi * stats.kiMult;
+
+        p.hp = p.maxHp;
+        p.ki = p.maxKi;
+        p.xpToNext = p.level * 800;
+
+        io.emit("fx", { type: "levelup", x: p.x, y: p.y });
+
+        // salvar
+        pool.query(
+            'UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4',
+            [p.level, p.xp, p.bp, p.name]
+        ).catch(e => console.error(e));
+    }
+
+} else if (p.ki < p.maxKi && p.state === "IDLE") {
+    p.ki += 0.5;
+}
         
         if (p.bp >= getMaxBP(p)) {
     if (!p.bpCapped) {
