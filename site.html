@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dragon Bolt: Universe — Manga Edition</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Roboto+Condensed:wght@700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================
+   VARIAVEIS DBZ STYLE
+   ========================= */
+:root {
+    --db-orange: #ff9900;
+    --db-blue: #0088ff;
+    --db-red: #ff3333;
+    --manga-black: #111;
+    --manga-white: #fff;
+    --ink-border: 4px solid var(--manga-black);
+}
+
+/* =========================
+   BASE & RESET
+   ========================= */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background-color: #f0f0f0;
+    font-family: 'Roboto Condensed', sans-serif;
+    color: var(--manga-black);
+    overflow-x: hidden;
+    /* Efeito de Retícula (Pontos de Manga) */
+    background-image: radial-gradient(var(--db-orange) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+h1, h2, h3, .btn {
+    font-family: 'Bangers', cursive;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* =========================
+   LINHAS DE AÇÃO (SPEED LINES)
+   ========================= */
+.speed-lines {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-conic-gradient(
+        from 0deg,
+        transparent 0deg 10deg,
+        rgba(255,255,255,0.8) 10deg 20deg
+    );
+    opacity: 0.3;
+    z-index: -1;
+    animation: rotateLines 20s linear infinite;
+}
+
+@keyframes rotateLines {
+    from { transform: rotate(0deg) scale(1.5); }
+    to { transform: rotate(360deg) scale(1.5); }
+}
+
+/* =========================
+   HEADER / CAPA DE MANGA
+   ========================= */
+.manga-cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(255,153,0,0.9) 0%, rgba(255,255,0,0.4) 100%);
+    clip-path: polygon(0 0, 100% 0, 100% 95%, 0 100%); /* Corte diagonal no fim */
+}
+
+.title-box {
+    background: var(--manga-white);
+    border: var(--ink-border);
+    padding: 40px 60px;
+    transform: rotate(-3deg); /* Leve inclinação dinâmica */
+    box-shadow: 15px 15px 0px var(--manga-black);
+    text-align: center;
+    max-width: 800px;
+}
+
+h1 {
+    font-size: 80px;
+    color: var(--db-orange);
+    -webkit-text-stroke: 3px var(--manga-black); /* Borda na letra */
+    line-height: 0.9;
+    text-shadow: 5px 5px 0 #000;
+}
+
+h1 span {
+    display: block;
+    font-size: 30px;
+    color: var(--db-blue);
+    -webkit-text-stroke: 1px var(--manga-black);
+    margin-top: 10px;
+}
+
+.intro-text {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    background: var(--manga-black);
+    color: #fff;
+    padding: 10px;
+    transform: skewX(-10deg);
+}
+
+/* BOTÕES ESTILO SHONEN */
+.action-area {
+    margin-top: 40px;
+    display: flex;
+    gap: 20px;
+    transform: rotate(3deg);
+}
+
+.btn {
+    font-size: 28px;
+    padding: 15px 40px;
+    border: var(--ink-border);
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 8px 8px 0 rgba(0,0,0,1);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background: var(--db-blue);
+    color: #fff;
+    text-shadow: 2px 2px 0 #000;
+}
+
+.btn-secondary {
+    background: #fff;
+    color: #000;
+}
+
+.btn:hover {
+    transform: translate(-5px, -5px);
+    box-shadow: 13px 13px 0 rgba(0,0,0,1);
+}
+
+.btn:active {
+    transform: translate(0, 0);
+    box-shadow: 0 0 0;
+}
+
+/* =========================
+   PAINÉIS DE QUADRINHOS (GRID)
+   ========================= */
+.comic-page {
+    max-width: 1200px;
+    margin: 60px auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    padding: 20px;
+}
+
+.panel {
+    background: #fff;
+    border: var(--ink-border);
+    padding: 30px;
+    position: relative;
+    box-shadow: 10px 10px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+    overflow: hidden;
+}
+
+.panel:hover {
+    transform: scale(1.02);
+    box-shadow: 15px 15px 0 var(--db-orange);
+}
+
+/* Balão de fala para títulos */
+.panel h3 {
+    background: var(--manga-black);
+    color: var(--db-orange);
+    display: inline-block;
+    padding: 5px 15px;
+    font-size: 32px;
+    transform: skewX(-10deg);
+    margin-bottom: 15px;
+    border: 2px solid #fff;
+}
+
+.panel p {
+    font-size: 18px;
+    line-height: 1.4;
+    font-weight: 700;
+}
+
+/* Efeito de som visual (Onomatopeia) */
+.sfx {
+    position: absolute;
+    bottom: -10px;
+    right: 10px;
+    font-family: 'Bangers', cursive;
+    font-size: 80px;
+    color: rgba(200,200,200,0.3);
+    z-index: 0;
+    pointer-events: none;
+    transform: rotate(-15deg);
+}
+
+/* =========================
+   SEÇÃO POWER UP (LOOP)
+   ========================= */
+.power-section {
+    background: var(--manga-black);
+    color: #fff;
+    padding: 80px 20px;
+    text-align: center;
+    position: relative;
+    /* Borda serrilhada estilo explosão */
+    clip-path: polygon(0 5%, 100% 0, 100% 95%, 0 100%);
+}
+
+.power-steps {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 40px;
+    margin-top: 40px;
+}
+
+.step-card {
+    border: 4px solid #fff;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--db-blue);
+    border-radius: 50%; /* Esferas */
+    position: relative;
+}
+
+.step-card span {
+    font-family: 'Bangers';
+    font-size: 50px;
+    position: absolute;
+    top: -20px;
+    left: -10px;
+    color: var(--db-orange);
+    text-shadow: 3px 3px 0 #000;
+    -webkit-text-stroke: 2px #000;
+}
+
+/* =========================
+   ZONAS (SCREENTONES)
+   ========================= */
+.zones-container {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.zone-tag {
+    display: inline-block;
+    background: #fff;
+    border: 3px solid #000;
+    padding: 10px 25px;
+    margin: 10px;
+    font-size: 24px;
+    font-family: 'Bangers';
+    transform: skewX(-15deg);
+    box-shadow: 5px 5px 0 #bbb;
+}
+
+.zone-tag:hover {
+    background: var(--db-orange);
+    color: #fff;
+    transform: skewX(-15deg) translateY(-5px);
+    box-shadow: 5px 10px 0 #000;
+}
+
+/* =========================
+   FOOTER
+   ========================= */
+footer {
+    background: var(--db-orange);
+    border-top: var(--ink-border);
+    padding: 40px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 18px;
+    text-transform: uppercase;
+}
+
+/* MOBILE */
+@media(max-width: 768px) {
+    .comic-page { grid-template-columns: 1fr; }
+    h1 { font-size: 50px; }
+    .action-area { flex-direction: column; }
+    .step-card { width: 150px; height: 150px; }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="speed-lines"></div>
+
+<header class="manga-cover">
+    <div class="title-box">
+        <h1>DRAGON BOLT<br><span>UNIVERSE ONLINE</span></h1>
+        <div class="intro-text">
+            O MMO DE LUTA SUPREMA NO NAVEGADOR!
+        </div>
+    </div>
+
+    <div class="action-area">
+        <button class="btn btn-primary" onclick="window.location.href='/game.html'">COMEÇAR MISSÃO</button>
+        <button class="btn btn-secondary">LER GUIA</button>
+    </div>
+</header>
+
+<section class="comic-page">
+    <div class="panel">
+        <div class="sfx">KABOOM!</div>
+        <h3>01. COMBATE REAL</h3>
+        <p>Esqueça os cliques lentos. Aqui é soco na cara, esquiva rápida e rajadas de Ki em tempo real. Seus reflexos definem o vencedor!</p>
+    </div>
+
+    <div class="panel">
+        <div class="sfx">WOOSH!</div>
+        <h3>02. MUNDO INFINITO</h3>
+        <p>Voe livremente por um mapa gigantesco. Da Terra a Namekusei, encontre inimigos, segredos e outros jogadores lutando.</p>
+    </div>
+
+    <div class="panel">
+        <div class="sfx">GYAAH!</div>
+        <h3>03. TRANSFORMACÕES</h3>
+        <p>Aumente seu Ki e mude de forma! Super Saiyajin, Deus, Instinto... cada forma muda sua aura, velocidade e poder destrutivo.</p>
+    </div>
+
+    <div class="panel">
+        <div class="sfx">VS</div>
+        <h3>04. MULTIPLAYER PVP</h3>
+        <p>Desafie qualquer um que cruzar seu caminho. Forme alianças ou torne-se o vilão do servidor.</p>
+    </div>
+</section>
+
+<section class="power-section">
+    <h2 style="font-size: 48px; color: var(--db-orange); text-shadow: 3px 3px 0 #000;">CAMINHO DO GUERREIRO</h2>
+    
+    <div class="power-steps">
+        <div class="step-card">
+            <span>1</span>
+            <p>TREINE<br>MOBS</p>
+        </div>
+        <div class="step-card" style="background: var(--db-red);">
+            <span>2</span>
+            <p>DERROTE<br>BOSSES</p>
+        </div>
+        <div class="step-card" style="background: var(--db-orange);">
+            <span>3</span>
+            <p>LIBERE<br>FORMAS</p>
+        </div>
+        <div class="step-card" style="background: #fff; color:#000;">
+            <span>4</span>
+            <p>DOMINE<br>O SERVER</p>
+        </div>
+    </div>
+</section>
+
+<div class="zones-container">
+    <h2 style="font-size:36px; margin-bottom:20px;">MAPA DO UNIVERSO</h2>
+    <div>
+        <div class="zone-tag">TERRA</div>
+        <div class="zone-tag" style="color:#008800">NAMEK</div>
+        <div class="zone-tag" style="color:#cc0000">MAJIN</div>
+        <div class="zone-tag" style="color:#6600cc">DEUSES</div>
+        <div class="zone-tag" style="color:#555">ANDROID</div>
+    </div>
+</div>
+
+<footer>
+    <p>DRAGON BOLT UNIVERSE &copy; 2025 • PROJETO DE FÃ</p>
+</footer>
+
+</body>
+</html>
