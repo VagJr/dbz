@@ -2,49 +2,141 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>DRAGON BOLT: INFINITE UNIVERSE</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAGON BOLT: UNIVERSE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; }
-        canvas { display: block; position: absolute; top: 0; left: 0; }
-        #login-screen { position: fixed; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .box { border: 2px solid #ff9900; padding: 40px; text-align: center; background: #111; box-shadow: 0 0 20px #ff9900; }
-        input { display: block; margin: 10px; padding: 10px; background: #000; color: #fff; border: 1px solid #ff9900; font-family: 'Orbitron'; }
-        button { padding: 10px 20px; background: #ff9900; border: none; cursor: pointer; font-family: 'Orbitron'; font-weight: bold; }
-        button:hover { background: #ffcc00; }
-        #ui { display: none; position: fixed; top: 20px; left: 20px; z-index: 100; pointer-events: none; }
-        .bar { width: 300px; height: 15px; background: #333; margin: 5px; border: 1px solid #fff; position: relative; }
-        .fill { height: 100%; width: 100%; transition: 0.2s; }
-        #hp-bar { background: linear-gradient(90deg, #f00, #a00); } 
-        #ki-bar { background: linear-gradient(90deg, #0ff, #00a); }
-        /* NOVA BARRA DE XP */
-        #xp-bar { background: linear-gradient(90deg, #0f0, #0a0); width: 0%; }
-        .bar-label { position: absolute; left: 5px; top: -2px; font-size: 10px; color: #fff; text-shadow: 1px 1px 0 #000; }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #000; overflow: hidden; 
+            font-family: 'Orbitron', sans-serif; 
+            color: #fff;
+        }
+
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* TELA DE LOGIN */
+        #login-screen { 
+            position: fixed; width: 100%; height: 100%; 
+            background: radial-gradient(circle, #222 0%, #000 100%); 
+            z-index: 1000; display: flex; align-items: center; 
+            justify-content: center; flex-direction: column; 
+        }
+        .login-box { 
+            border: 3px solid #ff9900; padding: 50px; text-align: center; 
+            background: rgba(17, 17, 17, 0.9); 
+            box-shadow: 0 0 30px rgba(255, 153, 0, 0.5);
+            border-radius: 10px;
+        }
+        h1 { color: #ff9900; font-size: 42px; margin-bottom: 30px; text-shadow: 3px 3px 0 #000; }
+        input { 
+            display: block; margin: 15px auto; padding: 12px; 
+            background: #000; color: #fff; border: 1px solid #ff9900; 
+            font-family: 'Orbitron'; width: 250px; outline: none;
+            transition: 0.3s;
+        }
+        input:focus { box-shadow: 0 0 10px #ff9900; }
+        button { 
+            padding: 12px 30px; background: #ff9900; color: #000; 
+            border: none; cursor: pointer; font-family: 'Orbitron'; 
+            font-weight: bold; font-size: 16px; margin-top: 10px;
+            transition: 0.3s;
+        }
+        button:hover { background: #fff; transform: scale(1.05); }
+
+        /* INTERFACE DO USUÁRIO (HUD) */
+        #ui { 
+            position: fixed; top: 20px; left: 20px; z-index: 100; 
+            pointer-events: none; width: 350px;
+        }
+
+        .stat-label { font-size: 12px; color: #aaa; margin-bottom: 2px; }
+        #stat-bp { color: #ffcc00; font-size: 24px; text-shadow: 2px 2px 0 #000; font-weight: 900; }
+        #stat-zone { color: #00ffcc; font-size: 16px; text-shadow: 1px 1px 0 #000; margin-bottom: 10px; }
+
+        .bar-container { margin-bottom: 8px; }
+        .bar { 
+            width: 100%; height: 18px; background: rgba(0,0,0,0.6); 
+            border: 2px solid #fff; position: relative; overflow: hidden;
+            border-radius: 4px;
+        }
+        .fill { height: 100%; width: 100%; transition: 0.3s ease-out; }
         
-        #stat-bp { color: #ffcc00; font-size: 20px; text-shadow: 2px 2px 0 #000; font-weight: bold; }
-        #stat-zone { color: #fff; font-size: 14px; text-shadow: 1px 1px 0 #000; margin-bottom: 5px; }
-        #controls { position: fixed; bottom: 10px; left: 10px; color: #aaa; font-size: 10px; z-index: 100; text-shadow: 1px 1px 0 #000; }
+        #hp-bar { background: linear-gradient(90deg, #ff0000, #990000); }
+        #ki-bar { background: linear-gradient(90deg, #00ffff, #0066ff); }
+        #xp-bar { background: linear-gradient(90deg, #ffff00, #ff9900); height: 5px !important; }
+
+        .bar-text { 
+            position: absolute; width: 100%; text-align: center; 
+            font-size: 10px; font-weight: bold; top: 1px; 
+            text-shadow: 1px 1px 0 #000; 
+        }
+
+        /* CONTROLES NO RODAPÉ */
+        #controls-hint { 
+            position: fixed; bottom: 15px; right: 20px; 
+            color: rgba(255,255,255,0.5); font-size: 11px; 
+            text-align: right; z-index: 100;
+        }
+
+        /* EFEITO DE DANO NA TELA */
+        #damage-vignette {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            pointer-events: none; box-shadow: inset 0 0 100px rgba(255,0,0,0);
+            transition: 0.2s; z-index: 99;
+        }
     </style>
 </head>
 <body>
+
+    <div id="damage-vignette"></div>
+
     <div id="login-screen">
-        <div class="box">
-            <h1 style="color: #ff9900;">DRAGON BOLT INFINITE</h1>
-            <input type="text" id="username" placeholder="Nome do Guerreiro">
+        <div class="login-box">
+            <h1>DRAGON BOLT<br><span style="font-size: 24px; color: #fff;">UNIVERSE</span></h1>
+            <input type="text" id="username" placeholder="Nome do Guerreiro" maxlength="12">
             <input type="password" id="password" placeholder="Senha">
-            <button id="btn-login">ENTRAR NO UNIVERSO</button>
+            <button id="btn-login">ENTRAR NO JOGO</button>
         </div>
     </div>
+
     <div id="ui">
         <div id="stat-bp">BP: 0</div>
-        <div id="stat-zone">LOADING...</div>
-        <div class="bar"><div id="hp-bar" class="fill" style="width: 100%;"></div><span class="bar-label">HP</span></div>
-        <div class="bar"><div id="ki-bar" class="fill" style="width: 100%;"></div><span class="bar-label">KI</span></div>
-        <div class="bar" style="height: 8px; width: 300px;"><div id="xp-bar" class="fill"></div><span class="bar-label">XP</span></div>
+        <div id="stat-zone">TERRA</div>
+
+        <div class="bar-container">
+            <div class="stat-label">SAÚDE</div>
+            <div class="bar">
+                <div id="hp-bar" class="fill"></div>
+                <div class="bar-text">HP</div>
+            </div>
+        </div>
+
+        <div class="bar-container">
+            <div class="stat-label">KI</div>
+            <div class="bar">
+                <div id="ki-bar" class="fill"></div>
+                <div class="bar-text">ENERGIA</div>
+            </div>
+        </div>
+
+        <div class="bar-container">
+            <div class="stat-label">EXPERIÊNCIA</div>
+            <div class="bar" style="height: 6px; border: 1px solid #444;">
+                <div id="xp-bar" class="fill" style="width: 0%;"></div>
+            </div>
+        </div>
     </div>
-    <div id="controls">WASD: Mover | Q: Block | C: Treinar/Carregar | G: Transforma | Mouse: Ataque</div>
+
+    <div id="controls-hint">
+        WASD: Mover | MOUSE1: Atacar | MOUSE2: Ki Blast | ESPAÇO: Dash<br>
+        C: Carregar Ki | Q: Bloquear | E: Super Ataque (Ki alto)
+    </div>
+
     <canvas id="gameCanvas"></canvas>
+
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/game.js"></script>
+    <script src="game.js"></script>
+
 </body>
 </html>
