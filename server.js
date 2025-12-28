@@ -76,7 +76,6 @@ function clampBP(p) {
     if (p.bp > maxBP) p.bp = maxBP;
     if (p.bp < 0) p.bp = 0;
 }
-
 function findSnapTarget(p) {
     let best = null; let bestScore = Infinity;
     [...Object.values(players), ...npcs].forEach(t => {
@@ -399,7 +398,12 @@ setInterval(() => {
             p.bp += 1 + Math.floor(p.level * 0.1);
 clampBP(p);
             if (p.state === "CHARGING") {
-                if (Math.random() > 0.85) { p.xp += 1; p.bp += 5; clampBP(p); }
+    if (Math.random() > 0.85) {
+        p.xp += 1;
+        p.bp += 5;
+        clampBP(p);
+    }
+}
                 const xpReq = p.level * 800;
                 if(p.xp >= xpReq) {
                    p.level++; p.xp = 0; p.bp += 5000; clampBP(p);
