@@ -17,69 +17,37 @@ let rocks = [];
 let craters = [];
 
 // ==================================================================================
-// BESTIARIO COMPLETO: DB, DBZ, DBGT, DBS, DAIMA
+// BESTIÁRIO GEOGRÁFICO: ORGANIZADO POR PONTOS CARDEAIS (MAQUETE DO DESENHO)
 // ==================================================================================
 const BESTIARY = {
-    // --- CENTRO: DRAGON BALL CLÁSSICO ---
-    ORIGINS: { 
-        mobs: ["RR_SOLDIER", "WOLF_BANDIT", "DINOSAUR", "TAMBOURINE"], 
-        bosses: ["TAO_PAI_PAI", "KING_PICCOLO", "PICCOLO_JR", "GENERAL_BLUE"] 
+    // --- CENTRO: PLANETA TERRA (Ponto Inicial) ---
+    EARTH: { 
+        mobs: ["RR_SOLDIER", "WOLF_BANDIT", "DINOSAUR", "TAMBOURINE", "ANDROID_19"], 
+        bosses: ["TAO_PAI_PAI", "KING_PICCOLO", "GENERAL_BLUE", "PERFECT_CELL"] 
     },
 
-    // --- ANEL 1: DRAGON BALL Z (5k - 15k dist) ---
-    SAIYAN_SAGA: { 
-        mobs: ["SAIBAMAN", "FRIEZA_SCOUT", "RADITZ_MINION"], 
-        bosses: ["RADITZ", "NAPPA", "VEGETA_SCOUTER"] 
-    },
-    NAMEK_SAGA: { 
-        mobs: ["FRIEZA_SOLDIER", "NAMEK_WARRIOR", "DODORIA_ELITE", "ZARBON_MONSTER"], 
-        bosses: ["CAPTAIN_GINYU", "FRIEZA_FINAL", "FRIEZA_FULL_POWER"] 
-    },
-    ANDROID_SAGA: { 
-        mobs: ["ANDROID_19", "ANDROID_20", "CELL_JR", "MECHA_GUARD"], 
-        bosses: ["ANDROID_17", "ANDROID_18", "ANDROID_16", "PERFECT_CELL"] 
-    },
-    MAJIN_SAGA: { 
-        mobs: ["PUIPUI", "YAKON", "MAJIN_SOLDIER", "BABIDI_GUARD"], 
-        bosses: ["DABURA", "MAJIN_VEGETA", "FAT_BUU", "KID_BUU"] 
+    // --- OESTE: ESPAÇO PROFUNDO E PLANETA NAMEK (Viagem Espacial) ---
+    DEEP_SPACE: { 
+        mobs: ["FRIEZA_SCOUT", "ZARBON_MONSTER", "DODORIA_ELITE", "NAMEK_WARRIOR"], 
+        bosses: ["CAPTAIN_GINYU", "FRIEZA_FINAL", "COOLER_METAL", "MORO_YOUNG"] 
     },
 
-    // --- ANEL 2: FILMES E GT (15k - 30k dist) ---
-    MOVIES_ZONE: {
-        mobs: ["COOLER_SQUAD", "TURLES_CRUSHER", "BOJACK_GANG", "BIO_WARRIOR"],
-        bosses: ["COOLER_METAL", "LEGENDARY_BROLY", "JANEMBA", "HIRUDEGARN"]
-    },
-    GT_ZONE: {
-        mobs: ["MACHINE_MUTANT", "SIGMA_FORCE", "HELL_FIGHTER_17", "SHADOW_DRAGON_MINION"],
-        bosses: ["BABY_VEGETA", "SUPER_17", "NUOVA_SHENRON", "OMEGA_SHENRON"]
+    // --- LESTE: FUTURO DISTÓPICO E CIDADES MECÂNICAS (GT/Future) ---
+    FUTURE_TIMELINE: { 
+        mobs: ["MACHINE_MUTANT", "SIGMA_FORCE", "ZAMASU_CLONE", "HELL_FIGHTER_17"], 
+        bosses: ["ANDROID_18", "GOKU_BLACK_ROSE", "SUPER_17", "OMEGA_SHENRON"] 
     },
 
-    // --- ANEL 3: DRAGON BALL SUPER (30k - 50k dist) ---
-    GODS_ZONE: {
-        mobs: ["RESURRECTED_SOLDIER", "FROST_DEMON", "U6_BOTAMO", "U6_MAGETTA"],
-        bosses: ["GOLDEN_FRIEZA", "HIT_ASSASSIN", "BEERUS", "CHAMPA"]
-    },
-    FUTURE_ZONE: {
-        mobs: ["ZAMASU_CLONE", "RESISTANCE_FIGHTER", "GOKU_BLACK_CLONE"],
-        bosses: ["GOKU_BLACK_ROSE", "ZAMASU_FUSED", "VEGITO_BLUE_ECHO"]
-    },
-    TOP_ZONE: { // Torneio do Poder
-        mobs: ["PRIDE_TROOPER", "KAMIKAZE_FIREBALL", "U9_WOLF", "U3_ROBOT"],
-        bosses: ["KEFLA", "TOPPO_GOD", "JIREN_FULL_POWER", "ANIRAZA"]
-    },
-    MORO_GRANOLAH: {
-        mobs: ["GALACTIC_PRISONER", "SEVEN_THREE_CLONE", "HEETER_GANG"],
-        bosses: ["MORO_YOUNG", "MORO_ANGEL", "GRANOLAH", "GAS_HEETER"]
+    // --- SUL: REINO DEMONÍACO E ZONAS MÁGICAS (Daima/Buu) ---
+    DEMON_REALM: { 
+        mobs: ["MASKED_MAJIN", "MINI_DEMON", "PUIPUI", "YAKON", "GOMAH_SOLDIER"], 
+        bosses: ["DABURA", "FAT_BUU", "KING_GOMAH", "DR_ARINSU"] 
     },
 
-    // --- BORDA EXTERNA: DAIMA & DIVINO (> 50k dist) ---
-    DAIMA_REALM: {
-        mobs: ["GOMAH_SOLDIER", "MASKED_MAJIN", "MINI_DEMON", "GLORIO_DRONE"],
-        bosses: ["KING_GOMAH", "DEGESU", "DR_ARINSU", "GLORIO"] // Personagens Daima
-    },
-    ANGEL_VOID: {
-        mobs: ["ANGEL_TRAINEE", "GRAND_PRIEST_GUARD", "ZENO_GUARD"],
-        bosses: ["WHIS", "VADOS", "GRAND_PRIEST", "ZENO_SAMAS"]
+    // --- NORTE: REINO DIVINO E VAZIO (Super/Bills) ---
+    DIVINE_REALM: { 
+        mobs: ["PRIDE_TROOPER", "U6_BOTAMO", "ANGEL_TRAINEE", "ZENO_GUARD"], 
+        bosses: ["BEERUS", "HIT_ASSASSIN", "JIREN_FULL_POWER", "WHIS"] 
     }
 };
 
@@ -112,40 +80,30 @@ function findSnapTarget(p) {
 }
 
 // ==================================================================================
-// NOVA LÓGICA DE ZONAS (MAPEAMENTO COMPLETO)
+// NOVA LÓGICA DE ZONAS (OMNIDIRECIONAL)
 // ==================================================================================
 function getZoneInfo(x, y) {
     const dist = Math.hypot(x, y);
+    // Nível aumenta conforme se afasta da Terra
     let level = 1 + Math.floor(dist / 1500); 
 
-    // --- ZONA CENTRAL (0 - 5000) ---
-    if (dist < 5000) return { id: "ORIGINS", level: Math.max(1, level) };
+    // --- CENTRO: TERRA (Raio de 5000) ---
+    if (dist < 5000) return { id: "EARTH", level: Math.max(1, level) };
 
-    // --- ANEL INTERNO: DBZ (5000 - 15000) ---
-    if (dist < 15000) {
-        if(x > 0 && Math.abs(y) < x) return { id: "NAMEK_SAGA", level }; // Leste
-        if(x < 0 && Math.abs(y) < Math.abs(x)) return { id: "ANDROID_SAGA", level }; // Oeste
-        if(y > 0) return { id: "MAJIN_SAGA", level }; // Sul
-        return { id: "SAIYAN_SAGA", level }; // Norte
-    }
+    // Direcionamento Geográfico via Ângulo
+    const angle = Math.atan2(y, x); // Retorna de -PI a PI
 
-    // --- ANEL MÉDIO: GT E FILMES (15000 - 30000) ---
-    if (dist < 30000) {
-        if(y < 0) return { id: "GT_ZONE", level }; // Norte (GT)
-        return { id: "MOVIES_ZONE", level }; // Resto (Filmes)
-    }
-
-    // --- ANEL EXTERNO: SUPER (30000 - 50000) ---
-    if (dist < 50000) {
-        if(x > 0 && Math.abs(y) < x) return { id: "GODS_ZONE", level }; // Battle of Gods / FnF
-        if(x < 0 && Math.abs(y) < Math.abs(x)) return { id: "FUTURE_ZONE", level }; // Black Arc
-        if(y > 0) return { id: "MORO_GRANOLAH", level }; // Manga Arcs
-        return { id: "TOP_ZONE", level }; // Tournament of Power
-    }
-
-    // --- VAZIO / BORDA FINAL (> 50000) ---
-    if (y < 0) return { id: "ANGEL_VOID", level: level + 50 }; // Norte Distante
-    return { id: "DAIMA_REALM", level: level + 20 }; // O Reino dos Demônios (Daima)
+    // OESTE (Espaço/Namek): Ângulo > 2.35 ou < -2.35 (Esquerda)
+    if (Math.abs(angle) > 2.35) return { id: "DEEP_SPACE", level };
+    
+    // LESTE (Futuro/GT/Tecnologia): Ângulo entre -0.78 e 0.78 (Direita)
+    if (Math.abs(angle) < 0.78) return { id: "FUTURE_TIMELINE", level };
+    
+    // SUL (Magia/Daima/Demônios): Y Positivo (Baixo na tela), Ângulo entre 0.78 e 2.35
+    if (angle >= 0.78 && angle <= 2.35) return { id: "DEMON_REALM", level };
+    
+    // NORTE (Divino/Bills/Zeno): Y Negativo (Cima na tela), Ângulo entre -0.78 e -2.35
+    return { id: "DIVINE_REALM", level };
 }
 
 // =========================
@@ -161,23 +119,28 @@ function initWorld() {
         const zone = getZoneInfo(x, y);
 
         let type = "rock_earth";
-        if(zone.id.includes("NAMEK")) type = "rock_namek";
-        if(zone.id.includes("ANDROID") || zone.id.includes("GT")) type = "rock_city";
-        if(zone.id.includes("MAJIN") || zone.id.includes("DAIMA")) type = "rock_magic";
-        if(zone.id.includes("GOD") || zone.id.includes("TOP") || zone.id.includes("VOID")) type = "rock_god";
+        // Definir tipo de rocha baseado no bioma
+        if(zone.id === "DEEP_SPACE") type = "rock_namek";
+        if(zone.id === "FUTURE_TIMELINE") type = "rock_city";
+        if(zone.id === "DEMON_REALM") type = "rock_magic";
+        if(zone.id === "DIVINE_REALM") type = "rock_god";
 
         rocks.push({ id: i, x, y, r: 30 + Math.random() * 80, hp: 200 + (dist/100), type });
     }
 
     for(let i=0; i<350; i++) spawnMobRandomly();
 
-    // Spawnar Bosses Iniciais em pontos cardeais
-    spawnBossAt(0, -3000); // Piccolo Daimaoh (Norte Perto)
-    spawnBossAt(10000, 0); // Frieza (Leste)
-    spawnBossAt(-10000, 0); // Cell (Oeste)
-    spawnBossAt(0, 10000); // Buu (Sul)
-    spawnBossAt(0, -20000); // Omega Shenron (Norte Longe)
-    spawnBossAt(0, 40000); // Jiren (Sul Muito Longe)
+    // Spawnar Bosses Iniciais em pontos cardeais fixos (Destinos da Jornada)
+    spawnBossAt(0, -15000);   // Bills (Norte - Divino)
+    spawnBossAt(-15000, 0);   // Freeza (Oeste - Espaço)
+    spawnBossAt(15000, 0);    // Baby Vegeta (Leste - Futuro)
+    spawnBossAt(0, 15000);    // Majin Buu (Sul - Demônio)
+    
+    // Bosses mais distantes
+    spawnBossAt(0, -40000);   // Jiren (Norte Distante)
+    spawnBossAt(-40000, 0);   // Moro (Oeste Distante)
+    spawnBossAt(40000, 0);    // Omega Shenron (Leste Distante)
+    spawnBossAt(0, 40000);    // King Gomah (Sul Distante)
 }
 
 function spawnMobRandomly() {
@@ -189,7 +152,7 @@ function spawnMobRandomly() {
 }
 
 // =========================
-// MOBS / BOSSES (COM CORES NOVAS)
+// MOBS / BOSSES
 // =========================
 function spawnMobAt(x, y) {
     const zone = getZoneInfo(x, y);
@@ -203,32 +166,14 @@ function spawnMobAt(x, y) {
         aggro: 700 + (zone.level * 10), aiType: "MELEE"
     };
 
-    // --- CORES E IA POR SAGA ---
-    // Clássico
+    // --- CORES BASEADAS NO TIPO ---
     if(type.includes("RR_")) stats.color = "#555";
     if(type.includes("DINOSAUR")) stats.color = "#484";
-    
-    // Z
-    if(type === "SAIBAMAN") { stats.color = "#4a4"; stats.aiType = "SWARM"; }
+    if(type.includes("SAIBAMAN")) { stats.color = "#4a4"; stats.aiType = "SWARM"; }
     if(type.includes("FRIEZA")) { stats.color = "#848"; stats.aiType = "RANGED"; }
-    if(type === "CELL_JR") { stats.color = "#38a"; stats.aiType = "AGGRESSIVE"; }
-    if(type.includes("MAJIN")) stats.color = "#fbb";
-
-    // GT
-    if(type.includes("MACHINE") || type.includes("SIGMA")) { stats.color = "#aaa"; stats.aiType = "TANK"; } // Metal
-    if(type.includes("SHADOW")) stats.color = "#224"; // Shadow Dragons (Azul escuro)
-
-    // Super
-    if(type.includes("ZAMASU") || type.includes("BLACK")) stats.color = "#fcc"; // Rose aura hint
-    if(type.includes("PRIDE")) stats.color = "#d22"; // Vermelho Jiren
-    if(type.includes("HEETER") || type.includes("PRISONER")) stats.color = "#642";
-
-    // Daima
-    if(type.includes("GOMAH") || type.includes("DEMON")) stats.color = "#909"; // Roxo Demônio
-    if(type.includes("GLORIO")) stats.color = "#00f";
-
-    // Anjos
-    if(type.includes("ANGEL")) stats.color = "#aaf";
+    if(type.includes("MAJIN") || type.includes("DEMON")) stats.color = "#909";
+    if(type.includes("MACHINE") || type.includes("SIGMA")) { stats.color = "#aaa"; stats.aiType = "TANK"; }
+    if(type.includes("PRIDE") || type.includes("ANGEL")) stats.color = "#aaf";
 
     npcs.push({
         id, isNPC: true, r: 25, x, y, vx: 0, vy: 0,
@@ -251,27 +196,17 @@ function spawnBossAt(x, y) {
 
     // --- CORES DE BOSSES ---
     if(type.includes("VEGETA")) stats.color = "#33f";
-    if(type.includes("FRIEZA")) stats.color = "#fff"; // Golden será tratado no game.js pelo nome
+    if(type.includes("FRIEZA")) stats.color = "#fff"; 
     if(type.includes("CELL")) stats.color = "#484";
     if(type.includes("BUU")) stats.color = "#fbb";
-    
-    // GT
     if(type.includes("BABY")) stats.color = "#ddd";
-    if(type.includes("OMEGA")) stats.color = "#fff"; // Branco/Azul
-    
-    // Super
+    if(type.includes("OMEGA")) stats.color = "#fff"; 
     if(type.includes("BLACK") || type.includes("ROSE")) stats.color = "#333";
     if(type.includes("JIREN") || type.includes("TOPPO")) stats.color = "#f22";
-    if(type.includes("BROLY")) stats.color = "#2f2";
-    if(type.includes("MORO")) stats.color = "#346";
-    if(type.includes("GAS")) stats.color = "#622";
-    
-    // Daima
-    if(type.includes("GOMAH")) stats.color = "#fdd"; // Pele clara/demoníaca
-    if(type.includes("GLORIO")) stats.color = "#22d";
+    if(type.includes("GOMAH")) stats.color = "#fdd"; 
 
     npcs.push({
-        id: "BOSS_" + zone.id + "_" + Date.now(),
+        id: "BOSS_" + zone.id + "_" + Date.now() + Math.random(),
         name: type, isNPC: true, isBoss: true,
         x, y, vx: 0, vy: 0,
         maxHp: stats.hp, hp: stats.hp,
@@ -303,7 +238,7 @@ const io = new Server(server, { transports: ['websocket'] });
 function packStateForPlayer(pid) {
     const p = players[pid];
     if (!p) return null;
-    const R = 4500; // Raio aumentado para ver mais coisas
+    const R = 4500; 
     const inRange = (o) => Math.hypot(o.x - p.x, o.y - p.y) < R;
     const np = npcs.filter(inRange);
     const rk = rocks.filter(inRange);
@@ -370,105 +305,94 @@ io.on("connection", (socket) => {
     });
 
     socket.on("release_attack", () => {
-    const p = players[socket.id];
-    if(!p || p.isSpirit || p.stun > 0) return;
+        const p = players[socket.id];
+        if(!p || p.isSpirit || p.stun > 0) return;
 
-    let target = findSnapTarget(p);
+        let target = findSnapTarget(p);
 
-    if (!target) {
-        let best = null, bestDist = 220;
+        if (!target) {
+            let best = null, bestDist = 220;
+            [...Object.values(players), ...npcs].forEach(t => {
+                if(t.id === p.id || t.isDead || t.isSpirit) return;
+                const d = Math.hypot(t.x - p.x, t.y - p.y);
+                if(d < bestDist) { bestDist = d; best = t; }
+            });
+            target = best;
+        }
+
+        if (target) {
+            const dx = target.x - p.x;
+            const dy = target.y - p.y;
+            p.angle = Math.atan2(dy, dx);
+            const ideal = 55;
+            const dist = Math.hypot(dx, dy);
+            if (dist > ideal) {
+                const pull = Math.min(80, dist - ideal);
+                p.vx = Math.cos(p.angle) * pull;
+                p.vy = Math.sin(p.angle) * pull;
+            }
+        }
+
+        const charged = (Date.now() - p.chargeStart) > 600;
+        p.state = "ATTACKING";
+        p.attackLock = 14;
+        p.lastAtk = Date.now();
+
+        const hitRadius = charged ? 130 : 100;
+        const hitAngle = 2.6; 
+        let hitSomeone = false;
+
         [...Object.values(players), ...npcs].forEach(t => {
             if(t.id === p.id || t.isDead || t.isSpirit) return;
-            const d = Math.hypot(t.x - p.x, t.y - p.y);
-            if(d < bestDist) {
-                bestDist = d;
-                best = t;
+
+            const dx = t.x - p.x;
+            const dy = t.y - p.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > hitRadius) return;
+
+            const ang = Math.atan2(dy, dx);
+            let diff = Math.abs(ang - p.angle);
+            if (diff > Math.PI) diff = Math.PI * 2 - diff;
+            if (diff > hitAngle) return;
+
+            hitSomeone = true;
+
+            let dmg = Math.floor(
+                (50 + p.level * 9) *
+                (charged ? 3.2 : (1 + p.combo * 0.3))
+            );
+
+            if(t.state === "BLOCKING") {
+                dmg *= 0.25;
+                t.ki -= 12;
+                t.counterWindow = 12;
             }
-        });
-        target = best;
-    }
 
-    if (target) {
-        const dx = target.x - p.x;
-        const dy = target.y - p.y;
-        p.angle = Math.atan2(dy, dx);
-        const ideal = 55;
-        const dist = Math.hypot(dx, dy);
-        if (dist > ideal) {
-            const pull = Math.min(80, dist - ideal);
-            p.vx = Math.cos(p.angle) * pull;
-            p.vy = Math.sin(p.angle) * pull;
-        }
-    }
+            t.hp -= dmg;
+            t.stun = charged ? 26 : 14;
 
-    const charged = (Date.now() - p.chargeStart) > 600;
-    p.state = "ATTACKING";
-    p.attackLock = 14;
-    p.lastAtk = Date.now();
+            const push = charged ? 140 : 65;
+            t.vx = Math.cos(p.angle) * push;
+            t.vy = Math.sin(p.angle) * push;
 
-    const hitRadius = charged ? 130 : 100;
-    const hitAngle = 2.6; 
-    let hitSomeone = false;
+            io.emit("fx", { type: charged ? "heavy" : "hit", x: t.x, y: t.y, dmg });
 
-    [...Object.values(players), ...npcs].forEach(t => {
-        if(t.id === p.id || t.isDead || t.isSpirit) return;
+            if(charged) {
+                craters.push({ x: t.x, y: t.y, r: 45, life: 1200 });
+            }
 
-        const dx = t.x - p.x;
-        const dy = t.y - p.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > hitRadius) return;
-
-        const ang = Math.atan2(dy, dx);
-        let diff = Math.abs(ang - p.angle);
-        if (diff > Math.PI) diff = Math.PI * 2 - diff;
-
-        if (diff > hitAngle) return;
-
-        hitSomeone = true;
-
-        let dmg = Math.floor(
-            (50 + p.level * 9) *
-            (charged ? 3.2 : (1 + p.combo * 0.3))
-        );
-
-        if(t.state === "BLOCKING") {
-            dmg *= 0.25;
-            t.ki -= 12;
-            t.counterWindow = 12;
-        }
-
-        t.hp -= dmg;
-        t.stun = charged ? 26 : 14;
-
-        const push = charged ? 140 : 65;
-        t.vx = Math.cos(p.angle) * push;
-        t.vy = Math.sin(p.angle) * push;
-
-        io.emit("fx", {
-            type: charged ? "heavy" : "hit",
-            x: t.x,
-            y: t.y,
-            dmg
+            if(t.hp <= 0) handleKill(p, t);
         });
 
-        if(charged) {
-            craters.push({ x: t.x, y: t.y, r: 45, life: 1200 });
+        if (!hitSomeone) {
+            p.combo = Math.max(0, p.combo - 1);
+        } else {
+            p.combo = (p.combo + 1) % 6;
+            p.comboTimer = 24;
         }
 
-        if(t.hp <= 0) handleKill(p, t);
+        setTimeout(() => { if(p) p.state = "IDLE"; }, 220);
     });
-
-    if (!hitSomeone) {
-        p.combo = Math.max(0, p.combo - 1);
-    } else {
-        p.combo = (p.combo + 1) % 6;
-        p.comboTimer = 24;
-    }
-
-    setTimeout(() => {
-        if(p) p.state = "IDLE";
-    }, 220);
-});
 
     socket.on("release_blast", () => {
         const p = players[socket.id];
@@ -519,30 +443,42 @@ function handleKill(killer, victim) {
     if(victim.isNPC) {
         victim.isDead = true;
         if(!killer.isNPC) {
+            // Cura parcial ao matar
             killer.hp = Math.min(killer.maxHp, killer.hp + (killer.maxHp * 0.2));
-            const xpGain = victim.level * 50;
+            
+            // Ganho de XP
+            const xpGain = victim.level * 100;
             const xpReq = killer.level * 800;
             killer.xp += xpGain;
+            
             io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: xpGain });
+            
             if(killer.xp >= xpReq) {
-                killer.level++; killer.xp = 0; 
+                killer.level++; 
+                killer.xp = 0; 
                 killer.bp += 5000; 
                 killer.maxHp += 1000; killer.hp = killer.maxHp;
                 killer.maxKi += 100; killer.ki = killer.maxKi;
                 killer.xpToNext = killer.level * 800; 
                 io.emit("fx", { type: "levelup", x: killer.x, y: killer.y });
+                
+                // Persistência
                 const user = db.get('users').find({ name: killer.name }).value();
                 if(user) { user.level = killer.level; user.bp = killer.bp; db.write(); }
             }
         }
         setTimeout(() => { 
             npcs = npcs.filter(n => n.id !== victim.id); 
-            if(Math.random() > 0.5) spawnMobRandomly(); 
+            spawnMobRandomly(); 
         }, 5000);
     } else {
+        // --- LÓGICA DE MORTE DO JOGADOR ---
         victim.isSpirit = true;
-        victim.hp = 1; 
-        victim.x = 0; victim.y = -2100; 
+        victim.hp = 1;
+        victim.ki = victim.maxKi; // Dá energia para voar o caminho
+        // Teleporta para o Início do Caminho da Serpente (Posto do Enma Daioh)
+        victim.x = 0; 
+        victim.y = -6000; // Localização do Enma Daioh (Norte próximo)
         victim.vx = 0; victim.vy = 0;
         io.emit("fx", { type: "vanish", x: victim.x, y: victim.y });
     }
@@ -559,7 +495,8 @@ setInterval(() => {
         p.x += p.vx; p.y += p.vy; 
         p.vx *= 0.82; p.vy *= 0.82; 
 
-        if(p.y < -5000) p.vy += 0.05;
+        // Gravidade apenas se estiver muito alto (opcional)
+        // if(p.y < -5000) p.vy += 0.05;
 
         if(!p.isSpirit) {
             if(p.state === "CHARGING") {
@@ -576,13 +513,21 @@ setInterval(() => {
             }
         }
     
-        if (p.isSpirit && p.y < -7500) { 
-            const distToCenter = Math.hypot(p.x - 0, p.y - (-8000));
-            if (distToCenter < 100) { 
+        // Lógica de Espírito / Renascimento
+        if (p.isSpirit) {
+            // O Caminho da Serpente leva ao Planeta do Sr. Kaioh (localizado em Y: -20000)
+            const distToKingKai = Math.hypot(p.x - 0, p.y - (-20000));
+            
+            // Se chegar perto do Planeta do Sr. Kaioh
+            if (distToKingKai < 400) { 
                 p.isSpirit = false;
-                p.hp = p.maxHp; p.ki = p.maxKi;
+                p.hp = p.maxHp; 
+                p.ki = p.maxKi;
+                // Teleporta de volta para a Terra (Centro)
                 p.x = 0; p.y = 0; p.vx = 0; p.vy = 0;
                 io.emit("fx", { type: "transform", x: 0, y: 0, form: "BASE" }); 
+                // Efeito visual de reviver
+                io.emit("fx", { type: "levelup", x: 0, y: 0 }); 
             }
         }
     });

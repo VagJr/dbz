@@ -135,7 +135,7 @@ function initMobileControls() {
 }
 
 // =========================================================
-// BACKGROUND INTELIGENTE (TODAS AS SAGAS)
+// BACKGROUND INTELIGENTE OMNIDIRECIONAL
 // =========================================================
 function drawBackground(camX, camY) {
     const viewW = canvas.width / ZOOM_SCALE;
@@ -145,45 +145,43 @@ function drawBackground(camX, camY) {
     const endX = camX + (viewW / 2);
     const endY = camY + (viewH / 2);
 
-    // Lógica de Cores baseada na distância (Match com Server.js)
     const dist = Math.hypot(camX, camY);
+    const angle = Math.atan2(camY, camX);
     
-    let bgColor = "#122a12"; // Origins (Centro)
+    let bgColor = "#122a12"; // Padrão Terra (Centro)
     let gridColor = "rgba(100,255,100,0.1)";
 
-    // ANEL 1: DBZ (5k - 15k)
-    if (dist >= 5000 && dist < 15000) {
-        if(camX > 0 && Math.abs(camY) < camX) { bgColor = "#004444"; gridColor = "rgba(100,255,255,0.1)"; } // Namek
-        else if(camY > 0) { bgColor = "#331133"; gridColor = "rgba(255,100,255,0.1)"; } // Majin
-        else { bgColor = "#222"; gridColor = "rgba(200,200,200,0.1)"; } // Android/Saiyan
-    }
-    // ANEL 2: GT & MOVIES (15k - 30k)
-    else if (dist >= 15000 && dist < 30000) {
-        bgColor = "#1a1a2e"; // Espaço Profundo/Metálico
-        gridColor = "rgba(100,100,150,0.15)";
-    }
-    // ANEL 3: SUPER (30k - 50k)
-    else if (dist >= 30000 && dist < 50000) {
-        bgColor = "#1a0b2e"; // Roxo Divino
-        gridColor = "rgba(255,215,0,0.1)"; // Grid Dourado
-    }
-    // BORDA: DAIMA & ANJOS (> 50k)
-    else if (dist >= 50000) {
-        bgColor = "#050015"; // Void
-        gridColor = "rgba(255,255,255,0.05)";
+    // Se estiver fora do centro (Terra)
+    if (dist >= 5000) {
+        // OESTE: Espaço / Namek (Azul Escuro / Estrelado)
+        if (Math.abs(angle) > 2.35) {
+            bgColor = "#001122"; gridColor = "rgba(100,200,255,0.1)";
+        }
+        // LESTE: Futuro / GT (Cinza Metálico / Tecnológico)
+        else if (Math.abs(angle) < 0.78) {
+            bgColor = "#1a1a2e"; gridColor = "rgba(200,200,200,0.15)";
+        }
+        // SUL: Reino Demônio (Roxo Escuro / Mágico)
+        else if (angle >= 0.78 && angle <= 2.35) {
+            bgColor = "#220022"; gridColor = "rgba(255,100,255,0.1)";
+        }
+        // NORTE: Divino (Azul Noite / Dourado)
+        else {
+            bgColor = "#001a33"; gridColor = "rgba(255,215,0,0.1)";
+        }
     }
 
     ctx.fillStyle = bgColor; 
     ctx.fillRect(startX - 200, startY - 200, viewW + 400, viewH + 400);
 
     // DETALHES DE FUNDO (PLANETAS/LUAS)
-    if(dist < 50000 && camX > 4000 && Math.abs(camY) < camX) { // Namek Suns
-        ctx.fillStyle = "rgba(100,255,200, 0.1)";
-        ctx.beginPath(); ctx.arc(8000, 0, 1500, 0, Math.PI*2); ctx.fill();
-    }
-    if(dist > 30000 && camY < -10000) { // Super Shenron Shadow (Exemplo)
-        ctx.fillStyle = "rgba(255,215,0, 0.05)";
-        ctx.beginPath(); ctx.arc(0, -40000, 5000, 0, Math.PI*2); ctx.fill();
+    if(dist > 5000) {
+        // Exemplo: Estrelas no Espaço (Oeste)
+        if (Math.abs(angle) > 2.35) {
+            ctx.fillStyle = "rgba(255,255,255, 0.5)";
+            // Apenas um exemplo visual simples para estrelas
+             // (Poderia ser expandido, mas mantendo simples por performance)
+        }
     }
 
     // GRID
@@ -197,6 +195,91 @@ function drawBackground(camX, camY) {
     ctx.stroke();
 }
 
+// ==========================================
+// DESENHO DO OUTRO MUNDO (SERPENTE E KAIOH)
+// ==========================================
+function drawOtherWorld(camX, camY) {
+    const viewW = canvas.width / ZOOM_SCALE;
+    const viewH = canvas.height / ZOOM_SCALE;
+    
+    // Verifica se a câmera está perto da região Norte (onde fica o caminho)
+    // O Caminho vai de Y: -5000 até Y: -20000
+    if (camY > -4000 && camY < 20000) return; // Otimização: não desenha se estiver longe
+
+    // 1. O CAMINHO DA SERPENTE (Curvas Senoidais)
+    ctx.save();
+    ctx.strokeStyle = "#e6b800"; // Amarelo/Laranja clássico
+    ctx.lineWidth = 60;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    
+    // Desenha o caminho do Enma (-6000) até o Kaioh (-20000)
+    const startY = -6000;
+    const endY = -20000;
+    
+    // Desenha segmentos para fazer a curva
+    for (let y = startY; y >= endY; y -= 200) {
+        // A serpente ondula no eixo X conforme sobe o eixo Y
+        const x = Math.sin(y * 0.0015) * 600; 
+        if (y === startY) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Detalhe: Espinhos/Escamas da Serpente (Opcional, linha interna)
+    ctx.strokeStyle = "#b38f00";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    for (let y = startY; y >= endY; y -= 200) {
+        const x = Math.sin(y * 0.0015) * 600;
+        if (y === startY) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. POSTO DO ENMA DAIOH (Início)
+    ctx.save();
+    ctx.translate(0, -6000);
+    ctx.fillStyle = "#8B4513"; // Madeira/Telhado
+    ctx.fillRect(-150, -50, 300, 100); // Base
+    ctx.fillStyle = "#d22"; // Telhado Vermelho
+    ctx.beginPath(); ctx.moveTo(-180, -50); ctx.lineTo(0, -150); ctx.lineTo(180, -50); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center";
+    ctx.fillText("ENMA", 0, 20);
+    ctx.restore();
+
+    // 3. PLANETA DO SR. KAIOH (Fim)
+    ctx.save();
+    ctx.translate(0, -20000); // Localização Final
+    
+    // Atmosfera/Gravidade
+    ctx.shadowBlur = 40; ctx.shadowColor = "rgba(100, 255, 100, 0.5)";
+    
+    // O Planeta Pequeno
+    ctx.fillStyle = "#4a4"; // Verde Grama
+    ctx.beginPath(); ctx.arc(0, 0, 350, 0, Math.PI * 2); ctx.fill();
+    
+    // Estrada do Carro
+    ctx.strokeStyle = "#dcb"; ctx.lineWidth = 40; 
+    ctx.beginPath(); ctx.arc(0, 0, 280, 0, Math.PI * 2); ctx.stroke();
+
+    // A Árvore
+    ctx.fillStyle = "#532"; ctx.fillRect(-30, -350, 60, 100); // Tronco
+    ctx.fillStyle = "#282"; ctx.beginPath(); ctx.arc(0, -400, 120, 0, Math.PI*2); ctx.fill(); // Copa
+
+    // A Casa (Cúpula)
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(100, -100, 80, 0, Math.PI, true); ctx.fill();
+    ctx.fillStyle = "#d22"; ctx.beginPath(); ctx.moveTo(20, -100); ctx.lineTo(100, -180); ctx.lineTo(180, -100); ctx.fill(); // Telhado
+
+    // Texto flutuante
+    ctx.fillStyle = "#ff0"; ctx.font = "bold 50px Orbitron"; ctx.textAlign = "center";
+    ctx.shadowBlur = 0;
+    ctx.fillText("PLANETA KAIOH", 0, 500);
+    
+    ctx.restore();
+}
+
 function drawEntity(e) {
     if(e.isDead && e.isNPC) return;
     const isSpirit = e.isSpirit;
@@ -204,7 +287,7 @@ function drawEntity(e) {
     const time = Date.now();
     
     // ==========================================
-    // LÓGICA DE CORES E AURAS AVANÇADA
+    // LÓGICA DE CORES E AURAS
     // ==========================================
     let auraColor = "#00ffff"; 
     if(e.color) auraColor = e.color; 
@@ -218,11 +301,11 @@ function drawEntity(e) {
     
     // Detecção por Nome (Sagas)
     if(e.name) {
-        if(e.name.includes("BLACK") || e.name.includes("ROSE")) auraColor = "#ff0088"; // Rosé
-        if(e.name.includes("BROLY") || e.name.includes("KEFLA")) auraColor = "#00ff00"; // Lendário
-        if(e.name.includes("GOMAH") || e.name.includes("DEMON")) auraColor = "#9900ff"; // Daima
-        if(e.name.includes("TOPPO") || e.name.includes("EGO")) auraColor = "#8800ff"; // Hakaishin
-        if(e.name.includes("ANGEL")) auraColor = "#aaaaff"; // Anjo
+        if(e.name.includes("BLACK") || e.name.includes("ROSE")) auraColor = "#ff0088"; 
+        if(e.name.includes("BROLY") || e.name.includes("KEFLA")) auraColor = "#00ff00"; 
+        if(e.name.includes("GOMAH") || e.name.includes("DEMON")) auraColor = "#9900ff"; 
+        if(e.name.includes("TOPPO") || e.name.includes("EGO")) auraColor = "#8800ff"; 
+        if(e.name.includes("ANGEL")) auraColor = "#aaaaff"; 
     }
 
     if(hitStop <= 0 && (Math.hypot(e.vx, e.vy) > 10)) {
@@ -231,34 +314,22 @@ function drawEntity(e) {
 
     ctx.save(); 
     ctx.translate(e.x, e.y); 
-	
-	// ==========================================
-// TRECHO: AURÉOLA DE ESPÍRITO (MORTO)
-// ==========================================
-if (isSpirit) {
-    ctx.save();
-    // Posiciona acima da cabeça (ajustado pelo tamanho do boss se necessário)
-    ctx.translate(0, -50 * sizeMult); 
     
-    // Efeito de brilho da auréola
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "#fff";
-    
-    // Desenha a elipse branca/dourada
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    // x, y, raioX, raioY, rotação, anguloInicial, anguloFinal
-    ctx.ellipse(0, 0, 15 * sizeMult, 5 * sizeMult, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    
-    // Adiciona um brilho interno leve
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = "#fff";
-    ctx.fill();
-    ctx.restore();
-}
-// ==========================================
+    // ==========================================
+    // TRECHO: AURÉOLA DE ESPÍRITO (MORTO)
+    // ==========================================
+    if (isSpirit) {
+        ctx.save();
+        ctx.translate(0, -50 * sizeMult); 
+        ctx.shadowBlur = 10; ctx.shadowColor = "#fff";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 15 * sizeMult, 5 * sizeMult, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 0.3; ctx.fillStyle = "#fff"; ctx.fill();
+        ctx.restore();
+    }
+    // ==========================================
 
     // EFEITOS DE CARREGAMENTO
     if (e.state === "CHARGING") {
@@ -323,7 +394,6 @@ if (isSpirit) {
     
     // CABEÇA
     ctx.fillStyle = e.isNPC ? (e.isBoss ? "#311" : "#2d2") : "#ffdbac"; 
-    // Exceções de cor de pele
     if(e.name && (e.name.includes("FRIEZA") || e.name.includes("METAL") || e.name.includes("WHITE"))) ctx.fillStyle = "#fff";
     if(e.name && e.name.includes("BUU")) ctx.fillStyle = "#fbb";
     if(e.name && e.name.includes("CELL")) ctx.fillStyle = "#dfd";
@@ -467,6 +537,7 @@ function draw() {
     ctx.translate(-cam.x + sx, -cam.y + sy);
 
     drawBackground(cam.x, cam.y);
+	drawOtherWorld(cam.x, cam.y);
 
     craters.forEach(c => { ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill(); });
     rocks.forEach(r => { 
@@ -535,13 +606,17 @@ function update() {
         const xpPerc = (me.xp / (me.level*800)) * 100;
         document.getElementById("xp-bar").style.width = xpPerc + "%";
         
-        // Atualiza HUD com Zona Aproximada (Visual)
+        // Atualiza HUD com Zona Geográfica (Omnidirecional)
         const dist = Math.hypot(me.x, me.y);
-        let zoneName = "TERRA";
-        if(dist > 5000 && dist < 15000) zoneName = "DBZ SAGA";
-        if(dist > 15000 && dist < 30000) zoneName = "GT / MOVIES";
-        if(dist > 30000 && dist < 50000) zoneName = "SUPER SAGA";
-        if(dist > 50000) zoneName = "DAIMA / ANGEL";
+        const angle = Math.atan2(me.y, me.x);
+        let zoneName = "PLANETA TERRA";
+        
+        if(dist >= 5000) {
+            if (Math.abs(angle) > 2.35) zoneName = "ESPAÇO PROFUNDO"; // Oeste
+            else if (Math.abs(angle) < 0.78) zoneName = "LINHA DO TEMPO FUTURA"; // Leste
+            else if (angle >= 0.78 && angle <= 2.35) zoneName = "REINO DEMONÍACO"; // Sul
+            else zoneName = "DOMÍNIO DIVINO"; // Norte
+        }
         
         document.getElementById("stat-bp").innerText = `LVL ${me.level} | ${zoneName}`;
         
