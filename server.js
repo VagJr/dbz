@@ -9,8 +9,10 @@ const adapter = new FileSync('db.json');
 const db = low(adapter);
 db.defaults({ users: [] }).write();
 
-const TICK = 50; // optimized for Render free tier
+const TICK = 30;
 const players = {};
+const MAX_CLIENT_SPEED = 18; // clamp for reconciliation
+
 let projectiles = [];
 let npcs = [];
 let rocks = []; 
@@ -141,18 +143,6 @@ const server = http.createServer((req, res) => {
 
 const io = new Server(server, { transports: ['websocket'] });
 
-function packStateForPlayer(pid) {
-    const p = players[pid];
-    if (!p) return null;
-    const R = 2200; // view radius
-    const inRange = (o) => Math.hypot(o.x - p.x, o.y - p.y) < R;
-    const np = npcs.filter(inRange);
-    const rk = rocks.filter(inRange);
-    const pr = projectiles.filter(inRange);
-    return { players, npcs: np, projectiles: pr, rocks: rk, craters };
-}
-
-
 io.on("connection", (socket) => {
     socket.on("login", (data) => {
         let user = db.get('users').find({ name: data.user }).value();
@@ -177,7 +167,19 @@ io.on("connection", (socket) => {
     });
 
     socket.on("input", (input) => {
+        // client-side prediction reconciliation
+
         const p = players[socket.id];
+        if(input.cx !== undefined && input.cy !== undefined){
+            const dx = input.cx - p.x;
+            const dy = input.cy - p.y;
+            const dist = Math.hypot(dx, dy);
+            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
+                p.x = input.cx;
+                p.y = input.cy;
+            }
+        }
+
         if(!p || p.stun > 0 || p.isDead) return; 
         
         let speed = 5;
@@ -212,6 +214,16 @@ io.on("connection", (socket) => {
 
     socket.on("release_attack", () => {
         const p = players[socket.id];
+        if(input.cx !== undefined && input.cy !== undefined){
+            const dx = input.cx - p.x;
+            const dy = input.cy - p.y;
+            const dist = Math.hypot(dx, dy);
+            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
+                p.x = input.cx;
+                p.y = input.cy;
+            }
+        }
+
         if(!p || p.isSpirit || p.stun > 0) return; 
         const isCharged = (Date.now() - p.chargeStart) > 600;
         p.state = "ATTACKING";
@@ -269,6 +281,16 @@ io.on("connection", (socket) => {
 
     socket.on("release_blast", () => {
         const p = players[socket.id];
+        if(input.cx !== undefined && input.cy !== undefined){
+            const dx = input.cx - p.x;
+            const dy = input.cy - p.y;
+            const dist = Math.hypot(dx, dy);
+            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
+                p.x = input.cx;
+                p.y = input.cy;
+            }
+        }
+
         if(!p || p.isSpirit || p.ki < 10) return;
         const isSuper = (Date.now() - p.chargeStart) > 800;
         const cost = isSuper ? 40 : 10;
@@ -289,6 +311,16 @@ io.on("connection", (socket) => {
 
     socket.on("vanish", () => {
         const p = players[socket.id];
+        if(input.cx !== undefined && input.cy !== undefined){
+            const dx = input.cx - p.x;
+            const dy = input.cy - p.y;
+            const dist = Math.hypot(dx, dy);
+            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
+                p.x = input.cx;
+                p.y = input.cy;
+            }
+        }
+
         if(!p || p.isSpirit || p.ki < 20 || p.stun > 0) return;
         p.ki -= 20; p.x += Math.cos(p.angle)*350; p.y += Math.sin(p.angle)*350;
         io.emit("fx", { type: "vanish", x: p.x, y: p.y });
@@ -296,6 +328,16 @@ io.on("connection", (socket) => {
 
     socket.on("transform", () => {
         const p = players[socket.id];
+        if(input.cx !== undefined && input.cy !== undefined){
+            const dx = input.cx - p.x;
+            const dy = input.cy - p.y;
+            const dist = Math.hypot(dx, dy);
+            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
+                p.x = input.cx;
+                p.y = input.cy;
+            }
+        }
+
         if(!p || p.isSpirit) return;
         
         let nextForm = "BASE";
@@ -462,7 +504,7 @@ setInterval(() => {
         if(hit || pr.life <= 0) projectiles.splice(i, 1);
     });
 
-    Object.keys(players).forEach(id=>{ const st = packStateForPlayer(id); if(st) io.to(id).emit('state', st); });
+    io.emit("state", { players, npcs, projectiles, rocks, craters });
 }, TICK);
 
 server.listen(3000, () => console.log("Dragon Bolt OMNI ONLINE"));

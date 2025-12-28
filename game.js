@@ -8,6 +8,8 @@ let cam = { x: 0, y: 0 }, mouse = { x: 0, y: 0 }, keys = {};
 let mouseLeft = false, mouseRight = false;
 let particles = [], shockwaves = [], trails = [], texts = [];
 let screenShake = 0, flash = 0, hitStop = 0;
+let localVX = 0, localVY = 0;
+
 
 // CONTROLES E LOGIN
 const btnLogin = document.getElementById("btn-login");
@@ -251,7 +253,6 @@ function draw() {
     ctx.restore();
 }
 
-let lastInputSent = 0;
 function update() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     if(!myId) { requestAnimationFrame(update); return; }
@@ -259,6 +260,13 @@ function update() {
 
     const me = players[myId];
     if(me) {
+        // CLIENT-SIDE PREDICTION (instant movement)
+        const speed = me.form === 'UI' ? 12 : me.form === 'GOD' ? 9 : me.form === 'SSJ' ? 7 : 5;
+        localVX = ((keys['KeyD']?1:0)-(keys['KeyA']?1:0)) * speed;
+        localVY = ((keys['KeyS']?1:0)-(keys['KeyW']?1:0)) * speed;
+        me.x += localVX;
+        me.y += localVY;
+
         document.getElementById("hp-bar").style.width = (me.hp/me.maxHp)*100 + "%";
         document.getElementById("ki-bar").style.width = (me.ki/me.maxKi)*100 + "%";
         // BARRA DE XP
@@ -274,7 +282,7 @@ function update() {
         document.getElementById("stat-zone").innerText = `${me.form} | ${zone}`;
 
         const ang = Math.atan2(mouse.y - (me.y - cam.y), mouse.x - (me.x - cam.x));
-        const now = performance.now(); if(now-lastInputSent>50){ lastInputSent=now; window.socket.emit("input", { x: (keys["KeyD"]?1:0)-(keys["KeyA"]?1:0), y: (keys["KeyS"]?1:0)-(keys["KeyW"]?1:0), angle: ang, block: keys["KeyQ"], charge: keys["KeyC"], holdAtk: mouseLeft, holdBlast: mouseRight }); }
+        const now = performance.now(); if(now-lastInputSent>50){ lastInputSent=now; window.socket.emit("input", { x: (keys['KeyD']?1:0)-(keys['KeyA']?1:0), y: (keys['KeyS']?1:0)-(keys['KeyW']?1:0), angle: ang, block: keys['KeyQ'], charge: keys['KeyC'], holdAtk: mouseLeft, holdBlast: mouseRight, cx: me.x, cy: me.y }); }
     }
     draw(); requestAnimationFrame(update);
 }
