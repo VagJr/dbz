@@ -167,50 +167,60 @@ io.on("connection", (socket) => {
     });
 
     socket.on("input", (input) => {
-        // client-side prediction reconciliation
+    const p = players[socket.id];
+    if(!p || p.stun > 0 || p.isDead) return;
 
-        const p = players[socket.id];
-        if(input.cx !== undefined && input.cy !== undefined){
-            const dx = input.cx - p.x;
-            const dy = input.cy - p.y;
-            const dist = Math.hypot(dx, dy);
-            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
-                p.x = input.cx;
-                p.y = input.cy;
-            }
+    // === RECONCILIAÇÃO CLIENT-SIDE PREDICTION (FIX) ===
+    if (
+        input &&
+        typeof input.cx === "number" &&
+        typeof input.cy === "number"
+    ) {
+        const dx = input.cx - p.x;
+        const dy = input.cy - p.y;
+        const dist = Math.hypot(dx, dy);
+
+        const MAX_DRIFT = 60; // tolerância segura
+        if (dist < MAX_DRIFT) {
+            p.x = input.cx;
+            p.y = input.cy;
         }
+    }
 
-        if(!p || p.stun > 0 || p.isDead) return; 
-        
-        let speed = 5;
-        if(p.form === "SSJ") speed = 7;
-        if(p.form === "GOD") speed = 9;
-        if(p.form === "UI") speed = 12;
+    // === MOVIMENTO NORMAL (server authority continua) ===
+    let speed = 5;
+    if(p.form === "SSJ") speed = 7;
+    if(p.form === "GOD") speed = 9;
+    if(p.form === "UI") speed = 12;
 
-        const moveMod = (p.state === "BLOCKING" || p.state === "CHARGING_ATK") ? 0.3 : 1.0;
-        
-        if(input.x || input.y) {
-            p.vx += input.x * speed * moveMod;
-            p.vy += input.y * speed * moveMod;
-            if(!["ATTACKING"].includes(p.state)) p.state = "MOVING";
-        }
-        
-        p.angle = input.angle;
+    const moveMod =
+        (p.state === "BLOCKING" || p.state === "CHARGING_ATK") ? 0.3 : 1.0;
 
-        if(input.block) {
-            if(p.ki > 0) { p.state = "BLOCKING"; p.ki -= 0.5; } 
-            else { p.state = "IDLE"; }
-        }
-        else if(input.charge) { 
-            p.state = "CHARGING"; 
-            p.ki = Math.min(p.maxKi, p.ki + (p.level * 0.8)); 
-        } 
-        else if(input.holdAtk) {
-            if(p.state !== "CHARGING_ATK") p.chargeStart = Date.now();
-            p.state = "CHARGING_ATK";
-        } 
-        else if(!["ATTACKING"].includes(p.state)) p.state = "IDLE";
-    });
+    if (input.x || input.y) {
+        p.vx += input.x * speed * moveMod;
+        p.vy += input.y * speed * moveMod;
+        if(!["ATTACKING"].includes(p.state)) p.state = "MOVING";
+    }
+
+    p.angle = input.angle;
+
+    if(input.block) {
+        if(p.ki > 0) { p.state = "BLOCKING"; p.ki -= 0.5; }
+        else { p.state = "IDLE"; }
+    }
+    else if(input.charge) {
+        p.state = "CHARGING";
+        p.ki = Math.min(p.maxKi, p.ki + (p.level * 0.8));
+    }
+    else if(input.holdAtk) {
+        if(p.state !== "CHARGING_ATK") p.chargeStart = Date.now();
+        p.state = "CHARGING_ATK";
+    }
+    else if(!["ATTACKING"].includes(p.state)) {
+        p.state = "IDLE";
+    }
+});
+
 
     socket.on("release_attack", () => {
         const p = players[socket.id];
