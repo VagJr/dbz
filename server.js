@@ -10,11 +10,10 @@ const { Pool } = require('pg'); // Cliente PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Necessário para conexão segura no Render
+    rejectUnauthorized: false
   }
 });
 
-// Cria a tabela de usuários se não existir ao iniciar
 pool.query(`
   CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -34,7 +33,7 @@ let rocks = [];
 let craters = [];
 
 // ==================================================================================
-// ESTATÍSTICAS RPG E BESTIÁRIO
+// ESTATÍSTICAS RPG E BESTIÁRIO EXPANDIDO (OBRA PRIMA)
 // ==================================================================================
 const FORM_STATS = {
     "BASE": { spd: 5,  dmg: 1.0, hpMult: 1.0, kiMult: 1.0 },
@@ -46,23 +45,37 @@ const FORM_STATS = {
     "UI":   { spd: 16, dmg: 6.0, hpMult: 5.0, kiMult: 5.0 }
 };
 
-// BP CAP POR NIVEL + FORMA
 const BP_TRAIN_CAP = {
-    BASE:  1200,
-    SSJ:   2500,
-    SSJ2:  5000,
-    SSJ3:  9000,
-    GOD:   16000,
-    BLUE:  28000,
-    UI:    45000
+    BASE:  1200, SSJ: 2500, SSJ2: 5000, SSJ3: 9000,
+    GOD: 16000, BLUE: 28000, UI: 45000
 };
 
 const BESTIARY = {
-    EARTH: { mobs: ["RR_SOLDIER", "WOLF_BANDIT", "DINOSAUR", "TAMBOURINE", "ANDROID_19"], bosses: ["TAO_PAI_PAI", "KING_PICCOLO", "GENERAL_BLUE", "PERFECT_CELL"] },
-    DEEP_SPACE: { mobs: ["FRIEZA_SCOUT", "ZARBON_MONSTER", "DODORIA_ELITE", "NAMEK_WARRIOR"], bosses: ["CAPTAIN_GINYU", "FRIEZA_FINAL", "COOLER_METAL", "MORO_YOUNG"] },
-    FUTURE_TIMELINE: { mobs: ["MACHINE_MUTANT", "SIGMA_FORCE", "ZAMASU_CLONE", "HELL_FIGHTER_17"], bosses: ["ANDROID_18", "GOKU_BLACK_ROSE", "SUPER_17", "OMEGA_SHENRON"] },
-    DEMON_REALM: { mobs: ["MASKED_MAJIN", "MINI_DEMON", "PUIPUI", "YAKON", "GOMAH_SOLDIER"], bosses: ["DABURA", "FAT_BUU", "KING_GOMAH", "DR_ARINSU"] },
-    DIVINE_REALM: { mobs: ["PRIDE_TROOPER", "U6_BOTAMO", "ANGEL_TRAINEE", "ZENO_GUARD"], bosses: ["BEERUS", "HIT_ASSASSIN", "JIREN_FULL_POWER", "WHIS"] }
+    // CENTRO: TERRA (Clássico + Z Início)
+    EARTH: { 
+        mobs: ["RR_SOLDIER", "WOLF_BANDIT", "DINOSAUR", "SAIBAMAN", "RADITZ_MINION"], 
+        bosses: ["TAO_PAI_PAI", "KING_PICCOLO", "RADITZ", "NAPPA", "VEGETA_SCOUTER"] 
+    },
+    // OESTE: ESPAÇO (Namek, Yardrat, Planeta Vegeta)
+    DEEP_SPACE: { 
+        mobs: ["FRIEZA_SOLDIER", "ZARBON_MONSTER", "DODORIA_ELITE", "NAMEK_WARRIOR", "GINYU_FORCE_MEMBER"], 
+        bosses: ["CAPTAIN_GINYU", "FRIEZA_FINAL", "COOLER_METAL", "LEGENDARY_BROLY"] 
+    },
+    // LESTE: FUTURO/TECH (Androids, Cell, Black)
+    FUTURE_TIMELINE: { 
+        mobs: ["ANDROID_19", "ANDROID_20", "CELL_JR", "MACHINE_MUTANT", "ZAMASU_CLONE"], 
+        bosses: ["ANDROID_18", "PERFECT_CELL", "GOKU_BLACK_ROSE", "SUPER_17", "OMEGA_SHENRON"] 
+    },
+    // SUL: REINO DEMONÍACO (Buu, Janemba, Daima)
+    DEMON_REALM: { 
+        mobs: ["PUIPUI", "YAKON", "DABURA_MINION", "JANEMBA_MINI", "GOMAH_SOLDIER"], 
+        bosses: ["DABURA", "FAT_BUU", "KID_BUU", "JANEMBA", "KING_GOMAH"] 
+    },
+    // NORTE: DOMÍNIO DIVINO (Super, Bills, Zeno)
+    DIVINE_REALM: { 
+        mobs: ["PRIDE_TROOPER", "U6_BOTAMO", "ANGEL_TRAINEE", "HAKAISHIN_GUARD"], 
+        bosses: ["GOLDEN_FRIEZA", "HIT_ASSASSIN", "TOPPO_GOD", "JIREN_FULL_POWER", "BEERUS"] 
+    }
 };
 
 function getMaxBP(p) {
@@ -76,6 +89,7 @@ function clampBP(p) {
     if (p.bp > maxBP) p.bp = maxBP;
     if (p.bp < 0) p.bp = 0;
 }
+
 function findSnapTarget(p) {
     let best = null; let bestScore = Infinity;
     [...Object.values(players), ...npcs].forEach(t => {
@@ -92,8 +106,8 @@ function findSnapTarget(p) {
 
 function getZoneInfo(x, y) {
     const dist = Math.hypot(x, y);
-    let level = 1 + Math.floor(dist / 1500); 
-    if (dist < 5000) return { id: "EARTH", level: Math.max(1, level) };
+    let level = 1 + Math.floor(dist / 2000); 
+    if (dist < 6000) return { id: "EARTH", level: Math.max(1, level) };
     const angle = Math.atan2(y, x);
     if (Math.abs(angle) > 2.35) return { id: "DEEP_SPACE", level };
     if (Math.abs(angle) < 0.78) return { id: "FUTURE_TIMELINE", level };
@@ -102,9 +116,10 @@ function getZoneInfo(x, y) {
 }
 
 function initWorld() {
-    for(let i=0; i<1200; i++) {
+    // Rochas e Decoração
+    for(let i=0; i<1500; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const dist = Math.random() * 60000;
+        const dist = Math.random() * 70000;
         const x = Math.cos(angle) * dist; const y = Math.sin(angle) * dist;
         const zone = getZoneInfo(x, y);
         let type = "rock_earth";
@@ -114,14 +129,39 @@ function initWorld() {
         if(zone.id === "DIVINE_REALM") type = "rock_god";
         rocks.push({ id: i, x, y, r: 30 + Math.random() * 80, hp: 200 + (dist/100), type });
     }
-    for(let i=0; i<350; i++) spawnMobRandomly();
-    spawnBossAt(0, -15000); spawnBossAt(-15000, 0); spawnBossAt(15000, 0); spawnBossAt(0, 15000);
-    spawnBossAt(0, -40000); spawnBossAt(0, 40000);
+
+    // Mobs Aleatórios
+    for(let i=0; i<500; i++) spawnMobRandomly();
+
+    // === PONTOS DE INTERESSE (PLANETAS E BOSSES) ===
+    // Terra (Centro)
+    spawnBossAt(2000, 2000, "VEGETA_SCOUTER");
+
+    // Oeste: Espaço (Namek & Planeta Vegeta Antigo)
+    spawnBossAt(-15000, 2000, "FRIEZA_FINAL"); // Namek
+    spawnBossAt(-25000, -5000, "LEGENDARY_BROLY"); // Vampa/Vegeta
+    spawnBossAt(-40000, 0, "MORO_YOUNG"); // Espaço Profundo
+
+    // Leste: Futuro (Ruínas e GT)
+    spawnBossAt(15000, 0, "PERFECT_CELL"); 
+    spawnBossAt(25000, 5000, "GOKU_BLACK_ROSE");
+    spawnBossAt(40000, 0, "OMEGA_SHENRON");
+
+    // Sul: Reino Demoníaco (Magia e Buu)
+    spawnBossAt(0, 15000, "FAT_BUU");
+    spawnBossAt(5000, 25000, "JANEMBA");
+    spawnBossAt(0, 40000, "KING_GOMAH"); // Daima
+
+    // Norte: Divino (Kaioh, Bills, Zeno)
+    // Kaioh fica em 0, -20000 (Local Seguro)
+    spawnBossAt(0, -30000, "BEERUS");
+    spawnBossAt(10000, -35000, "JIREN_FULL_POWER");
+    spawnBossAt(0, -50000, "WHIS"); // Treino Final
 }
 
 function spawnMobRandomly() {
     const angle = Math.random() * Math.PI * 2;
-    const dist = 1000 + Math.random() * 55000; 
+    const dist = 2000 + Math.random() * 60000; 
     const x = Math.cos(angle) * dist; const y = Math.sin(angle) * dist;
     spawnMobAt(x, y);
 }
@@ -131,25 +171,36 @@ function spawnMobAt(x, y) {
     const list = BESTIARY[zone.id].mobs;
     const type = list[Math.floor(Math.random() * list.length)];
     const id = "mob_" + Math.random().toString(36).substr(2, 9);
-    let stats = { name: type, hp: 500 * zone.level, bp: 1000 * zone.level, level: zone.level, color: "#fff", aggro: 700 + (zone.level * 10), aiType: "MELEE" };
+    
+    let stats = { name: type, hp: 600 * zone.level, bp: 1200 * zone.level, level: zone.level, color: "#fff", aggro: 700 + (zone.level * 10), aiType: "MELEE" };
+    
     if(type.includes("RR_")) stats.color = "#555";
     if(type.includes("FRIEZA")) stats.color = "#848";
     if(type.includes("MAJIN") || type.includes("DEMON")) stats.color = "#909";
     if(type.includes("PRIDE") || type.includes("ANGEL")) stats.color = "#aaf";
+    if(type.includes("CELL") || type.includes("SAIBAMAN")) stats.color = "#484";
+    
     npcs.push({ id, isNPC: true, r: 25, x, y, vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 200, maxKi: 200, level: stats.level, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0, name: stats.name, zoneId: zone.id, aiType: stats.aiType });
 }
 
-function spawnBossAt(x, y) {
+function spawnBossAt(x, y, forcedType = null) {
     const zone = getZoneInfo(x, y);
-    const bosses = BESTIARY[zone.id].bosses;
-    const type = bosses[Math.floor(Math.random() * bosses.length)];
-    let stats = { name: type, hp: 15000 * zone.level, bp: 60000 * zone.level, color: "#f00", r: 60 };
-    if(type.includes("VEGETA")) stats.color = "#33f"; if(type.includes("FRIEZA")) stats.color = "#fff"; 
-    if(type.includes("CELL")) stats.color = "#484"; if(type.includes("BUU")) stats.color = "#fbb";
-    if(type.includes("BABY")) stats.color = "#ddd"; if(type.includes("OMEGA")) stats.color = "#fff"; 
+    let type = forcedType;
+    if (!type) {
+        const bosses = BESTIARY[zone.id].bosses;
+        type = bosses[Math.floor(Math.random() * bosses.length)];
+    }
+    
+    let stats = { name: type, hp: 20000 * zone.level, bp: 80000 * zone.level, color: "#f00", r: 60 };
+    
+    if(type.includes("VEGETA")) stats.color = "#33f";
+    if(type.includes("FRIEZA")) stats.color = "#fff"; 
+    if(type.includes("CELL")) stats.color = "#484";
+    if(type.includes("BUU")) stats.color = "#fbb";
     if(type.includes("BLACK") || type.includes("ROSE")) stats.color = "#333";
-    if(type.includes("JIREN") || type.includes("TOPPO")) stats.color = "#f22"; if(type.includes("GOMAH")) stats.color = "#fdd"; 
-    npcs.push({ id: "BOSS_" + zone.id + "_" + Date.now() + Math.random(), name: type, isNPC: true, isBoss: true, x, y, vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 5000, maxKi: 5000, level: zone.level + 10, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0 });
+    if(type.includes("JIREN") || type.includes("TOPPO")) stats.color = "#f22";
+    
+    npcs.push({ id: "BOSS_" + type + "_" + Date.now(), name: type, isNPC: true, isBoss: true, x, y, vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 10000, maxKi: 10000, level: zone.level + 15, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0 });
 }
 
 initWorld();
@@ -182,66 +233,28 @@ function packStateForPlayer(pid) {
 io.on("connection", (socket) => {
     socket.on("login", async (data) => {
         try {
-            // Busca usuário no PostgreSQL
             const res = await pool.query('SELECT * FROM users WHERE name = $1', [data.user]);
             let user = res.rows[0];
-
             if(!user) {
-                // Cria novo usuário se não existir
-                const insertRes = await pool.query(
-                    'INSERT INTO users (name, pass, level, xp, bp) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-                    [data.user, data.pass, 1, 0, 500]
-                );
+                const insertRes = await pool.query('INSERT INTO users (name, pass, level, xp, bp) VALUES ($1, $2, $3, $4, $5) RETURNING *', [data.user, data.pass, 1, 0, 500]);
                 user = insertRes.rows[0];
-            } else if(user.pass !== data.pass) {
-                return; // Senha errada
-            }
+            } else if(user.pass !== data.pass) return;
 
             const xpToNext = user.level * 800;
-            players[socket.id] = {
-    ...user,
-    id: socket.id,
-    r: 20,
-    x: 0,
-    y: 0,
-    vx: 0,
-    vy: 0,
-    angle: 0,
-    baseMaxHp: 1000 + (user.level * 200),
-    baseMaxKi: 100 + (user.level * 10),
-    hp: 1000 + (user.level * 200),
-    maxHp: 1000 + (user.level * 200),
-    ki: 100,
-    maxKi: 100 + (user.level * 10),
-    form: "BASE",
-    xpToNext: xpToNext,
-    state: "IDLE",
-    combo: 0,
-    comboTimer: 0,
-    attackLock: 0,
-    counterWindow: 0,
-    lastAtk: 0,
-    isDead: false,
-    isSpirit: false,
-    stun: 0,
-    color: "#ff9900",
-    chargeStart: 0,
-    pvpMode: false,
-    lastTransform: 0,
-    bpCapped: false   // 👈 AQUI
-};
-
+            players[socket.id] = { 
+                ...user, id: socket.id, r: 20, x: 0, y: 0, vx: 0, vy: 0, angle: 0, 
+                baseMaxHp: 1000 + (user.level * 200), baseMaxKi: 100 + (user.level * 10), 
+                hp: 1000 + (user.level * 200), maxHp: 1000 + (user.level * 200), 
+                ki: 100, maxKi: 100 + (user.level * 10), form: "BASE", 
+                xpToNext: xpToNext, state: "IDLE", combo: 0, comboTimer: 0, 
+                attackLock: 0, counterWindow: 0, lastAtk: 0, isDead: false, isSpirit: false, 
+                stun: 0, color: "#ff9900", chargeStart: 0, pvpMode: false, lastTransform: 0, bpCapped: false 
+            };
             socket.emit("auth_success", players[socket.id]);
-
-        } catch (err) {
-            console.error("Erro no Login:", err);
-        }
+        } catch (err) { console.error("Erro no Login:", err); }
     });
 
-    socket.on("toggle_pvp", () => {
-        const p = players[socket.id];
-        if(p) p.pvpMode = !p.pvpMode;
-    });
+    socket.on("toggle_pvp", () => { const p = players[socket.id]; if(p) p.pvpMode = !p.pvpMode; });
 
     socket.on("input", (input) => {
         const p = players[socket.id];
@@ -286,6 +299,7 @@ io.on("connection", (socket) => {
 
         [...Object.values(players), ...npcs].forEach(t => {
             if(t.id === p.id || t.isDead || t.isSpirit) return;
+            // REGRA PVP: Só acerta jogador se PVP estiver ON
             if(!t.isNPC && !p.pvpMode) return;
 
             const dx = t.x - p.x; const dy = t.y - p.y;
@@ -340,7 +354,6 @@ io.on("connection", (socket) => {
     socket.on("transform", () => {
         const p = players[socket.id];
         if(!p || p.isSpirit) return;
-        
         if(p.lastTransform && Date.now() - p.lastTransform < 10000) return;
 
         let nextForm = "BASE";
@@ -355,11 +368,11 @@ io.on("connection", (socket) => {
         if(nextForm !== p.form && p.ki >= 50) {
             p.form = nextForm; p.ki -= 50;
             p.lastTransform = Date.now();
-
             const stats = FORM_STATS[nextForm];
             p.maxHp = p.baseMaxHp * stats.hpMult;
             p.maxKi = p.baseMaxKi * stats.kiMult;
-            p.hp += p.maxHp * 0.1; if(p.hp > p.maxHp) p.hp = p.maxHp;
+            // REMOVIDO CURA AO TRANSFORMAR PARA EVITAR EXPLOIT
+            // p.hp += p.maxHp * 0.1; 
 
             const knockbackRadius = 350; const pushForce = 150;
             [...Object.values(players), ...npcs].forEach(t => {
@@ -394,10 +407,7 @@ function handleKill(killer, victim) {
                 killer.maxHp = killer.baseMaxHp * stats.hpMult; killer.maxKi = killer.baseMaxKi * stats.kiMult;
                 killer.hp = killer.maxHp; killer.ki = killer.maxKi; killer.xpToNext = killer.level * 800; 
                 io.emit("fx", { type: "levelup", x: killer.x, y: killer.y });
-                
-                // SALVAR NO BANCO (Fire and Forget)
-                pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', 
-                    [killer.level, killer.xp, killer.bp, killer.name]).catch(e => console.error(e));
+                pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [killer.level, killer.xp, killer.bp, killer.name]).catch(e => console.error(e));
             }
         }
         setTimeout(() => { npcs = npcs.filter(n => n.id !== victim.id); spawnMobRandomly(); }, 5000);
@@ -407,6 +417,7 @@ function handleKill(killer, victim) {
         if(!killer.isNPC) io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: 50 });
     }
 }
+
 setInterval(() => {
     craters = craters.filter(c => { c.life--; return c.life > 0; });
 
@@ -418,67 +429,41 @@ setInterval(() => {
         p.x += p.vx; p.y += p.vy; p.vx *= 0.82; p.vy *= 0.82; 
         
         if (!p.isDead && !p.isSpirit) {
-
-    // BP passivo
-    p.bp += 1 + Math.floor(p.level * 0.1);
-    clampBP(p);
-
-    // Training / Charge
-    if (p.state === "CHARGING") {
-        if (Math.random() > 0.85) {
-            p.xp += 1;
-            p.bp += 5;
+            p.bp += 1 + Math.floor(p.level * 0.1);
             clampBP(p);
+
+            if (p.state === "CHARGING") {
+                if (Math.random() > 0.85) { p.xp += 1; p.bp += 5; clampBP(p); }
+                const xpReq = p.level * 800;
+                if(p.xp >= xpReq) {
+                   p.level++; p.xp = 0; p.bp += 5000; clampBP(p);
+                   p.baseMaxHp += 1000; p.baseMaxKi += 100;
+                   const stats = FORM_STATS[p.form] || FORM_STATS["BASE"];
+                   p.maxHp = p.baseMaxHp * stats.hpMult; p.maxKi = p.baseMaxKi * stats.kiMult;
+                   p.hp = p.maxHp; p.ki = p.maxKi; p.xpToNext = p.level * 800;
+                   io.emit("fx", { type: "levelup", x: p.x, y: p.y });
+                   pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [p.level, p.xp, p.bp, p.name]).catch(e => console.error(e));
+                }
+            } else if(p.ki < p.maxKi && p.state === "IDLE") { p.ki += 0.5; }
+
+            // LÓGICA DE CURA NO PLANETA KAIOH (Se estiver vivo, voe lá para curar)
+            // Localização Sr. Kaioh: 0, -20000
+            const distToKingKai = Math.hypot(p.x - 0, p.y + 20000); 
+            if (distToKingKai < 1500) {
+                // Regeneração rápida
+                p.hp = Math.min(p.maxHp, p.hp + (p.maxHp * 0.05));
+                p.ki = Math.min(p.maxKi, p.ki + (p.maxKi * 0.05));
+            }
         }
-    }
-
-    // Level up
-    const xpReq = p.level * 800;
-    if (p.xp >= xpReq) {
-        p.level++;
-        p.xp = 0;
-        p.bp += 5000;
-        clampBP(p);
-
-        p.baseMaxHp += 1000;
-        p.baseMaxKi += 100;
-
-        const stats = FORM_STATS[p.form] || FORM_STATS["BASE"];
-        p.maxHp = p.baseMaxHp * stats.hpMult;
-        p.maxKi = p.baseMaxKi * stats.kiMult;
-
-        p.hp = p.maxHp;
-        p.ki = p.maxKi;
-        p.xpToNext = p.level * 800;
-
-        io.emit("fx", { type: "levelup", x: p.x, y: p.y });
-
-        // salvar
-        pool.query(
-            'UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4',
-            [p.level, p.xp, p.bp, p.name]
-        ).catch(e => console.error(e));
-    }
-
-} else if (p.ki < p.maxKi && p.state === "IDLE") {
-    p.ki += 0.5;
-}
         
         if (p.bp >= getMaxBP(p)) {
-    if (!p.bpCapped) {
-        p.bpCapped = true;
-        io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "BP NO LIMITE" });
-    }
-} else {
-    p.bpCapped = false;
-}
-
+            if (!p.bpCapped) { p.bpCapped = true; io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "BP NO LIMITE" }); }
+        } else { p.bpCapped = false; }
 
         if (p.isSpirit) {
             const distToKingKai = Math.hypot(p.x - 0, p.y + 20000); 
             if (distToKingKai < 1000) {
-                p.hp = Math.min(p.maxHp, p.hp + 20); 
-                p.ki = Math.min(p.maxKi, p.ki + 5);
+                p.hp = Math.min(p.maxHp, p.hp + 20); p.ki = Math.min(p.maxKi, p.ki + 5);
                 if (distToKingKai < 300) {
                     p.isSpirit = false; p.hp = p.maxHp; p.ki = p.maxKi; p.x = 0; p.y = 0; p.vx = 0; p.vy = 0;
                     io.emit("fx", { type: "transform", x: 0, y: 0, form: "BASE" }); 
@@ -492,7 +477,12 @@ setInterval(() => {
         if(n.isDead) return;
         if(n.stun > 0) { n.stun--; n.x += n.vx; n.y += n.vy; n.vx *= 0.85; n.vy *= 0.85; return; }
         let target = null, minDist = n.aggro || 700;
-        Object.values(players).forEach(p => { if(!p.isSpirit) { const d = Math.hypot(n.x-p.x, n.y-p.y); if(d < minDist) { minDist=d; target=p; } } });
+        Object.values(players).forEach(p => { 
+            if(!p.isSpirit) { 
+                const d = Math.hypot(n.x-p.x, n.y-p.y); 
+                if(d < minDist) { minDist=d; target=p; } 
+            } 
+        });
         if(target) {
             const dx = target.x - n.x; const dy = target.y - n.y;
             const ang = Math.atan2(dy, dx); n.angle = ang;
@@ -514,16 +504,13 @@ setInterval(() => {
     projectiles.forEach((pr, i) => {
         pr.x += pr.vx; pr.y += pr.vy; pr.life--;
         let hit = false;
-        
         [...Object.values(players), ...npcs].forEach(t => {
             if (!hit && t.id !== pr.owner && !t.isSpirit && !t.isDead) {
                 const dist = Math.hypot(pr.x - t.x, pr.y - t.y);
-                if (dist < (45 + pr.size)) { 
+                if (dist < (45 + pr.size)) { // Hitbox corrigida
                     if(!t.isNPC && !pr.pvp) return;
-
                     let dmg = pr.dmg;
                     if (!t.isNPC) dmg *= 0.5;
-
                     t.hp -= dmg; t.stun = 8; hit = true;
                     io.emit("fx", { type: pr.isSuper ? "heavy" : "hit", x: pr.x, y: pr.y, dmg: Math.floor(dmg) });
                     const owner = players[pr.owner] || npcs.find(n => n.id === pr.owner) || {};

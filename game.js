@@ -420,7 +420,8 @@ function drawScouterHUD(me) {
         if (onScreen) {
             const bracketSize = 30 + Math.sin(time/200)*5;
             const isTarget = Math.hypot(screenX-cx, screenY-cy) < 100;
-            const color = isTarget ? "#ff0000" : (e.isNPC ? "#00ff00" : "#00ffff"); 
+            // Cor Ciano para Players, Verde para NPC, Vermelho para Boss
+            const color = isTarget ? "#ff0000" : (e.isNPC ? (e.isBoss ? "#ff0000" : "#00ff00") : "#00ffff"); 
 
             ctx.save(); ctx.translate(screenX, screenY);
             ctx.strokeStyle = color; ctx.lineWidth = 2;
@@ -433,7 +434,11 @@ function drawScouterHUD(me) {
             ctx.fillText(`BP: ${bpDisplay}`, bracketSize+5, -10);
             ctx.font = "10px Orbitron";
             ctx.fillText(e.name, bracketSize+5, 5);
-            if(!e.isNPC) ctx.fillText("[PLAYER]", bracketSize+5, 15);
+            if(!e.isNPC) {
+                // INDICADOR DE HUMANO NO SCOUTER
+                ctx.fillStyle = "#00ffff"; 
+                ctx.fillText("[P]", -bracketSize-15, 0); 
+            }
             ctx.restore();
         } else {
             if (dist < 4000) {
@@ -443,11 +448,12 @@ function drawScouterHUD(me) {
                 const iy = cy + Math.sin(angle) * radius;
                 
                 ctx.save(); ctx.translate(ix, iy); ctx.rotate(angle);
-                ctx.fillStyle = e.isBoss ? "#ff0000" : "#00ff00"; 
+                ctx.fillStyle = e.isBoss ? "#ff0000" : (!e.isNPC ? "#00ffff" : "#00ff00"); 
                 ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-10, 5); ctx.lineTo(-10, -5); ctx.fill();
                 ctx.rotate(-angle);
                 ctx.fillStyle = "#fff"; ctx.font = "10px Arial"; ctx.textAlign = "center";
                 ctx.fillText(`${Math.floor(dist)}m`, 0, 20);
+                if(!e.isNPC) ctx.fillText("P", 0, 5);
                 ctx.restore();
             }
         }
@@ -518,7 +524,8 @@ function drawSchematicMap(me) {
         if(p.id !== myId && !p.isDead) {
             const ox = p.x * scale; const oy = p.y * scale;
             if(Math.hypot(ox, oy) < size) {
-                ctx.fillStyle = "#00ffff"; ctx.beginPath(); ctx.arc(ox, oy, 2, 0, Math.PI*2); ctx.fill();
+                // JOGADORES NO RADAR (CIANO)
+                ctx.fillStyle = "#00ffff"; ctx.beginPath(); ctx.arc(ox, oy, 3, 0, Math.PI*2); ctx.fill();
             }
         }
     });
