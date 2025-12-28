@@ -15,6 +15,7 @@ let showMap = true;
 const ZOOM_SCALE = 0.7;
 const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
 
+// Partículas de poeira da tela (Screen Space Dust)
 const dustParticles = [];
 for(let i=0; i<60; i++) {
     dustParticles.push({
@@ -79,33 +80,33 @@ window.addEventListener("keydown", e => {
     if(e.code === "KeyM") showMap = !showMap; 
     if(e.code === "KeyP") window.socket.emit("toggle_pvp"); 
 });
+window.addEventListener("keyup", e => keys[e.code] = false);
 
+// Botão PVP Mobile
 const btnPvp = document.getElementById("btn-pvp");
-
 if (btnPvp) {
     btnPvp.addEventListener("touchstart", e => {
-        e.preventDefault();
-        socket.emit("toggle_pvp");
-        btnPvp.classList.toggle("active");
+        e.preventDefault(); socket.emit("toggle_pvp"); btnPvp.classList.toggle("active");
     });
-
     btnPvp.addEventListener("click", () => {
-        socket.emit("toggle_pvp");
-        btnPvp.classList.toggle("active");
+        socket.emit("toggle_pvp"); btnPvp.classList.toggle("active");
     });
 }
-
-window.addEventListener("keyup", e => keys[e.code] = false);
 
 window.socket.on("auth_success", (data) => { 
     myId = data.id; 
     document.getElementById("login-screen").style.display = "none"; 
     document.getElementById("ui").style.display = "block"; 
+
+    // 🔓 GARANTE QUE O BGM DESTRAVA
+    unlockBGM();
+
     if (isMobile) {
         document.getElementById("mobile-ui").style.display = "block";
         requestAnimationFrame(() => { initMobileControls(); });
     }
 });
+
 
 window.socket.on("state", data => {
     if(!myId) return;
@@ -131,6 +132,9 @@ window.socket.on("fx", data => {
     if(data.type === "levelup") {
         texts.push({x: data.x, y: data.y - 80, text: "LEVEL UP!", color: "#00ffff", life: 120, vy: -0.5});
         shockwaves.push({ x: data.x, y: data.y, r: 10, maxR: 400, a: 1, color: "#fff" });
+    }
+    if(data.type === "bp_limit") {
+        texts.push({x: data.x, y: data.y - 100, text: data.text, color: "#ff0000", life: 60, vy: -0.5});
     }
 });
 
@@ -436,8 +440,7 @@ function drawScouterHUD(me) {
         if (onScreen) {
             const bracketSize = 30 + Math.sin(time/200)*5;
             const isTarget = Math.hypot(screenX-cx, screenY-cy) < 100;
-            // Cor Ciano para Players, Verde para NPC, Vermelho para Boss
-            const color = isTarget ? "#ff0000" : (e.isNPC ? (e.isBoss ? "#ff0000" : "#00ff00") : "#00ffff"); 
+            const color = isTarget ? "#ff0000" : (e.isNPC ? "#00ff00" : "#00ffff"); 
 
             ctx.save(); ctx.translate(screenX, screenY);
             ctx.strokeStyle = color; ctx.lineWidth = 2;
@@ -451,7 +454,6 @@ function drawScouterHUD(me) {
             ctx.font = "10px Orbitron";
             ctx.fillText(e.name, bracketSize+5, 5);
             if(!e.isNPC) {
-                // INDICADOR DE HUMANO NO SCOUTER
                 ctx.fillStyle = "#00ffff"; 
                 ctx.fillText("[P]", -bracketSize-15, 0); 
             }
@@ -540,7 +542,6 @@ function drawSchematicMap(me) {
         if(p.id !== myId && !p.isDead) {
             const ox = p.x * scale; const oy = p.y * scale;
             if(Math.hypot(ox, oy) < size) {
-                // JOGADORES NO RADAR (CIANO)
                 ctx.fillStyle = "#00ffff"; ctx.beginPath(); ctx.arc(ox, oy, 3, 0, Math.PI*2); ctx.fill();
             }
         }
@@ -569,7 +570,10 @@ function draw() {
     craters.forEach(c => { ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill(); });
     rocks.forEach(r => { 
         ctx.fillStyle = r.type === "rock_namek" ? "#446" : "#543";
-        if(r.type === "rock_magic") ctx.fillStyle = "#636"; if(r.type === "rock_god") ctx.fillStyle = "#333";
+        if(r.type === "rock_magic") ctx.fillStyle = "#636"; 
+        if(r.type === "rock_god") ctx.fillStyle = "#eee"; // Divine Realm mais claro
+        if(r.type === "rock_city") ctx.fillStyle = "#444"; // Adicionado suporte visual para o FUTURO
+        
         ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI*2); ctx.fill(); 
         ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.arc(r.x-r.r/3, r.y+r.r/3, r.r/2, 0, Math.PI*2); ctx.fill();
     });
@@ -614,6 +618,18 @@ function update() {
         
         const dist = Math.hypot(me.x, me.y);
         const angle = Math.atan2(me.y, me.x);
+		let zoneKey = "EARTH";
+
+if (dist >= 5000) {
+    if (Math.abs(angle) > 2.35) zoneKey = "SPACE";
+    else if (Math.abs(angle) < 0.78) zoneKey = "FUTURE";
+    else if (angle >= 0.78 && angle <= 2.35) zoneKey = "DEMON";
+    else zoneKey = "KAIOH";
+}
+
+if (BGM_TRACKS[zoneKey]) {
+    playBGM(BGM_TRACKS[zoneKey]);
+}
         let zoneName = "PLANETA TERRA";
         if (dist >= 5000) {
             if (Math.abs(angle) > 2.35) zoneName = "SETOR OESTE (ESPAÇO)";
@@ -642,5 +658,280 @@ function update() {
         }
     }
     draw(); requestAnimationFrame(update);
+	// ============================================================================
+// 🌍 TROCA DE BGM AUTOMÁTICA POR ZONA
+// ============================================================================
+
+// ============================================================================
+// 🎵 BGM — DETECÇÃO DE ZONA (LOCAL CORRETO)
+// ============================================================================
+
+
+
+
 }
 update();
+
+// =============================================================================
+// 🔊 DBZ PROCEDURAL AUDIO ENGINE — FIXED & SAFE
+// =============================================================================
+(function(){
+
+    let audioCtx = null;
+    let unlocked = false;
+
+    function getAudioCtx(){
+        if(!audioCtx){
+            const AC = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AC(); // criado APÓS gesto
+        }
+        return audioCtx;
+    }
+
+    function unlockAudio(){
+        if(unlocked) return;
+        unlocked = true;
+        getAudioCtx(); // apenas cria, não resume canvas
+    }
+
+    window.addEventListener("pointerdown", unlockAudio, { once:true });
+    window.addEventListener("keydown", unlockAudio, { once:true });
+    window.addEventListener("touchstart", unlockAudio, { once:true });
+
+    // =========================
+    // 🥊 SOCO SECO
+    // =========================
+    function punch(){
+        if(!unlocked) return;
+        const ctxA = getAudioCtx();
+
+        const o = ctxA.createOscillator();
+        const g = ctxA.createGain();
+
+        o.type = "square";
+        o.frequency.setValueAtTime(220, ctxA.currentTime);
+        o.frequency.exponentialRampToValueAtTime(60, ctxA.currentTime + 0.05);
+
+        g.gain.setValueAtTime(0.8, ctxA.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctxA.currentTime + 0.07);
+
+        o.connect(g);
+        g.connect(ctxA.destination);
+
+        o.start();
+        o.stop(ctxA.currentTime + 0.07);
+    }
+
+    // =========================
+    // 💥 IMPACTO PESADO
+    // =========================
+    function heavy(){
+        if(!unlocked) return;
+        const ctxA = getAudioCtx();
+
+        const o = ctxA.createOscillator();
+        const g = ctxA.createGain();
+
+        o.type = "sine";
+        o.frequency.setValueAtTime(90, ctxA.currentTime);
+        o.frequency.exponentialRampToValueAtTime(30, ctxA.currentTime + 0.18);
+
+        g.gain.setValueAtTime(1, ctxA.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctxA.currentTime + 0.2);
+
+        o.connect(g);
+        g.connect(ctxA.destination);
+
+        o.start();
+        o.stop(ctxA.currentTime + 0.2);
+    }
+
+    // =========================
+    // 🔥 KI BLAST
+    // =========================
+    function blast(){
+        if(!unlocked) return;
+        const ctxA = getAudioCtx();
+
+        const o = ctxA.createOscillator();
+        const g = ctxA.createGain();
+
+        o.type = "sawtooth";
+        o.frequency.setValueAtTime(400, ctxA.currentTime);
+        o.frequency.exponentialRampToValueAtTime(900, ctxA.currentTime + 0.15);
+
+        g.gain.setValueAtTime(0.6, ctxA.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctxA.currentTime + 0.18);
+
+        o.connect(g);
+        g.connect(ctxA.destination);
+
+        o.start();
+        o.stop(ctxA.currentTime + 0.18);
+    }
+
+    function transform(){ punch(); heavy(); blast(); }
+    function vanish(){ blast(); }
+    function scouter(){ punch(); }
+
+    // =========================
+    // 🔗 INTEGRAÇÃO SOCKET
+    // =========================
+    if(window.socket){
+        socket.on("fx", fx=>{
+            if(!fx || !fx.type) return;
+            if(fx.type==="hit") punch();
+            if(fx.type==="heavy") heavy();
+            if(fx.type==="vanish") vanish();
+            if(fx.type==="transform") transform();
+            if(fx.type==="bp_limit") scouter();
+        });
+    }
+
+    const _emit = window.socket.emit;
+    window.socket.emit = function(ev,data){
+        if(ev==="release_attack") punch();
+        if(ev==="release_blast") blast();
+        _emit.apply(this, arguments);
+    };
+
+})();
+
+
+// ============================================================================
+// 🎵 BGM LOCAL — TRILHAS POR ZONA (PASTA /audio)
+// ============================================================================
+
+const BGM_TRACKS = {
+    EARTH:  new Audio("audio/earth.mp3"),
+    FUTURE: new Audio("audio/future.mp3"),
+    KAIOH:  new Audio("audio/kaioh.mp3"),
+    DEMON:  new Audio("audio/demon.mp3"),
+    SPACE:  new Audio("audio/space.mp3")
+};
+
+// Configuração padrão
+Object.values(BGM_TRACKS).forEach(bgm => {
+    bgm.loop = true;
+    bgm.volume = 0.25;
+});
+
+let currentBGM = null;
+let audioUnlocked = false;
+
+// 🔓 Desbloqueio obrigatório do navegador
+function unlockBGM(){
+    if(audioUnlocked) return;
+    audioUnlocked = true;
+
+    Object.values(BGM_TRACKS).forEach(bgm => {
+        bgm.load();        // 🔥 IMPORTANTE
+        bgm.muted = true;  // hack de autoplay
+        bgm.play().then(()=>{
+            bgm.pause();
+            bgm.currentTime = 0;
+            bgm.muted = false;
+        }).catch(()=>{});
+    });
+}
+
+
+// Gatilhos seguros
+window.addEventListener("click", unlockBGM, { once:true });
+window.addEventListener("touchstart", unlockBGM, { once:true });
+window.addEventListener("keydown", unlockBGM, { once:true });
+
+// 🎶 Controle de troca (sem reiniciar se for a mesma)
+function playBGM(track){
+    if(!audioUnlocked) return;
+    if(currentBGM === track) return;
+
+    if(currentBGM){
+        currentBGM.pause();
+        currentBGM.currentTime = 0;
+    }
+
+    currentBGM = track;
+    currentBGM.play().catch(()=>{});
+}
+
+
+// Hook leve no draw (não substitui, só desenha depois)
+const __oldDraw = draw;
+draw = function(){
+    __oldDraw();
+
+    if (!window.cosmicEvents) return;
+
+    ctx.save();
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+    ctx.translate(-cam.x, -cam.y);
+
+    window.cosmicEvents.forEach((e,i)=>{
+        e.r += 20;
+        e.life--;
+
+        ctx.strokeStyle = e.color;
+        ctx.globalAlpha = Math.max(0, e.life / 120);
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+        ctx.stroke();
+
+        if(e.life <= 0) window.cosmicEvents.splice(i,1);
+    });
+
+    ctx.restore();
+};
+
+
+// --- 3) MARCADORES DE BOSSES LENDÁRIOS NO MAPA ---
+const legendaryBosses = [
+    {name:"BROLY", x:-25000, y:-5000},
+    {name:"JIREN", x:10000, y:-35000},
+    {name:"KID BUU", x:0, y:40000},
+    {name:"BEERUS", x:0, y:-30000}
+];
+
+const __oldDrawMap = drawSchematicMap;
+drawSchematicMap = function(me){
+    __oldDrawMap(me);
+    ctx.save();
+    const size = isMobile ? 60 : 150;
+    const scale = size / 60000;
+    const mapCX = canvas.width - size - 20;
+    const mapCY = size + 20;
+    ctx.translate(mapCX, mapCY);
+    legendaryBosses.forEach(b=>{
+        const bx = b.x * scale;
+        const by = b.y * scale;
+        if(Math.hypot(bx,by) < size){
+            ctx.fillStyle = "#ff0000";
+            ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI*2); ctx.fill();
+        }
+    });
+    ctx.restore();
+};
+
+// --- 4) TEXTO DE AMEAÇA EM ZONAS ENDGAME ---
+const __oldScouter = drawScouterHUD;
+drawScouterHUD = function(me){
+    __oldScouter(me);
+    if(!me) return;
+    const dist = Math.hypot(me.x, me.y);
+    if(dist > 35000){
+        ctx.save();
+        ctx.fillStyle = "#ff0000";
+        ctx.font = "bold 22px Orbitron";
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#f00";
+        ctx.fillText("⚠ ZONA DE ANIQUILAÇÃO ⚠", canvas.width/2, 80);
+        ctx.restore();
+    }
+};
+
+// ============================================================================
+// === PATCH DESTROY THE GALAXY :: CLIENT END ==================================
+// ============================================================================
