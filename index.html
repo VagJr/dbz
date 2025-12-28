@@ -2,15 +2,18 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DRAGON BOLT: UNIVERSE</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
     <style>
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
             background: #000; overflow: hidden; 
             font-family: 'Orbitron', sans-serif; 
             color: #fff;
+            user-select: none;
+            touch-action: none;
         }
 
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -49,11 +52,9 @@
             position: fixed; top: 20px; left: 20px; z-index: 100; 
             pointer-events: none; width: 350px;
         }
-
         .stat-label { font-size: 12px; color: #aaa; margin-bottom: 2px; }
         #stat-bp { color: #ffcc00; font-size: 24px; text-shadow: 2px 2px 0 #000; font-weight: 900; }
         #stat-zone { color: #00ffcc; font-size: 16px; text-shadow: 1px 1px 0 #000; margin-bottom: 10px; }
-
         .bar-container { margin-bottom: 8px; }
         .bar { 
             width: 100%; height: 18px; background: rgba(0,0,0,0.6); 
@@ -61,29 +62,77 @@
             border-radius: 4px;
         }
         .fill { height: 100%; width: 100%; transition: 0.3s ease-out; }
-        
         #hp-bar { background: linear-gradient(90deg, #ff0000, #990000); }
         #ki-bar { background: linear-gradient(90deg, #00ffff, #0066ff); }
         #xp-bar { background: linear-gradient(90deg, #ffff00, #ff9900); height: 5px !important; }
-
         .bar-text { 
             position: absolute; width: 100%; text-align: center; 
             font-size: 10px; font-weight: bold; top: 1px; 
             text-shadow: 1px 1px 0 #000; 
         }
 
-        /* CONTROLES NO RODAPÉ */
+        /* CONTROLES MOBILE */
+        #mobile-ui {
+            display: none; /* Ativado via JS */
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: 200;
+            pointer-events: auto;
+        }
+        #joystick-container {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    width: 180px;
+    height: 180px;
+    pointer-events: auto;
+    z-index: 300;
+}
+
+        .mobile-btns {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-gap: 15px;
+            pointer-events: auto;
+        }
+        .m-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 153, 0, 0.2);
+            border: 2px solid #ff9900;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #ff9900;
+            user-select: none;
+        }
+        .m-btn:active { background: #ff9900; color: #000; }
+        .btn-large { width: 90px; height: 90px; font-size: 16px; border-width: 4px; }
+        .btn-blue { border-color: #00ffff; color: #00ffff; }
+
+        /* RODAPÉ DESKTOP */
         #controls-hint { 
             position: fixed; bottom: 15px; right: 20px; 
             color: rgba(255,255,255,0.5); font-size: 11px; 
             text-align: right; z-index: 100;
         }
 
-        /* EFEITO DE DANO NA TELA */
         #damage-vignette {
             position: fixed; top:0; left:0; width:100%; height:100%;
             pointer-events: none; box-shadow: inset 0 0 100px rgba(255,0,0,0);
             transition: 0.2s; z-index: 99;
+        }
+
+        @media (max-width: 1024px) {
+            #controls-hint { display: none; }
+            #mobile-ui { display: block; }
         }
     </style>
 </head>
@@ -103,7 +152,6 @@
     <div id="ui">
         <div id="stat-bp">BP: 0</div>
         <div id="stat-zone">TERRA</div>
-
         <div class="bar-container">
             <div class="stat-label">SAÚDE</div>
             <div class="bar">
@@ -111,7 +159,6 @@
                 <div class="bar-text">HP</div>
             </div>
         </div>
-
         <div class="bar-container">
             <div class="stat-label">KI</div>
             <div class="bar">
@@ -119,12 +166,23 @@
                 <div class="bar-text">ENERGIA</div>
             </div>
         </div>
-
         <div class="bar-container">
             <div class="stat-label">EXPERIÊNCIA</div>
             <div class="bar" style="height: 6px; border: 1px solid #444;">
                 <div id="xp-bar" class="fill" style="width: 0%;"></div>
             </div>
+        </div>
+    </div>
+
+    <div id="mobile-ui">
+        <div id="joystick-container"></div>
+        <div class="mobile-btns">
+            <div class="m-btn btn-blue" id="btn-vanish">VANISH</div>
+            <div class="m-btn" id="btn-block">BLOCK</div>
+            <div class="m-btn" id="btn-transform">TRANSF</div>
+            <div class="m-btn btn-large" id="btn-atk">ATK</div>
+            <div class="m-btn btn-large" id="btn-blast">BLAST</div>
+            <div class="m-btn" id="btn-charge">CHARGE KI</div>
         </div>
     </div>
 
@@ -137,6 +195,11 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="game.js"></script>
-
+<script>
+  // Força UI mobile quando houver touch (inclusive no PC)
+  if (navigator.maxTouchPoints > 0) {
+    document.getElementById('mobile-ui').style.display = 'block';
+  }
+</script>
 </body>
 </html>
