@@ -9,7 +9,7 @@ const adapter = new FileSync('db.json');
 const db = low(adapter);
 db.defaults({ users: [] }).write();
 
-const TICK = 30;
+const TICK = 50; // optimized for Render free tier
 const players = {};
 let projectiles = [];
 let npcs = [];
@@ -140,6 +140,18 @@ const server = http.createServer((req, res) => {
 });
 
 const io = new Server(server, { transports: ['websocket'] });
+
+function packStateForPlayer(pid) {
+    const p = players[pid];
+    if (!p) return null;
+    const R = 2200; // view radius
+    const inRange = (o) => Math.hypot(o.x - p.x, o.y - p.y) < R;
+    const np = npcs.filter(inRange);
+    const rk = rocks.filter(inRange);
+    const pr = projectiles.filter(inRange);
+    return { players, npcs: np, projectiles: pr, rocks: rk, craters };
+}
+
 
 io.on("connection", (socket) => {
     socket.on("login", (data) => {
@@ -450,7 +462,7 @@ setInterval(() => {
         if(hit || pr.life <= 0) projectiles.splice(i, 1);
     });
 
-    io.emit("state", { players, npcs, projectiles, rocks, craters });
+    Object.keys(players).forEach(id=>{ const st = packStateForPlayer(id); if(st) io.to(id).emit('state', st); });
 }, TICK);
 
 server.listen(3000, () => console.log("Dragon Bolt OMNI ONLINE"));

@@ -251,6 +251,7 @@ function draw() {
     ctx.restore();
 }
 
+let lastInputSent = 0;
 function update() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     if(!myId) { requestAnimationFrame(update); return; }
@@ -273,7 +274,7 @@ function update() {
         document.getElementById("stat-zone").innerText = `${me.form} | ${zone}`;
 
         const ang = Math.atan2(mouse.y - (me.y - cam.y), mouse.x - (me.x - cam.x));
-        window.socket.emit("input", { x: (keys["KeyD"]?1:0)-(keys["KeyA"]?1:0), y: (keys["KeyS"]?1:0)-(keys["KeyW"]?1:0), angle: ang, block: keys["KeyQ"], charge: keys["KeyC"], holdAtk: mouseLeft, holdBlast: mouseRight });
+        const now = performance.now(); if(now-lastInputSent>50){ lastInputSent=now; window.socket.emit("input", { x: (keys["KeyD"]?1:0)-(keys["KeyA"]?1:0), y: (keys["KeyS"]?1:0)-(keys["KeyW"]?1:0), angle: ang, block: keys["KeyQ"], charge: keys["KeyC"], holdAtk: mouseLeft, holdBlast: mouseRight }); }
     }
     draw(); requestAnimationFrame(update);
 }
