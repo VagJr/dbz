@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DRAGON BOLT: UNIVERSE</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Bangers&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <style>
+        /* ============================
+           BASE DO JOGO (MANTIDO)
+           ============================ */
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
             background: #000; overflow: hidden; 
@@ -19,47 +22,122 @@
 
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* TELA DE LOGIN */
+        /* ============================
+           NOVA TELA DE LOGIN (DBZ STYLE)
+           ============================ */
         #login-screen { 
             position: fixed; width: 100%; height: 100%; 
-            background: radial-gradient(circle, #222 0%, #000 100%); 
+            /* Fundo estilo Aura de Ki */
+            background: radial-gradient(circle at center, #3a1c00 0%, #000000 90%);
             z-index: 1000; display: flex; align-items: center; 
-            justify-content: center; flex-direction: column; 
+            justify-content: center; flex-direction: column;
+            overflow: hidden;
         }
+
+        /* Efeito de linhas de velocidade no fundo */
+        #login-screen::before {
+            content: ''; position: absolute; inset: 0;
+            background: repeating-conic-gradient(from 0deg, transparent 0deg 20deg, rgba(255, 100, 0, 0.05) 20deg 40deg);
+            animation: spinBg 60s linear infinite;
+        }
+        @keyframes spinBg { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         .login-box { 
-            border: 3px solid #ff9900; padding: 50px; text-align: center; 
-            background: rgba(17, 17, 17, 0.95); 
-            box-shadow: 0 0 40px rgba(255, 153, 0, 0.4);
-            border-radius: 12px;
-            backdrop-filter: blur(5px);
+            position: relative;
+            width: 90%; max-width: 400px;
+            padding: 40px 20px; text-align: center; 
+            background: rgba(0, 0, 0, 0.85); 
+            border: 4px solid #F85B1A; /* Laranja Goku */
+            box-shadow: 0 0 0 4px #000, 0 0 30px #F85B1A;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; align-items: center;
         }
 
+        /* ARTE: ESFERA DO DRAGÃO CSS */
+        .dragon-ball {
+            width: 80px; height: 80px;
+            background: radial-gradient(circle at 30% 30%, #ffcc00, #ff9900, #d65c00);
+            border-radius: 50%;
+            border: 3px solid #632a00;
+            box-shadow: 0 0 20px #ff9900;
+            margin-bottom: 20px;
+            position: relative;
+            display: flex; justify-content: center; align-items: center;
+        }
+        /* Estrelas da esfera */
+        .star {
+            color: #cc0000; font-size: 24px; position: absolute;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.4);
+        }
+        .s1 { top: 15px; left: 15px; }
+        .s2 { top: 15px; right: 15px; }
+        .s3 { bottom: 15px; left: 15px; }
+        .s4 { bottom: 15px; right: 15px; }
+
+        /* TÍTULO ESTILO LOGO */
         h1 { 
-            color: #ff9900; font-size: 32px; 
-            margin-bottom: 20px; text-shadow: 0 0 10px rgba(255, 153, 0, 0.8); 
+            font-family: 'Bangers', cursive;
+            color: #ffcc00; 
+            font-size: 55px; 
+            margin: 10px 0; 
+            line-height: 0.9;
+            text-shadow: 3px 3px 0 #F85B1A, 5px 5px 0 #000; /* Borda grossa estilo anime */
+            letter-spacing: 2px;
+            transform: skewX(-5deg);
+        }
+
+        h1 span {
+            display: block;
+            font-size: 24px; 
+            color: #0088FF; /* Azul Vegeta */
+            text-shadow: 2px 2px 0 #000;
+            letter-spacing: 8px;
+            margin-top: 5px;
         }
 
         input { 
-            display: block; margin: 15px auto; padding: 12px; 
-            background: #000; color: #fff; border: 1px solid #ff9900; 
-            font-family: 'Orbitron'; width: 220px; outline: none;
+            display: block; margin: 15px auto; padding: 15px; 
+            background: #fff; color: #000; 
+            border: 3px solid #0050B5; 
+            font-family: 'Bangers', cursive; font-size: 20px;
+            width: 80%; outline: none;
             text-align: center;
+            border-radius: 50px; /* Redondo estilo Capsula */
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
         }
 
-        button { 
-            padding: 12px 40px; background: #ff9900; color: #000; 
-            border: none; cursor: pointer; font-family: 'Orbitron'; 
-            font-weight: 900; font-size: 16px; margin-top: 15px;
+        input::placeholder { color: #888; letter-spacing: 2px; }
+
+        /* BOTÃO PRINCIPAL */
+        #btn-login { 
+            padding: 15px 50px; 
+            background: linear-gradient(180deg, #F85B1A 0%, #cc3300 100%); 
+            color: #fff; 
+            border: 3px solid #fff; 
+            cursor: pointer; 
+            font-family: 'Bangers', cursive; 
+            font-size: 28px; 
+            margin-top: 20px;
             text-transform: uppercase;
-            box-shadow: 0 0 15px #ff9900;
+            box-shadow: 0 5px 0 #882200, 0 10px 20px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-shadow: 2px 2px 0 #000;
         }
 
-        /* HUD */
+        #btn-login:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #882200;
+        }
+
+        /* =========================
+           HUD & MOBILE CONTROLS (MANTIDOS)
+           ========================= */
         #ui { 
             position: fixed; top: 20px; left: 20px; z-index: 100; 
             pointer-events: none; width: 300px;
-            transform: skewX(-10deg); /* Estilo Sci-fi no HUD */
+            transform: skewX(-10deg); 
         }
 
         #stat-bp { color: #ffcc00; font-size: 20px; font-weight: 900; text-shadow: 2px 2px 0 #000; }
@@ -76,34 +154,15 @@
         #ki-bar { background: linear-gradient(90deg, #00ffff, #0066ff); box-shadow: 0 0 10px #0ff; }
         #xp-bar { background: #ffff00; height: 4px !important; }
 
-        /* =========================
-           CONTROLES MOBILE V2
-           ========================= */
         #mobile-ui {
             display: none;
             position: fixed; inset: 0; z-index: 200; pointer-events: auto;
         }
-
         #joystick-container {
             position: absolute; bottom: 40px; left: 40px;
-            width: 150px; height: 150px; z-index: 300;
+            width: 150px; height: 150px; z-index: 300; pointer-events: auto;
         }
-		
-		#mobile-ui {
-    pointer-events: auto;
-}
-
-#joystick-container {
-    pointer-events: auto;
-}
-
-
-        /* Container dos botões */
-        .mobile-btns {
-            position: absolute;
-            z-index: 300;
-        }
-
+        .mobile-btns { position: absolute; z-index: 300; }
         .m-btn {
             position: absolute;
             background: rgba(0, 0, 0, 0.3);
@@ -114,56 +173,33 @@
             user-select: none; backdrop-filter: blur(2px);
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
-
         .m-btn:active {
             background: rgba(255, 153, 0, 0.6);
             color: #fff; border-color: #fff;
             transform: scale(0.9);
         }
 
-        /* ESTILO PARA CELULAR EM PÉ (PORTRAIT) 
-           - Botões mais espalhados verticalmente para não encavalar
-        */
         @media (orientation: portrait) {
-            .mobile-btns {
-                right: 10px; bottom: 20px;
-                width: 140px; height: 350px; /* Mais alto */
-            }
-
-            /* Botão de Ataque Principal (Maior) */
+            .mobile-btns { right: 10px; bottom: 20px; width: 140px; height: 350px; }
             #btn-atk { width: 85px; height: 85px; right: 10px; bottom: 10px; border-color: #ff3333; font-size: 14px; background: rgba(50,0,0,0.4); }
-            
-            /* Ataques secundários próximos */
             #btn-blast { width: 65px; height: 65px; right: 80px; bottom: 60px; border-color: #00ffff; color: #00ffff; }
-            
-            /* Ações de utilidade subindo na tela */
             #btn-charge { width: 60px; height: 60px; right: 10px; bottom: 110px; }
             #btn-block  { width: 60px; height: 60px; right: 80px; bottom: 140px; }
             #btn-vanish { width: 55px; height: 55px; right: 10px; bottom: 180px; border-style: dashed; }
             #btn-transform { width: 50px; height: 50px; right: 60px; bottom: 220px; font-size: 9px; }
         }
 
-        /* ESTILO PARA CELULAR DEITADO (LANDSCAPE) 
-           - Layout em arco no canto direito
-        */
         @media (orientation: landscape) {
-            .mobile-btns {
-                right: 20px; bottom: 20px;
-                width: 300px; height: 250px;
-            }
-
+            .mobile-btns { right: 20px; bottom: 20px; width: 300px; height: 250px; }
             #btn-atk { width: 90px; height: 90px; right: 10px; bottom: 10px; font-size: 16px; border-width: 3px; border-color: #ff3333; background: rgba(50,0,0,0.4); }
             #btn-blast { width: 70px; height: 70px; right: 110px; bottom: 10px; border-color: #00ffff; color: #00ffff; }
-            
             #btn-charge { width: 65px; height: 65px; right: 20px; bottom: 110px; }
             #btn-block  { width: 65px; height: 65px; right: 100px; bottom: 90px; }
             #btn-vanish { width: 60px; height: 60px; right: 170px; bottom: 50px; border-style: dashed; }
             #btn-transform { width: 55px; height: 55px; right: 80px; bottom: 160px; font-size: 10px; }
         }
 
-        @media (max-width: 1024px) {
-            #mobile-ui { display: block; }
-        }
+        @media (max-width: 1024px) { #mobile-ui { display: block; } }
     </style>
 </head>
 
@@ -171,10 +207,19 @@
 
 <div id="login-screen">
     <div class="login-box">
-        <h1>DRAGON BOLT<br><span style="font-size:18px; color:#fff; letter-spacing: 5px;">UNIVERSE</span></h1>
-        <input id="username" placeholder="Guerreiro" autocomplete="off">
-        <input id="password" type="password" placeholder="Senha">
-        <button id="btn-login">INICIAR MISSÃO</button>
+        <div class="dragon-ball">
+            <div class="star s1">★</div>
+            <div class="star s2">★</div>
+            <div class="star s3">★</div>
+            <div class="star s4">★</div>
+        </div>
+
+        <h1>DRAGON BOLT<br><span>UNIVERSE</span></h1>
+        
+        <input id="username" placeholder="NOME DO SAIYAJIN" autocomplete="off" maxlength="12">
+        <input id="password" type="password" placeholder="SENHA SECRETA">
+        
+        <button id="btn-login">COMEÇAR MISSÃO</button>
     </div>
 </div>
 
