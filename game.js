@@ -1,6 +1,12 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-window.socket = io({ transports: ['websocket'] });
+window.socket = io({
+    transports: ['polling', 'websocket'],
+    upgrade: true,
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000
+});
 
 let myId = null;
 let players = {}, npcs = [], projectiles = [], rocks = [], craters = [];

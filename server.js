@@ -141,7 +141,12 @@ const server = http.createServer((req, res) => {
     } else { res.writeHead(404); res.end(); }
 });
 
-const io = new Server(server, { transports: ['websocket'] });
+const io = new Server(server, {
+    transports: ['polling', 'websocket'],
+    allowUpgrades: true,
+    pingTimeout: 20000,
+    pingInterval: 25000
+});
 
 io.on("connection", (socket) => {
     socket.on("login", (data) => {
@@ -224,14 +229,6 @@ io.on("connection", (socket) => {
 
     socket.on("release_attack", () => {
         const p = players[socket.id];
-        if(input.cx !== undefined && input.cy !== undefined){
-            const dx = input.cx - p.x;
-            const dy = input.cy - p.y;
-            const dist = Math.hypot(dx, dy);
-            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
-                p.x = input.cx;
-                p.y = input.cy;
-            }
         }
 
         if(!p || p.isSpirit || p.stun > 0) return; 
@@ -291,14 +288,6 @@ io.on("connection", (socket) => {
 
     socket.on("release_blast", () => {
         const p = players[socket.id];
-        if(input.cx !== undefined && input.cy !== undefined){
-            const dx = input.cx - p.x;
-            const dy = input.cy - p.y;
-            const dist = Math.hypot(dx, dy);
-            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
-                p.x = input.cx;
-                p.y = input.cy;
-            }
         }
 
         if(!p || p.isSpirit || p.ki < 10) return;
@@ -321,14 +310,6 @@ io.on("connection", (socket) => {
 
     socket.on("vanish", () => {
         const p = players[socket.id];
-        if(input.cx !== undefined && input.cy !== undefined){
-            const dx = input.cx - p.x;
-            const dy = input.cy - p.y;
-            const dist = Math.hypot(dx, dy);
-            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
-                p.x = input.cx;
-                p.y = input.cy;
-            }
         }
 
         if(!p || p.isSpirit || p.ki < 20 || p.stun > 0) return;
@@ -338,14 +319,6 @@ io.on("connection", (socket) => {
 
     socket.on("transform", () => {
         const p = players[socket.id];
-        if(input.cx !== undefined && input.cy !== undefined){
-            const dx = input.cx - p.x;
-            const dy = input.cy - p.y;
-            const dist = Math.hypot(dx, dy);
-            if(dist < MAX_CLIENT_SPEED * 3){ // allow small prediction drift
-                p.x = input.cx;
-                p.y = input.cy;
-            }
         }
 
         if(!p || p.isSpirit) return;
