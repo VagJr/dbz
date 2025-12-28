@@ -9,7 +9,7 @@ const adapter = new FileSync('db.json');
 const db = low(adapter);
 db.defaults({ users: [] }).write();
 
-const TICK = 10; // optimized for Render free tier
+const TICK = 24; // optimized for Render free tier
 const players = {};
 let projectiles = [];
 let npcs = [];
