@@ -15,7 +15,6 @@ let showMap = true;
 const ZOOM_SCALE = 0.7;
 const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
 
-// Partículas de poeira da tela (Screen Space Dust - dá sensação de movimento)
 const dustParticles = [];
 for(let i=0; i<60; i++) {
     dustParticles.push({
@@ -78,7 +77,7 @@ window.addEventListener("keydown", e => {
     if(e.code === "KeyG") window.socket.emit("transform"); 
     if(e.code === "KeyT") scouterActive = !scouterActive; 
     if(e.code === "KeyM") showMap = !showMap; 
-    if(e.code === "KeyP") window.socket.emit("toggle_pvp"); // TECLA P PARA PVP
+    if(e.code === "KeyP") window.socket.emit("toggle_pvp"); 
 });
 window.addEventListener("keyup", e => keys[e.code] = false);
 
@@ -342,7 +341,6 @@ function drawEntity(e) {
         if(!e.isNPC) {
              ctx.fillStyle = "#fff"; ctx.font = "12px Orbitron";
              ctx.fillText(`BP: ${e.bp.toLocaleString()}`, 5, 20);
-             // Indicador de PVP
              if(e.pvpMode) {
                  ctx.fillStyle = "#f00"; ctx.font = "bold 10px Arial"; ctx.fillText("PVP ON", 5, 32);
              }
@@ -419,11 +417,10 @@ function drawScouterHUD(me) {
         
         if (e.bp > me.bp * 1.5 && dist < 3000) dangerDetected = true;
 
-        // Se estiver na tela OU se for scouter ativo e estiver "perto" (4000)
-        // Alteração: Ler QUALQUER inimigo na tela, não só no centro
         if (onScreen) {
             const bracketSize = 30 + Math.sin(time/200)*5;
-            const color = (e.isNPC) ? (e.isBoss ? "#ff0000" : "#00ff00") : "#00ffff"; 
+            const isTarget = Math.hypot(screenX-cx, screenY-cy) < 100;
+            const color = isTarget ? "#ff0000" : (e.isNPC ? "#00ff00" : "#00ffff"); 
 
             ctx.save(); ctx.translate(screenX, screenY);
             ctx.strokeStyle = color; ctx.lineWidth = 2;
@@ -432,21 +429,13 @@ function drawScouterHUD(me) {
             ctx.beginPath(); ctx.moveTo(bracketSize, bracketSize-10); ctx.lineTo(bracketSize, bracketSize); ctx.lineTo(bracketSize-10, bracketSize); ctx.stroke();
 
             ctx.fillStyle = color; ctx.font = "bold 12px Orbitron"; 
-            const bpDisplay = e.bp.toLocaleString();
+            const bpDisplay = isTarget ? e.bp.toLocaleString() : Math.floor(Math.random()*99999);
             ctx.fillText(`BP: ${bpDisplay}`, bracketSize+5, -10);
             ctx.font = "10px Orbitron";
             ctx.fillText(e.name, bracketSize+5, 5);
-            
-            // INDICADOR DE HUMANO
-            if(!e.isNPC) {
-                ctx.fillStyle = "#fff";
-                ctx.font = "bold 10px Arial";
-                ctx.fillText("⚠️ HUMAN", bracketSize+5, 20);
-            }
-            
+            if(!e.isNPC) ctx.fillText("[PLAYER]", bracketSize+5, 15);
             ctx.restore();
         } else {
-            // Seta indicadora fora da tela
             if (dist < 4000) {
                 const angle = Math.atan2(screenY - cy, screenX - cx);
                 const radius = Math.min(W, H) / 2 - 30;
@@ -454,12 +443,11 @@ function drawScouterHUD(me) {
                 const iy = cy + Math.sin(angle) * radius;
                 
                 ctx.save(); ctx.translate(ix, iy); ctx.rotate(angle);
-                ctx.fillStyle = (!e.isNPC) ? "#00ffff" : (e.isBoss ? "#ff0000" : "#00ff00"); 
+                ctx.fillStyle = e.isBoss ? "#ff0000" : "#00ff00"; 
                 ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-10, 5); ctx.lineTo(-10, -5); ctx.fill();
                 ctx.rotate(-angle);
                 ctx.fillStyle = "#fff"; ctx.font = "10px Arial"; ctx.textAlign = "center";
                 ctx.fillText(`${Math.floor(dist)}m`, 0, 20);
-                if(!e.isNPC) ctx.fillText("P", 0, 5); // P de Player
                 ctx.restore();
             }
         }
@@ -530,7 +518,6 @@ function drawSchematicMap(me) {
         if(p.id !== myId && !p.isDead) {
             const ox = p.x * scale; const oy = p.y * scale;
             if(Math.hypot(ox, oy) < size) {
-                // Jogadores são pontos Ciano no radar
                 ctx.fillStyle = "#00ffff"; ctx.beginPath(); ctx.arc(ox, oy, 2, 0, Math.PI*2); ctx.fill();
             }
         }
@@ -613,7 +600,6 @@ function update() {
         }
         document.getElementById("stat-bp").innerText = `LVL ${me.level} | ${zoneName}`;
         
-        // Indicador PVP no HUD
         if(me.pvpMode) {
              document.getElementById("stat-bp").innerText += " [PVP ON]";
              document.getElementById("stat-bp").style.color = "#f00";
