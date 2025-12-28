@@ -397,6 +397,7 @@ setInterval(() => {
         
         if (!p.isDead && !p.isSpirit) {
             p.bp += 1 + Math.floor(p.level * 0.1);
+clampBP(p);
             if (p.state === "CHARGING") {
                 if (Math.random() > 0.85) { p.xp += 1; p.bp += 5; clampBP(p); }
                 const xpReq = p.level * 800;
