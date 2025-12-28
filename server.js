@@ -3,6 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const { Server } = require("socket.io");
 const { Pool } = require('pg'); // Cliente PostgreSQL
+const isRender = !!process.env.DATABASE_URL;
+
 
 // ==================================================================================
 // CONFIGURAÇÃO DO BANCO DE DADOS (POSTGRESQL NO RENDER)
@@ -229,30 +231,91 @@ function packStateForPlayer(pid) {
 
     return { players: playersObj, npcs: npcs.filter(inRange), projectiles: projectiles.filter(inRange), rocks: rocks.filter(inRange), craters };
 }
-
+const localUsers = {};
 io.on("connection", (socket) => {
     socket.on("login", async (data) => {
-        try {
-            const res = await pool.query('SELECT * FROM users WHERE name = $1', [data.user]);
-            let user = res.rows[0];
-            if(!user) {
-                const insertRes = await pool.query('INSERT INTO users (name, pass, level, xp, bp) VALUES ($1, $2, $3, $4, $5) RETURNING *', [data.user, data.pass, 1, 0, 500]);
-                user = insertRes.rows[0];
-            } else if(user.pass !== data.pass) return;
+    try {
+        let user;
 
-            const xpToNext = user.level * 800;
-            players[socket.id] = { 
-                ...user, id: socket.id, r: 20, x: 0, y: 0, vx: 0, vy: 0, angle: 0, 
-                baseMaxHp: 1000 + (user.level * 200), baseMaxKi: 100 + (user.level * 10), 
-                hp: 1000 + (user.level * 200), maxHp: 1000 + (user.level * 200), 
-                ki: 100, maxKi: 100 + (user.level * 10), form: "BASE", 
-                xpToNext: xpToNext, state: "IDLE", combo: 0, comboTimer: 0, 
-                attackLock: 0, counterWindow: 0, lastAtk: 0, isDead: false, isSpirit: false, 
-                stun: 0, color: "#ff9900", chargeStart: 0, pvpMode: false, lastTransform: 0, bpCapped: false 
-            };
-            socket.emit("auth_success", players[socket.id]);
-        } catch (err) { console.error("Erro no Login:", err); }
-    });
+        if (isRender) {
+            // ===== POSTGRES (RENDER) =====
+            const res = await pool.query(
+                'SELECT * FROM users WHERE name = $1',
+                [data.user]
+            );
+
+            user = res.rows[0];
+
+            if (!user) {
+                const insert = await pool.query(
+                    'INSERT INTO users (name, pass, level, xp, bp) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+                    [data.user, data.pass, 1, 0, 500]
+                );
+                user = insert.rows[0];
+            } else if (user.pass !== data.pass) {
+                return;
+            }
+
+        } else {
+            // ===== LOCAL (SEM BANCO) =====
+            user = localUsers[data.user];
+
+            if (!user) {
+                user = {
+                    name: data.user,
+                    pass: data.pass,
+                    level: 1,
+                    xp: 0,
+                    bp: 500
+                };
+                localUsers[data.user] = user;
+            } else if (user.pass !== data.pass) {
+                return;
+            }
+        }
+
+        const xpToNext = user.level * 800;
+
+        players[socket.id] = {
+            ...user,
+            id: socket.id,
+            r: 20,
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            baseMaxHp: 1000 + user.level * 200,
+            baseMaxKi: 100 + user.level * 10,
+            hp: 1000 + user.level * 200,
+            maxHp: 1000 + user.level * 200,
+            ki: 100,
+            maxKi: 100 + user.level * 10,
+            form: "BASE",
+            xpToNext,
+            state: "IDLE",
+            combo: 0,
+            comboTimer: 0,
+            attackLock: 0,
+            counterWindow: 0,
+            lastAtk: 0,
+            isDead: false,
+            isSpirit: false,
+            stun: 0,
+            color: "#ff9900",
+            chargeStart: 0,
+            pvpMode: false,
+            lastTransform: 0,
+            bpCapped: false
+        };
+
+        socket.emit("auth_success", players[socket.id]);
+
+    } catch (err) {
+        console.error("Erro no Login:", err);
+    }
+});
+
 
     socket.on("toggle_pvp", () => { const p = players[socket.id]; if(p) p.pvpMode = !p.pvpMode; });
 

@@ -173,6 +173,13 @@
     letter-spacing: 0.6px;
     opacity: 0.1;
 }
+#btn-pvp.active {
+    background: rgba(255, 0, 255, 0.6);
+    color: #fff;
+    border-color: #fff;
+    box-shadow: 0 0 15px #ff00ff;
+}
+
 
 
 /* ANIMAÇÃO DBZ (PULSO DE PODER) */
@@ -222,8 +229,19 @@
         <div class="m-btn" id="btn-charge">KI</div>
         <div class="m-btn" id="btn-blast">BLAST</div>
         <div class="m-btn" id="btn-atk">ATK</div>
+
+        <div class="m-btn" id="btn-pvp"
+             style="width:55px;height:55px;
+                    right:10px;bottom:260px;
+                    border-color:#ff00ff;
+                    color:#ff00ff;
+                    font-size:11px;">
+            PVP
+        </div>
     </div>
-</div>
+</div> <!-- ✅ FECHAMENTO CORRETO DO mobile-ui -->
+
+
 
 <canvas id="gameCanvas"></canvas>
 <script src="/socket.io/socket.io.js"></script>

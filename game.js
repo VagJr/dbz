@@ -79,6 +79,22 @@ window.addEventListener("keydown", e => {
     if(e.code === "KeyM") showMap = !showMap; 
     if(e.code === "KeyP") window.socket.emit("toggle_pvp"); 
 });
+
+const btnPvp = document.getElementById("btn-pvp");
+
+if (btnPvp) {
+    btnPvp.addEventListener("touchstart", e => {
+        e.preventDefault();
+        socket.emit("toggle_pvp");
+        btnPvp.classList.toggle("active");
+    });
+
+    btnPvp.addEventListener("click", () => {
+        socket.emit("toggle_pvp");
+        btnPvp.classList.toggle("active");
+    });
+}
+
 window.addEventListener("keyup", e => keys[e.code] = false);
 
 window.socket.on("auth_success", (data) => { 
