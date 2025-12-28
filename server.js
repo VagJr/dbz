@@ -201,18 +201,16 @@ io.on("connection", (socket) => {
    GAME LOOP (UNCHANGED CORE)
    ========================= */
 setInterval(() => {
+
+    // 1. Atualiza lógica dos players
     Object.values(players).forEach(p => {
         if (!p.isDead && !p.isSpirit) {
+
             if (p.state === "CHARGING" && Math.random() > 0.85) {
                 p.xp += 1;
                 p.bp += 5;
                 clampBP(p);
             }
-    Object.keys(players).forEach(id => {
-    const st = packStateForPlayer(id);
-    if (st) io.to(id).emit("state", st);
-});
-
 
             const xpReq = p.level * 800;
             if (p.xp >= xpReq) {
@@ -223,7 +221,15 @@ setInterval(() => {
             }
         }
     });
+
+    // 2. Envia estado UMA VEZ por tick (correto)
+    Object.keys(players).forEach(id => {
+        const st = packStateForPlayer(id);
+        if (st) io.to(id).emit("state", st);
+    });
+
 }, TICK);
+
 
 server.listen(3000, () => {
     console.log("Dragon Ball Universe — Postgres STABLE ONLINE");
