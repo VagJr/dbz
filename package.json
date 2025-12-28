@@ -1,0 +1,11 @@
+{
+  "name": "dragon-bolt-infinite",
+  "version": "3.0.0",
+  "description": "DBZ MMO Omni-Directional",
+  "main": "server.js",
+  "dependencies": {
+    "socket.io": "^4.5.0",
+    "lowdb": "^1.0.0",
+    "mkdirp": "^1.0.4"
+  }
+}
