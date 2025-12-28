@@ -110,6 +110,23 @@ const io = new Server(server, { transports: ["websocket"] });
 /* =========================
    SOCKET.IO
    ========================= */
+
+function packStateForPlayer(pid) {
+    const p = players[pid];
+    if (!p) return null;
+
+    const R = 4500;
+    const inRange = (o) => Math.hypot(o.x - p.x, o.y - p.y) < R;
+
+    return {
+        players,
+        npcs: npcs.filter(inRange),
+        projectiles: projectiles.filter(inRange),
+        rocks: rocks.filter(inRange),
+        craters
+    };
+}
+
 io.on("connection", (socket) => {
 
     socket.on("login", async (data) => {
@@ -191,6 +208,11 @@ setInterval(() => {
                 p.bp += 5;
                 clampBP(p);
             }
+    Object.keys(players).forEach(id => {
+    const st = packStateForPlayer(id);
+    if (st) io.to(id).emit("state", st);
+});
+
 
             const xpReq = p.level * 800;
             if (p.xp >= xpReq) {
