@@ -21,6 +21,25 @@ const pool = new Pool({
     ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(32) UNIQUE NOT NULL,
+              pass VARCHAR(64) NOT NULL,
+              level INT DEFAULT 1,
+              xp INT DEFAULT 0,
+              bp INT DEFAULT 500
+            );
+        `);
+        console.log("Postgres: tabela users pronta");
+    } catch (err) {
+        console.error("Erro ao preparar tabela users:", err);
+    }
+})();
+
+
 /* =========================
    GAME STATE
    ========================= */
