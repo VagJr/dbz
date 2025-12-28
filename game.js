@@ -601,8 +601,50 @@ function update() {
     
     const me = players[myId];
     if(me) {
-        document.getElementById("hp-bar").style.width = (me.hp/me.maxHp)*100 + "%";
-        document.getElementById("ki-bar").style.width = (me.ki/me.maxKi)*100 + "%";
+        // ===============================
+// HP BAR COM NÚMERO + ANIMAÇÃO
+// ===============================
+const hpPerc = Math.max(0, me.hp / me.maxHp) * 100;
+const hpBar = document.getElementById("hp-bar");
+hpBar.style.width = hpPerc + "%";
+
+let hpText = hpBar.querySelector(".value-text");
+if (!hpText) {
+    hpText = document.createElement("div");
+    hpText.className = "value-text";
+    hpBar.parentElement.appendChild(hpText);
+}
+hpText.innerText = `${Math.floor(me.hp)} / ${me.maxHp}`;
+
+hpBar.parentElement.classList.remove("power-pulse");
+if (me.hp < me.maxHp) {
+    // HP pode pulsar
+hpBar.parentElement.classList.remove("hp-pulse");
+hpBar.parentElement.classList.add("hp-pulse");
+
+// KI NÃO escala texto (só brilho visual)
+kiBar.parentElement.classList.remove("hp-pulse");
+}
+// ===============================
+// KI BAR COM NÚMERO + ANIMAÇÃO
+// ===============================
+const kiPerc = Math.max(0, me.ki / me.maxKi) * 100;
+const kiBar = document.getElementById("ki-bar");
+kiBar.style.width = kiPerc + "%";
+
+let kiText = kiBar.querySelector(".value-text");
+if (!kiText) {
+    kiText = document.createElement("div");
+    kiText.className = "value-text ki-bar-text";
+    kiBar.parentElement.appendChild(kiText);
+}
+
+kiText.innerText = `${Math.floor(me.ki)} / ${me.maxKi}`;
+
+kiBar.parentElement.classList.remove("power-pulse");
+if (me.state === "CHARGING") {
+    kiBar.parentElement.classList.add("power-pulse");
+}
         const xpPerc = (me.xp / (me.level*800)) * 100;
         document.getElementById("xp-bar").style.width = xpPerc + "%";
         
@@ -618,7 +660,12 @@ function update() {
             else zoneName = "DOMÍNIO DIVINO"; // Norte
         }
         
-        document.getElementById("stat-bp").innerText = `LVL ${me.level} | ${zoneName}`;
+        document.getElementById("stat-bp").innerText =
+    `LVL ${me.level} | PB ${me.bp.toLocaleString()}`;
+const bpEl = document.getElementById("stat-bp");
+if (me.bp > 50000) bpEl.style.color = "#ff9900";
+if (me.bp > 150000) bpEl.style.color = "#ff3333";
+
         
         let ang = Math.atan2(mouse.y, mouse.x); 
         if (isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) {
