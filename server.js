@@ -262,70 +262,125 @@ io.on("connection", (socket) => {
     });
 
     socket.on("release_attack", () => {
-        const p = players[socket.id];
-        if(!p || p.isSpirit || p.stun > 0) return; 
+    const p = players[socket.id];
+    if(!p || p.isSpirit || p.stun > 0) return;
 
-        // --- LÓGICA DE DRAGON BALL: LUNGE E SNAP ---
-        const snap = findSnapTarget(p);
-        if (snap) {
-            p.angle = Math.atan2(snap.y - p.y, snap.x - p.x);
-        }
+    // =========================
+    // 1. TAB TARGET AUTOMÁTICO
+    // =========================
+    let target = findSnapTarget(p);
 
-        const isCharged = (Date.now() - p.chargeStart) > 600;
-        p.state = "ATTACKING";
-        p.lastAtk = Date.now();
-        p.attackLock = 12;
-
-        // Impulso de perseguição (Lunge)
-        let lungePower = isCharged ? 90 : 55;
-        if (snap) {
-            const d = Math.hypot(snap.x - p.x, snap.y - p.y);
-            // Se estiver perto, ajusta o dash para não atravessar o inimigo de forma errada
-            if (d < 120) lungePower = Math.max(0, d - 45); 
-        }
-
-        p.vx = Math.cos(p.angle) * lungePower;
-        p.vy = Math.sin(p.angle) * lungePower;
-
-        const targets = [...Object.values(players), ...npcs, ...rocks];
-        let hit = false;
-
-        targets.forEach(t => {
+    // Se não houver alvo direto, pega o mais próximo
+    if (!target) {
+        let best = null, bestDist = 220;
+        [...Object.values(players), ...npcs].forEach(t => {
             if(t.id === p.id || t.isDead || t.isSpirit) return;
-            const dist = Math.hypot(p.x - t.x, p.y - t.y);
-            // Range generoso para garantir que o soco conecte após o lunge
-            const range = (t.r || 25) + 95; 
-            
-            const angToT = Math.atan2(t.y - p.y, t.x - p.x);
-            let angDiff = angToT - p.angle;
-            while (angDiff > Math.PI) angDiff -= Math.PI * 2;
-            while (angDiff < -Math.PI) angDiff += Math.PI * 2;
-
-            if(dist < range && Math.abs(angDiff) < 1.8) {
-                hit = true;
-                let dmg = Math.floor((45 + p.level * 8) * (isCharged ? 3.5 : (1 + p.combo * 0.25)));
-                if(t.state === "BLOCKING") { dmg *= 0.15; t.ki -= 15; t.counterWindow = 12; }
-                
-                t.hp -= dmg;
-                t.stun = isCharged ? 24 : 12;
-
-                // Knockback de DBZ (Empurra o alvo na direção do soco)
-                const push = isCharged ? 130 : 50;
-                t.vx = Math.cos(p.angle) * push;
-                t.vy = Math.sin(p.angle) * push;
-                
-                io.emit("fx", { type: isCharged ? "heavy" : "hit", x: t.x, y: t.y, angle: p.angle, dmg: dmg });
-                if(isCharged) craters.push({ x: t.x, y: t.y, r: 45, life: 1200 }); 
-                if(t.hp <= 0) handleKill(p, t);
+            const d = Math.hypot(t.x - p.x, t.y - p.y);
+            if(d < bestDist) {
+                bestDist = d;
+                best = t;
             }
         });
+        target = best;
+    }
 
-        if (p.comboTimer <= 0) p.combo = 0;
-        p.combo = hit ? (p.combo + 1) % 6 : 0;
-        p.comboTimer = 22;
+    // =========================
+    // 2. TELEGUIA / ENCAIXE
+    // =========================
+    if (target) {
+        const dx = target.x - p.x;
+        const dy = target.y - p.y;
+        p.angle = Math.atan2(dy, dx);
 
-        setTimeout(() => { if(p) p.state = "IDLE"; }, 250);
+        // distância ideal DBZ
+        const ideal = 55;
+        const dist = Math.hypot(dx, dy);
+
+        // move o player para a distância perfeita
+        if (dist > ideal) {
+            const pull = Math.min(80, dist - ideal);
+            p.vx = Math.cos(p.angle) * pull;
+            p.vy = Math.sin(p.angle) * pull;
+        }
+    }
+
+    const charged = (Date.now() - p.chargeStart) > 600;
+    p.state = "ATTACKING";
+    p.attackLock = 14;
+    p.lastAtk = Date.now();
+
+    // =========================
+    // 3. CLEAVE / ÁREA DBZ
+    // =========================
+    const hitRadius = charged ? 130 : 100;
+    const hitAngle = 2.6; // MUITO tolerante (DBZ)
+    let hitSomeone = false;
+
+    [...Object.values(players), ...npcs].forEach(t => {
+        if(t.id === p.id || t.isDead || t.isSpirit) return;
+
+        const dx = t.x - p.x;
+        const dy = t.y - p.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > hitRadius) return;
+
+        const ang = Math.atan2(dy, dx);
+        let diff = Math.abs(ang - p.angle);
+        if (diff > Math.PI) diff = Math.PI * 2 - diff;
+
+        if (diff > hitAngle) return;
+
+        hitSomeone = true;
+
+        let dmg = Math.floor(
+            (50 + p.level * 9) *
+            (charged ? 3.2 : (1 + p.combo * 0.3))
+        );
+
+        if(t.state === "BLOCKING") {
+            dmg *= 0.25;
+            t.ki -= 12;
+            t.counterWindow = 12;
+        }
+
+        t.hp -= dmg;
+        t.stun = charged ? 26 : 14;
+
+        // Knockback cinematográfico
+        const push = charged ? 140 : 65;
+        t.vx = Math.cos(p.angle) * push;
+        t.vy = Math.sin(p.angle) * push;
+
+        io.emit("fx", {
+            type: charged ? "heavy" : "hit",
+            x: t.x,
+            y: t.y,
+            dmg
+        });
+
+        if(charged) {
+            craters.push({ x: t.x, y: t.y, r: 45, life: 1200 });
+        }
+
+        if(t.hp <= 0) handleKill(p, t);
     });
+
+    // =========================
+    // 4. COMBO SEM FRUSTRAÇÃO
+    // =========================
+    if (!hitSomeone) {
+        // mesmo errando visualmente, mantém combo curto
+        p.combo = Math.max(0, p.combo - 1);
+    } else {
+        p.combo = (p.combo + 1) % 6;
+        p.comboTimer = 24;
+    }
+
+    setTimeout(() => {
+        if(p) p.state = "IDLE";
+    }, 220);
+});
+
 
     socket.on("release_blast", () => {
         const p = players[socket.id];
