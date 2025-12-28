@@ -383,7 +383,7 @@ function handleKill(killer, victim) {
         if(!killer.isNPC) io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: 50 });
     }
 }
-
+p.bpCapped = false;
 setInterval(() => {
     craters = craters.filter(c => { c.life--; return c.life > 0; });
 
@@ -420,7 +420,15 @@ clampBP(p);
             } else if(p.ki < p.maxKi && p.state === "IDLE") { p.ki += 0.5; }
         }
         
-        if (p.bp >= getMaxBP(p)) { io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "BP NO LIMITE" }); }
+        if (p.bp >= getMaxBP(p)) {
+    if (!p.bpCapped) {
+        p.bpCapped = true;
+        io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "BP NO LIMITE" });
+    }
+} else {
+    p.bpCapped = false;
+}
+
 
         if (p.isSpirit) {
             const distToKingKai = Math.hypot(p.x - 0, p.y + 20000); 
