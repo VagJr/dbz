@@ -251,23 +251,144 @@ function drawEntity(e) {
     if(e.isDead && e.isNPC) return;
     const isSpirit = e.isSpirit;
     const sizeMult = e.isBoss ? 3.5 : 1;
+    const time = Date.now();
     
-    // AURA TRAIL
+    // Configuração de Cores da Forma
+    let auraColor = "#00ffff"; // Base (Azul Cyan)
+    if(e.color) auraColor = e.color; 
+    if(e.form === "SSJ" || e.form === "SSJ2") auraColor = "#ffea00";
+    if(e.form === "SSJ3") auraColor = "#ffcc00";
+    if(e.form === "GOD") auraColor = "#ff0000";
+    if(e.form === "BLUE") auraColor = "#00bbff";
+    if(e.form === "UI") auraColor = "#ffffff";
+    if(e.name && e.name.includes("BLACK")) auraColor = "#9000ff"; 
+
+    // AURA TRAIL (Rastro de movimento quando rápido)
     if(hitStop <= 0 && (Math.hypot(e.vx, e.vy) > 10)) {
-        let auraColor = e.color || "#fff";
-        if(e.form === "SSJ" || e.form === "SSJ2") auraColor = "#ffea00";
-        if(e.form === "BLUE") auraColor = "#0ff";
         trails.push({ x: e.x, y: e.y, angle: e.angle, color: auraColor, alpha: 0.4, sizeMult });
     }
 
     ctx.save(); 
     ctx.translate(e.x, e.y); 
+
+    // ============================================================
+    // 1. EFEITO: CARREGANDO KI (TECLA C) - "PODER EXPLOSIVO"
+    // ============================================================
+    if (e.state === "CHARGING") {
+        // Aura Externa Pulsante (Chama Vertical)
+        ctx.save();
+        const pulse = Math.sin(time / 50) * 0.1 + 1; 
+        const auraSize = 45 * sizeMult * pulse;
+        
+        const grd = ctx.createRadialGradient(0, 0, 15 * sizeMult, 0, 0, auraSize);
+        grd.addColorStop(0, "rgba(255, 255, 255, 0)");
+        grd.addColorStop(0.5, auraColor);
+        grd.addColorStop(1, "rgba(0, 0, 0, 0)");
+        
+        ctx.fillStyle = grd;
+        ctx.globalAlpha = 0.6;
+        ctx.scale(1, 1.3); // Estica para cima (fogo)
+        ctx.beginPath(); ctx.arc(0, -10, auraSize, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // Raios subindo (Energia fluindo)
+        ctx.save();
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        for(let i=0; i<2; i++) {
+            const px = (Math.random() - 0.5) * 50 * sizeMult;
+            const py = (Math.random() - 0.5) * 50 * sizeMult;
+            const h = Math.random() * 40 * sizeMult;
+            ctx.moveTo(px, py); ctx.lineTo(px, py - h);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Pedras flutuando (Debris)
+        if(Math.random() > 0.7) {
+            const rx = (Math.random() - 0.5) * 60 * sizeMult;
+            particles.push({
+                x: e.x + rx, y: e.y + 10, 
+                vx: 0, vy: -2 - Math.random()*3, 
+                life: 0.5, color: "#888", size: Math.random() * 3 + 1
+            });
+        }
+        if(e.id === myId && Math.random() > 0.8) screenShake = 2;
+    }
+
+    // ============================================================
+    // 2. EFEITO: SEGURAR SOCO (CLIQUE ESQ) - "CONCENTRAÇÃO FÍSICA"
+    // ============================================================
+    else if (e.state === "CHARGING_ATK") {
+        ctx.save();
+        
+        // Efeito de Implosão (Anéis fechando no jogador)
+        const ringSize = (time % 500) / 500 * 60 * sizeMult; // 60 -> 0
+        const invertRing = (60 * sizeMult) - ringSize;
+
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, invertRing, 0, Math.PI*2);
+        ctx.stroke();
+
+        // Brilho intenso na mão/corpo (Flash de Tensão)
+        if (Math.random() > 0.5) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.globalCompositeOperation = "overlay";
+            ctx.beginPath(); ctx.arc(0, 0, 25*sizeMult, 0, Math.PI*2); ctx.fill();
+        }
+
+        // Tremor lateral (Tensão muscular)
+        const shakeX = (Math.random() - 0.5) * 4;
+        ctx.translate(shakeX, 0);
+
+        ctx.restore();
+    }
+
+    // ============================================================
+    // 3. EFEITO: SEGURAR BLAST (CLIQUE DIR) - "ESFERA DE ENERGIA"
+    // ============================================================
+    // Nota: Requer que o e.state seja "CHARGING_BLAST" ou similar no futuro.
+    // Se usar o mesmo state do soco, cairá no efeito acima.
+    else if (e.state === "CHARGING_BLAST") {
+        ctx.save();
+        // Gira a esfera na frente do player
+        const orbDist = 20 * sizeMult;
+        // Posição da mão/boca (frente do angulo)
+        const handX = Math.cos(e.angle) * orbDist; // Como já estamos no translate(x,y), isso é local
+        const handY = Math.sin(e.angle) * orbDist; // Mas o rotate vem depois.
+
+        // Desenha esfera giratória pequena concentrando
+        ctx.rotate(e.angle); // Rotaciona para desenhar na frente
+        ctx.translate(20 * sizeMult, 0); // Move para frente
+        
+        // Esfera principal
+        ctx.fillStyle = auraColor;
+        ctx.shadowBlur = 20; ctx.shadowColor = auraColor;
+        const orbSize = 10 * sizeMult + Math.sin(time/20)*2;
+        ctx.beginPath(); ctx.arc(0, 0, orbSize, 0, Math.PI*2); ctx.fill();
+        
+        // Partículas sendo sugadas para a esfera
+        ctx.fillStyle = "#fff";
+        for(let i=0; i<3; i++) {
+            const r = 20 * sizeMult;
+            const a = Math.random() * Math.PI * 2;
+            const px = Math.cos(a) * r;
+            const py = Math.sin(a) * r;
+            ctx.fillRect(px, py, 2, 2); // Pontinhos em volta
+        }
+        
+        ctx.restore();
+    }
+
+    // ============================================================
     
     // HOLOGRAMA DE STATUS
     if(!e.isSpirit && e.id !== myId) {
         ctx.save();
         ctx.translate(30 * sizeMult, -50 * sizeMult);
-        ctx.transform(1, -0.2, 0, 1, 0, 0); // Inclinação Diagonal
+        ctx.transform(1, -0.2, 0, 1, 0, 0); 
 
         // Linha
         ctx.strokeStyle = "rgba(0, 255, 255, 0.4)";
@@ -288,29 +409,41 @@ function drawEntity(e) {
     }
 
     ctx.globalAlpha = isSpirit ? 0.5 : 1.0;
+    
+    // Rotação do Personagem (Se não estivermos no bloco do Blast que já rodou, rodamos aqui)
+    // O save/restore dos blocos acima garante que a rotação não acumule errado
     ctx.rotate(e.angle);
 
     // CORPO
     ctx.shadowBlur = 0;
-    if(e.form === "SSJ") { ctx.shadowBlur = 20; ctx.shadowColor = "#ff0"; }
+    if(e.form !== "BASE" || e.state === "CHARGING") { 
+        ctx.shadowBlur = 15; 
+        ctx.shadowColor = auraColor; 
+    }
     
     ctx.fillStyle = e.color; 
     ctx.fillRect(-15*sizeMult, -12*sizeMult, 30*sizeMult, 24*sizeMult);
     
     // CABEÇA
     ctx.fillStyle = e.isNPC ? (e.isBoss ? "#311" : "#2d2") : "#ffdbac"; 
-    if(e.name.includes("FRIEZA")) ctx.fillStyle = "#fff";
+    if(e.name && e.name.includes("FRIEZA")) ctx.fillStyle = "#fff";
     ctx.beginPath(); ctx.arc(0, -5*sizeMult, 12*sizeMult, 0, Math.PI*2); ctx.fill();
 
     // CABELO
     if(!e.isNPC) { 
         let hColor = "#111"; 
-        if(e.form === "SSJ") hColor = "#ffea00";
-        if(e.form === "BLUE") hColor = "#0ff";
+        if(e.form === "SSJ" || e.form === "SSJ2") hColor = "#ffea00";
+        if(e.form === "SSJ3") hColor = "#ffcc00";
+        if(e.form === "GOD") hColor = "#aa0000";
+        if(e.form === "BLUE") hColor = "#00bbff";
+        if(e.form === "UI") hColor = "#dddddd";
+
         ctx.fillStyle = hColor; 
+        const hairSize = e.form === "SSJ3" ? 2.5 : 1; 
+
         for(let i=0; i<3; i++) { 
             ctx.beginPath(); ctx.moveTo(-10*sizeMult, -10*sizeMult); 
-            ctx.lineTo((-15+i*15)*sizeMult, -35*sizeMult); 
+            ctx.lineTo((-15+i*15)*sizeMult, -35*sizeMult * hairSize); 
             ctx.lineTo((10)*sizeMult, -10*sizeMult); ctx.fill(); 
         } 
     }
