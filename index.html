@@ -29,124 +29,137 @@
 
         .login-box { 
             border: 3px solid #ff9900; padding: 50px; text-align: center; 
-            background: rgba(17, 17, 17, 0.9); 
-            box-shadow: 0 0 30px rgba(255, 153, 0, 0.5);
-            border-radius: 10px;
+            background: rgba(17, 17, 17, 0.95); 
+            box-shadow: 0 0 40px rgba(255, 153, 0, 0.4);
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
         }
 
         h1 { 
-            color: #ff9900; font-size: 42px; 
-            margin-bottom: 30px; text-shadow: 3px 3px 0 #000; 
+            color: #ff9900; font-size: 32px; 
+            margin-bottom: 20px; text-shadow: 0 0 10px rgba(255, 153, 0, 0.8); 
         }
 
         input { 
             display: block; margin: 15px auto; padding: 12px; 
             background: #000; color: #fff; border: 1px solid #ff9900; 
-            font-family: 'Orbitron'; width: 250px; outline: none;
-            transition: 0.3s;
+            font-family: 'Orbitron'; width: 220px; outline: none;
+            text-align: center;
         }
-
-        input:focus { box-shadow: 0 0 10px #ff9900; }
 
         button { 
-            padding: 12px 30px; background: #ff9900; color: #000; 
+            padding: 12px 40px; background: #ff9900; color: #000; 
             border: none; cursor: pointer; font-family: 'Orbitron'; 
-            font-weight: bold; font-size: 16px; margin-top: 10px;
-            transition: 0.3s;
+            font-weight: 900; font-size: 16px; margin-top: 15px;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px #ff9900;
         }
-
-        button:hover { background: #fff; transform: scale(1.05); }
 
         /* HUD */
         #ui { 
             position: fixed; top: 20px; left: 20px; z-index: 100; 
-            pointer-events: none; width: 350px;
+            pointer-events: none; width: 300px;
+            transform: skewX(-10deg); /* Estilo Sci-fi no HUD */
         }
 
-        #stat-bp { color: #ffcc00; font-size: 24px; font-weight: 900; }
-        #stat-zone { color: #00ffcc; font-size: 16px; margin-bottom: 10px; }
+        #stat-bp { color: #ffcc00; font-size: 20px; font-weight: 900; text-shadow: 2px 2px 0 #000; }
+        #stat-zone { color: #00ffcc; font-size: 14px; margin-bottom: 5px; text-shadow: 1px 1px 0 #000; }
 
         .bar { 
-            width: 100%; height: 18px; background: rgba(0,0,0,0.6); 
-            border: 2px solid #fff; position: relative; overflow: hidden;
-            border-radius: 4px;
+            width: 100%; height: 14px; background: rgba(0,0,0,0.8); 
+            border: 1px solid #fff; position: relative; overflow: hidden;
+            margin-bottom: 4px;
         }
 
         .fill { height: 100%; width: 100%; transition: 0.3s ease-out; }
-        #hp-bar { background: linear-gradient(90deg, #ff0000, #990000); }
-        #ki-bar { background: linear-gradient(90deg, #00ffff, #0066ff); }
-        #xp-bar { background: linear-gradient(90deg, #ffff00, #ff9900); height: 5px !important; }
+        #hp-bar { background: linear-gradient(90deg, #ff3333, #aa0000); box-shadow: 0 0 10px #f00; }
+        #ki-bar { background: linear-gradient(90deg, #00ffff, #0066ff); box-shadow: 0 0 10px #0ff; }
+        #xp-bar { background: #ffff00; height: 4px !important; }
 
         /* =========================
-           CONTROLES MOBILE (AJUSTADO)
+           CONTROLES MOBILE V2
            ========================= */
         #mobile-ui {
             display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 200;
-            pointer-events: auto;
+            position: fixed; inset: 0; z-index: 200; pointer-events: auto;
         }
 
         #joystick-container {
-            position: absolute;
-            left: 24px;
-            bottom: 24px;
-            width: 180px;
-            height: 180px;
-            z-index: 300;
+            position: absolute; bottom: 40px; left: 40px;
+            width: 150px; height: 150px; z-index: 300;
         }
+		
+		#mobile-ui {
+    pointer-events: auto;
+}
 
+#joystick-container {
+    pointer-events: auto;
+}
+
+
+        /* Container dos botões */
         .mobile-btns {
             position: absolute;
-            right: 24px;
-            bottom: 24px;
-            width: 240px;
-            height: 240px;
+            z-index: 300;
         }
 
         .m-btn {
             position: absolute;
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 153, 0, 0.2);
-            border: 2px solid #ff9900;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 153, 0, 0.6);
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: bold;
-            color: #ff9900;
-            user-select: none;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: bold; color: #ffcc00;
+            user-select: none; backdrop-filter: blur(2px);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
         .m-btn:active {
-            background: #ff9900;
-            color: #000;
-            transform: scale(0.95);
+            background: rgba(255, 153, 0, 0.6);
+            color: #fff; border-color: #fff;
+            transform: scale(0.9);
         }
 
-        #btn-atk {
-            width: 92px;
-            height: 92px;
-            font-size: 16px;
-            border-width: 4px;
-            right: 72px;
-            bottom: 0;
+        /* ESTILO PARA CELULAR EM PÉ (PORTRAIT) 
+           - Botões mais espalhados verticalmente para não encavalar
+        */
+        @media (orientation: portrait) {
+            .mobile-btns {
+                right: 10px; bottom: 20px;
+                width: 140px; height: 350px; /* Mais alto */
+            }
+
+            /* Botão de Ataque Principal (Maior) */
+            #btn-atk { width: 85px; height: 85px; right: 10px; bottom: 10px; border-color: #ff3333; font-size: 14px; background: rgba(50,0,0,0.4); }
+            
+            /* Ataques secundários próximos */
+            #btn-blast { width: 65px; height: 65px; right: 80px; bottom: 60px; border-color: #00ffff; color: #00ffff; }
+            
+            /* Ações de utilidade subindo na tela */
+            #btn-charge { width: 60px; height: 60px; right: 10px; bottom: 110px; }
+            #btn-block  { width: 60px; height: 60px; right: 80px; bottom: 140px; }
+            #btn-vanish { width: 55px; height: 55px; right: 10px; bottom: 180px; border-style: dashed; }
+            #btn-transform { width: 50px; height: 50px; right: 60px; bottom: 220px; font-size: 9px; }
         }
 
-        #btn-blast {
-            width: 80px;
-            height: 80px;
-            right: 0;
-            bottom: 90px;
-        }
+        /* ESTILO PARA CELULAR DEITADO (LANDSCAPE) 
+           - Layout em arco no canto direito
+        */
+        @media (orientation: landscape) {
+            .mobile-btns {
+                right: 20px; bottom: 20px;
+                width: 300px; height: 250px;
+            }
 
-        #btn-charge { right: 150px; bottom: 90px; }
-        #btn-block  { right: 72px;  bottom: 170px; }
-        #btn-vanish { right: 150px; bottom: 170px; border-color: #00ffff; color: #00ffff; }
-        #btn-transform { right: 0; bottom: 170px; }
+            #btn-atk { width: 90px; height: 90px; right: 10px; bottom: 10px; font-size: 16px; border-width: 3px; border-color: #ff3333; background: rgba(50,0,0,0.4); }
+            #btn-blast { width: 70px; height: 70px; right: 110px; bottom: 10px; border-color: #00ffff; color: #00ffff; }
+            
+            #btn-charge { width: 65px; height: 65px; right: 20px; bottom: 110px; }
+            #btn-block  { width: 65px; height: 65px; right: 100px; bottom: 90px; }
+            #btn-vanish { width: 60px; height: 60px; right: 170px; bottom: 50px; border-style: dashed; }
+            #btn-transform { width: 55px; height: 55px; right: 80px; bottom: 160px; font-size: 10px; }
+        }
 
         @media (max-width: 1024px) {
             #mobile-ui { display: block; }
@@ -158,10 +171,10 @@
 
 <div id="login-screen">
     <div class="login-box">
-        <h1>DRAGON BOLT<br><span style="font-size:24px;">UNIVERSE</span></h1>
-        <input id="username" placeholder="Nome">
+        <h1>DRAGON BOLT<br><span style="font-size:18px; color:#fff; letter-spacing: 5px;">UNIVERSE</span></h1>
+        <input id="username" placeholder="Guerreiro" autocomplete="off">
         <input id="password" type="password" placeholder="Senha">
-        <button id="btn-login">ENTRAR</button>
+        <button id="btn-login">INICIAR MISSÃO</button>
     </div>
 </div>
 
@@ -170,16 +183,16 @@
     <div id="stat-zone">TERRA</div>
     <div class="bar"><div id="hp-bar" class="fill"></div></div>
     <div class="bar"><div id="ki-bar" class="fill"></div></div>
-    <div class="bar" style="height:6px"><div id="xp-bar" class="fill"></div></div>
+    <div class="bar" style="height:4px; border:none;"><div id="xp-bar" class="fill"></div></div>
 </div>
 
 <div id="mobile-ui">
     <div id="joystick-container"></div>
     <div class="mobile-btns">
-        <div class="m-btn" id="btn-vanish">VANISH</div>
-        <div class="m-btn" id="btn-block">BLOCK</div>
-        <div class="m-btn" id="btn-transform">TRANSF</div>
-        <div class="m-btn" id="btn-charge">CHARGE</div>
+        <div class="m-btn" id="btn-transform">FORM</div>
+        <div class="m-btn" id="btn-vanish">TP</div>
+        <div class="m-btn" id="btn-block">DEF</div>
+        <div class="m-btn" id="btn-charge">KI</div>
         <div class="m-btn" id="btn-blast">BLAST</div>
         <div class="m-btn" id="btn-atk">ATK</div>
     </div>
@@ -191,6 +204,7 @@
 <script src="game.js"></script>
 
 <script>
+// Forçar detecção mobile se houver touch
 if (navigator.maxTouchPoints > 0) {
     document.getElementById('mobile-ui').style.display = 'block';
 }
