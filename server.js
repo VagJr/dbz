@@ -198,15 +198,39 @@ io.on("connection", (socket) => {
             }
 
             const xpToNext = user.level * 800;
-            players[socket.id] = { 
-                ...user, id: socket.id, r: 20, x: 0, y: 0, vx: 0, vy: 0, angle: 0, 
-                baseMaxHp: 1000 + (user.level * 200), baseMaxKi: 100 + (user.level * 10), 
-                hp: 1000 + (user.level * 200), maxHp: 1000 + (user.level * 200), 
-                ki: 100, maxKi: 100 + (user.level * 10), form: "BASE", 
-                xpToNext: xpToNext, state: "IDLE", combo: 0, comboTimer: 0, 
-                attackLock: 0, counterWindow: 0, lastAtk: 0, isDead: false, isSpirit: false, 
-                stun: 0, color: "#ff9900", chargeStart: 0, pvpMode: false, lastTransform: 0 
-            };
+            players[socket.id] = {
+    ...user,
+    id: socket.id,
+    r: 20,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    angle: 0,
+    baseMaxHp: 1000 + (user.level * 200),
+    baseMaxKi: 100 + (user.level * 10),
+    hp: 1000 + (user.level * 200),
+    maxHp: 1000 + (user.level * 200),
+    ki: 100,
+    maxKi: 100 + (user.level * 10),
+    form: "BASE",
+    xpToNext: xpToNext,
+    state: "IDLE",
+    combo: 0,
+    comboTimer: 0,
+    attackLock: 0,
+    counterWindow: 0,
+    lastAtk: 0,
+    isDead: false,
+    isSpirit: false,
+    stun: 0,
+    color: "#ff9900",
+    chargeStart: 0,
+    pvpMode: false,
+    lastTransform: 0,
+    bpCapped: false   // 👈 AQUI
+};
+
             socket.emit("auth_success", players[socket.id]);
 
         } catch (err) {
@@ -383,7 +407,6 @@ function handleKill(killer, victim) {
         if(!killer.isNPC) io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: 50 });
     }
 }
-p.bpCapped = false;
 setInterval(() => {
     craters = craters.filter(c => { c.life--; return c.life > 0; });
 
