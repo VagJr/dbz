@@ -4,6 +4,7 @@ window.socket = io({ transports: ['websocket'] });
 
 let myId = null;
 let players = {}, npcs = [], projectiles = [], rocks = [], craters = [];
+let dominationZones = [], leaderboard = [];
 let cam = { x: 0, y: 0 }, mouse = { x: 0, y: 0 }, keys = {};
 let mouseLeft = false, mouseRight = false;
 let particles = [], shockwaves = [], trails = [], texts = [];
@@ -11,6 +12,7 @@ let screenShake = 0, flash = 0, hitStop = 0;
 let joystickMove = { x: 0, y: 0 };
 let scouterActive = false; 
 let showMap = true;
+let showLeaderboard = false;
 
 const ZOOM_SCALE = 0.7;
 const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
@@ -79,6 +81,17 @@ window.addEventListener("keydown", e => {
     if(e.code === "KeyT") scouterActive = !scouterActive; 
     if(e.code === "KeyM") showMap = !showMap; 
     if(e.code === "KeyP") window.socket.emit("toggle_pvp"); 
+    if(e.code === "KeyK") showLeaderboard = !showLeaderboard;
+    // Atalho para Guilda Rápida (Exemplo: /guild [nome])
+    if(e.code === "Enter") {
+        let g = prompt("Criar/Entrar Guilda (Max 12 chars):");
+        if(g) socket.emit("create_guild", g);
+    }
+    // Troca de Título (Simples, rotativo via comando no chat futuro, aqui via prompt para teste)
+    if(e.code === "KeyL") {
+         let t = prompt("Definir Título Atual (Ex: Novato, Guerreiro Z):");
+         if(t) socket.emit("set_title", t);
+    }
 });
 window.addEventListener("keyup", e => keys[e.code] = false);
 
@@ -107,6 +120,8 @@ window.socket.on("state", data => {
     if(!myId) return;
     players = data.players; npcs = data.npcs; projectiles = data.projectiles; 
     rocks = data.rocks; craters = data.craters || [];
+    dominationZones = data.domination || [];
+    leaderboard = data.leaderboard || [];
 });
 
 window.socket.on("fx", data => {
@@ -274,6 +289,48 @@ function drawOtherWorld(camX, camY) {
     ctx.restore();
 }
 
+function drawDominationZones() {
+    dominationZones.forEach(z => {
+        ctx.save();
+        ctx.translate(z.x, z.y);
+        
+        // Círculo de Dominação no chão
+        ctx.beginPath();
+        ctx.arc(0, 0, z.radius, 0, Math.PI*2);
+        ctx.strokeStyle = z.owner ? "#00ff00" : "#ffaa00";
+        if(z.state === "WAR") ctx.strokeStyle = "#ff0000";
+        ctx.lineWidth = 10;
+        ctx.setLineDash([20, 10]);
+        ctx.stroke();
+        
+        // Efeito de preenchimento (Progresso)
+        if(z.progress > 0) {
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = z.owner ? "#00ff00" : "#ffff00";
+            ctx.beginPath();
+            ctx.arc(0, 0, z.radius * (z.progress/100), 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // Texto da Zona
+        ctx.font = "bold 40px Orbitron";
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.fillText(z.name, 0, -z.radius - 20);
+        
+        ctx.font = "20px Orbitron";
+        if(z.owner) {
+             ctx.fillStyle = "#00ff00";
+             ctx.fillText(`DOMINADO: ${z.owner} [${z.guild || "SOLO"}]`, 0, -z.radius + 10);
+        } else {
+             ctx.fillStyle = "#ccc";
+             ctx.fillText(`NEUTRO - ${z.progress}%`, 0, -z.radius + 10);
+        }
+        
+        ctx.restore();
+    });
+}
+
 function drawEntity(e) {
     if(e.isDead && e.isNPC) return;
     const isSpirit = e.isSpirit;
@@ -346,6 +403,15 @@ function drawEntity(e) {
         ctx.font = "bold 20px Orbitron";
         ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
         ctx.fillText(`${e.name.substring(0,12)}`, 5, -8);
+
+        // EXIBIR TÍTULO E GUILDA
+        if(!e.isNPC) {
+            ctx.font = "italic 12px Arial";
+            ctx.fillStyle = "#ffcc00";
+            let titleText = `<${e.current_title || 'Novato'}>`;
+            if(e.guild) titleText = `[${e.guild}] ` + titleText;
+            ctx.fillText(titleText, 5, -28);
+        }
         
         const hpPerc = Math.max(0, e.hp / e.maxHp);
         ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 5, 100, 6);
@@ -529,6 +595,15 @@ function drawSchematicMap(me) {
     ctx.beginPath(); ctx.arc(0, 0, 5000*scale, 0, Math.PI*2); ctx.stroke(); 
     ctx.beginPath(); ctx.arc(0, 0, 15000*scale, 0, Math.PI*2); ctx.stroke(); 
 
+    // DESENHAR ZONAS DE DOMINAÇÃO NO MAPA
+    dominationZones.forEach(z => {
+        const zx = z.x * scale; const zy = z.y * scale;
+        if(Math.hypot(zx, zy) < size) {
+            ctx.fillStyle = z.owner ? (z.owner === me.guild || z.owner === me.name ? "#00ff00" : "#ff0000") : "#aaa";
+            ctx.beginPath(); ctx.arc(zx, zy, 5, 0, Math.PI*2); ctx.fill();
+        }
+    });
+
     const px = me.x * scale; const py = me.y * scale;
     if (Math.hypot(px, py) < size) {
         ctx.fillStyle = "#ffaa00"; ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI*2); ctx.fill();
@@ -540,6 +615,32 @@ function drawSchematicMap(me) {
                 ctx.fillStyle = "#00ffff"; ctx.beginPath(); ctx.arc(ox, oy, 3, 0, Math.PI*2); ctx.fill();
             }
         }
+    });
+    ctx.restore();
+}
+
+function drawLeaderboard() {
+    if(!showLeaderboard) return;
+    const W = 300; const H = 200;
+    const X = canvas.width/2 - W/2; const Y = canvas.height/2 - H/2;
+    
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.strokeStyle = "#ffaa00";
+    ctx.lineWidth = 2;
+    ctx.fillRect(X, Y, W, H);
+    ctx.strokeRect(X, Y, W, H);
+    
+    ctx.fillStyle = "#ffaa00";
+    ctx.font = "bold 16px Orbitron";
+    ctx.textAlign = "center";
+    ctx.fillText("RANKING PVP", X + W/2, Y + 30);
+    
+    ctx.font = "14px monospace";
+    ctx.textAlign = "left";
+    leaderboard.forEach((p, i) => {
+        const text = `#${i+1} ${p.name} [${p.guild||"SOLO"}] - ${p.score} pts`;
+        ctx.fillText(text, X + 20, Y + 60 + (i*25));
     });
     ctx.restore();
 }
@@ -561,6 +662,9 @@ function draw() {
 
     drawBackground(cam.x, cam.y);
     drawOtherWorld(cam.x, cam.y); 
+
+    // Desenha as Zonas antes dos players
+    drawDominationZones();
 
     craters.forEach(c => { ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill(); });
     rocks.forEach(r => { 
@@ -595,6 +699,7 @@ function draw() {
         drawNavigationMarkers(me); 
         drawScouterHUD(me);
     }
+    drawLeaderboard();
 }
 
 let lastInputSent = 0;
@@ -661,28 +766,13 @@ update();
 
     // 🎧 SONS MAIS PESADOS, METÁLICOS, ESPACIAIS
     const SOURCES = {
-        // Poradas secas, impacto físico
         hit:       "https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3",
-
-        // Pancada forte, corpo sendo arremessado
         heavy:     "https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3",
-
-        // Ki blast / energia explodindo
         blast:     "https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3",
-
-        // Carregar energia (loop curto e denso)
         charge:    "https://assets.mixkit.co/active_storage/sfx/388/388-preview.mp3",
-
-        // Teleporte / vanish / rasgo no espaço
         teleport:  "https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3",
-
-        // Transformação poderosa
         transform: "https://assets.mixkit.co/active_storage/sfx/411/411-preview.mp3",
-
-        // Scouter eletrônico sci-fi
         scouter:   "https://assets.mixkit.co/active_storage/sfx/1114/1114-preview.mp3",
-
-        // Level up energético
         levelup:   "https://assets.mixkit.co/active_storage/sfx/201/201-preview.mp3"
     };
 
@@ -715,10 +805,8 @@ update();
         a.play().catch(()=>{});
     }
 
-    // 🔓 Gesto obrigatório
     window.addEventListener("pointerdown", unlockAudio, { once:true });
 
-    // 🔊 FX do servidor
     if (window.socket) {
         socket.on("fx", fx => {
             if (!fx || !fx.type) return;
@@ -730,7 +818,6 @@ update();
         });
     }
 
-    // 🔫 Ação local imediata
     const originalEmit = socket.emit;
     socket.emit = function(ev, data){
         if (ev === "release_attack") play("hit");
@@ -738,7 +825,6 @@ update();
         originalEmit.apply(this, arguments);
     };
 
-    // 📡 Scouter
     let lastScouter = false;
     setInterval(()=>{
         if (typeof scouterActive !== "boolean") return;
@@ -748,11 +834,6 @@ update();
 
 })();
 
-
-
-    window.addEventListener('click', () => {
-        if (bgmPlayer.paused && currentBiome) bgmPlayer.play().catch(()=>{});
-    }, { once: true });
 // ============================================================================
 // PATCH V2 FINAL — COMBATE TÉCNICO (APPEND-ONLY)
 // ============================================================================
@@ -783,7 +864,5 @@ function startDefend(){ combatState=COMBAT_STATE.DEFEND; parryWindow=6; }
 function endDefend(){ combatState=COMBAT_STATE.ATTACK; }
 function isParry(){ return combatState===COMBAT_STATE.DEFEND && parryWindow>0; }
 
-
-// === PATCH V3 HOLOGRAMA / DRAGON BALL UI ===
 let hologramPulse=0;
 socket.on("fx",fx=>{if(fx.type==="hit"&&fx.targetId===myId)hologramPulse=6;});

@@ -3,291 +3,315 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dragon Bolt: Universe — Manga Edition</title>
+
+<title>Universe Z — Destroy The Galaxy</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Roboto+Condensed:wght@700&display=swap" rel="stylesheet">
 
 <style>
-:root {
-    --db-orange: #f85b1a;
-    --db-yellow: #ffcc00;
-    --db-blue: #0088ff;
-    --db-red: #ff3333;
-    --ink: #111;
-    --paper: #fff;
-    --ink-border: 5px solid #111;
+:root{
+    --orange:#ff9f00;
+    --blue:#007bff;
+    --red:#ff2e2e;
+    --black:#0e0e0e;
+    --white:#ffffff;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*{margin:0;padding:0;box-sizing:border-box;}
 
-body {
-    font-family: 'Roboto Condensed', sans-serif;
-    background: #f2f2f2;
-    color: #111;
-    background-image: radial-gradient(#f85b1a 1px, transparent 1px);
-    background-size: 22px 22px;
-    overflow-x: hidden;
+body{
+    background:#111;
+    color:#fff;
+    font-family:'Roboto Condensed',sans-serif;
+    overflow-x:hidden;
 }
 
-h1, h2, h3, .btn {
-    font-family: 'Bangers', cursive;
-    letter-spacing: 2px;
+/* ================= HERO ================= */
+.hero{
+    min-height:100vh;
+    background:
+        radial-gradient(circle at top, rgba(255,160,0,.4), transparent 60%),
+        url("https://images.alphacoders.com/129/1290706.jpg") center/cover no-repeat;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
 }
 
-/* SPEED LINES */
-.speed-lines {
-    position: fixed;
-    inset: 0;
-    background: repeating-conic-gradient(
-        from 0deg,
-        transparent 0deg 12deg,
-        rgba(255,255,255,0.85) 12deg 24deg
-    );
-    opacity: 0.25;
-    z-index: -1;
-    animation: spin 30s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg) scale(1.4); } }
-
-/* CAPA */
-.manga-cover {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 40px 20px;
-    background: linear-gradient(135deg, var(--db-orange), var(--db-yellow));
-    clip-path: polygon(0 0,100% 0,100% 94%,0 100%);
+.hero::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to bottom,#000000aa,#000);
 }
 
-.title-box {
-    background: var(--paper);
-    border: var(--ink-border);
-    padding: 45px 65px;
-    transform: rotate(-2deg);
-    box-shadow: 15px 15px 0 #000;
-    text-align: center;
+.hero-content{
+    position:relative;
+    text-align:center;
+    z-index:2;
+    max-width:900px;
+    padding:30px;
 }
 
-h1 {
-    font-size: 82px;
-    color: var(--db-orange);
-    -webkit-text-stroke: 4px #000;
-    text-shadow: 6px 6px 0 #000;
-    line-height: 0.9;
+.logo{
+    font-family:'Bangers';
+    font-size:88px;
+    color:var(--orange);
+    text-shadow:
+        4px 4px 0 #000,
+        0 0 40px #ffb300;
+    line-height:.9;
 }
 
-h1 span {
-    display: block;
-    font-size: 30px;
-    color: var(--db-blue);
-    -webkit-text-stroke: 2px #000;
-    margin-top: 12px;
+.logo span{
+    display:block;
+    font-size:28px;
+    color:#fff;
+    letter-spacing:4px;
+    margin-top:15px;
 }
 
-.intro-text {
-    margin-top: 22px;
-    background: #000;
-    color: #fff;
-    padding: 12px;
-    font-size: 20px;
-    transform: skewX(-10deg);
+.tagline{
+    margin:30px auto;
+    font-size:22px;
+    background:#000;
+    display:inline-block;
+    padding:10px 25px;
+    border:3px solid #fff;
+    transform:skewX(-10deg);
 }
 
-/* BOTÕES */
-.action-area {
-    margin-top: 45px;
-    display: flex;
-    gap: 22px;
-    transform: rotate(2deg);
+.hero-buttons{
+    margin-top:40px;
+    display:flex;
+    gap:25px;
+    justify-content:center;
+    flex-wrap:wrap;
 }
 
-.btn {
-    font-size: 30px;
-    padding: 16px 45px;
-    border: var(--ink-border);
-    cursor: pointer;
-    box-shadow: 8px 8px 0 #000;
-    transition: 0.15s;
+.btn{
+    font-family:'Bangers';
+    font-size:28px;
+    padding:18px 45px;
+    border:4px solid #000;
+    cursor:pointer;
+    box-shadow:8px 8px 0 #000;
+    transition:.2s;
 }
 
-.btn-primary {
-    background: var(--db-blue);
-    color: #fff;
-    text-shadow: 2px 2px 0 #000;
+.btn-play{
+    background:var(--blue);
+    color:#fff;
 }
 
-.btn-secondary {
-    background: #fff;
+.btn-discord{
+    background:#fff;
+    color:#000;
 }
 
-.btn:hover {
-    transform: translate(-4px,-4px);
-    box-shadow: 12px 12px 0 #000;
+.btn:hover{
+    transform:translate(-6px,-6px);
+    box-shadow:14px 14px 0 #000;
 }
 
-/* PAINÉIS */
-.comic-page {
-    max-width: 1200px;
-    margin: 70px auto;
-    display: grid;
-    grid-template-columns: repeat(2,1fr);
-    gap: 35px;
-    padding: 20px;
+/* ================= SECTIONS ================= */
+section{
+    padding:90px 20px;
 }
 
-.panel {
-    background: #fff;
-    border: var(--ink-border);
-    padding: 32px;
-    box-shadow: 12px 12px 0 rgba(0,0,0,0.25);
-    position: relative;
+.section-title{
+    font-family:'Bangers';
+    font-size:52px;
+    text-align:center;
+    margin-bottom:50px;
+    color:var(--orange);
+    text-shadow:3px 3px 0 #000;
 }
 
-.panel h3 {
-    background: #000;
-    color: var(--db-orange);
-    display: inline-block;
-    padding: 6px 18px;
-    font-size: 34px;
-    transform: skewX(-10deg);
-    border: 3px solid #fff;
+/* ================= GAME FEATURES ================= */
+.features{
+    max-width:1200px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:35px;
 }
 
-.panel p {
-    font-size: 19px;
-    margin-top: 12px;
+.card{
+    background:#fff;
+    color:#000;
+    border:4px solid #000;
+    padding:30px;
+    box-shadow:10px 10px 0 #000;
+    position:relative;
 }
 
-.sfx {
-    position: absolute;
-    right: 10px;
-    bottom: -15px;
-    font-size: 85px;
-    color: rgba(0,0,0,0.15);
-    transform: rotate(-12deg);
+.card h3{
+    font-family:'Bangers';
+    font-size:30px;
+    margin-bottom:15px;
 }
 
-/* POWER */
-.power-section {
-    background: #000;
-    color: #fff;
-    padding: 90px 20px;
-    text-align: center;
-    clip-path: polygon(0 6%,100% 0,100% 94%,0 100%);
+.card p{
+    font-size:18px;
 }
 
-.power-steps {
-    display: flex;
-    justify-content: center;
-    gap: 45px;
-    margin-top: 45px;
-    flex-wrap: wrap;
+.sfx{
+    position:absolute;
+    bottom:-15px;
+    right:10px;
+    font-family:'Bangers';
+    font-size:72px;
+    color:rgba(0,0,0,.1);
 }
 
-.step-card {
-    width: 210px;
-    height: 210px;
-    border-radius: 50%;
-    border: 4px solid #fff;
-    background: var(--db-blue);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: relative;
+/* ================= POWER LOOP ================= */
+.loop{
+    background:#000;
+    text-align:center;
 }
 
-.step-card span {
-    position: absolute;
-    top: -22px;
-    left: -10px;
-    font-size: 54px;
-    color: var(--db-yellow);
-    -webkit-text-stroke: 3px #000;
+.loop-steps{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:40px;
 }
 
-/* ZONAS */
-.zones-container {
-    padding: 70px 20px;
-    text-align: center;
+.step{
+    width:180px;
+    height:180px;
+    border-radius:50%;
+    border:4px solid #fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Bangers';
+    font-size:22px;
+    background:var(--orange);
+    color:#000;
 }
 
-.zone-tag {
-    display: inline-block;
-    background: #fff;
-    border: 3px solid #000;
-    padding: 12px 28px;
-    margin: 10px;
-    font-family: 'Bangers';
-    font-size: 26px;
-    transform: skewX(-15deg);
-    box-shadow: 6px 6px 0 #aaa;
+/* ================= MAP ================= */
+.map{
+    background:url("https://images.alphacoders.com/117/1174584.jpg") center/cover no-repeat;
+    position:relative;
 }
 
-/* FOOTER */
-footer {
-    background: var(--db-orange);
-    border-top: var(--ink-border);
-    padding: 40px;
-    text-align: center;
-    font-size: 18px;
+.map::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:#000000bb;
 }
 
+.map-content{
+    position:relative;
+    z-index:2;
+    text-align:center;
+}
+
+.zones span{
+    display:inline-block;
+    margin:10px;
+    padding:12px 25px;
+    border:3px solid #fff;
+    font-family:'Bangers';
+    background:#000;
+}
+
+/* ================= FOOTER ================= */
+footer{
+    background:var(--orange);
+    color:#000;
+    text-align:center;
+    padding:40px;
+    font-weight:bold;
+}
+
+/* ================= MOBILE ================= */
 @media(max-width:768px){
-    .comic-page{grid-template-columns:1fr}
-    h1{font-size:52px}
-    .action-area{flex-direction:column}
+    .logo{font-size:56px;}
 }
 </style>
 </head>
 
 <body>
 
-<div class="speed-lines"></div>
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-content">
+        <div class="logo">
+            UNIVERSE Z
+            <span>DESTROY THE GALAXY</span>
+        </div>
 
-<header class="manga-cover">
-    <div class="title-box">
-        <h1>DRAGON BOLT<br><span>UNIVERSE ONLINE</span></h1>
-        <div class="intro-text">BATALHAS INSANAS • PODER SEM LIMITES • MMO EM TEMPO REAL</div>
-    </div>
+        <div class="tagline">
+            LITE MMO DE AÇÃO • TEMPO REAL • NO NAVEGADOR
+        </div>
 
-    <div class="action-area">
-        <button class="btn btn-primary" onclick="window.location.href='/game.html'">COMEÇAR MISSÃO</button>
-        <button class="btn btn-secondary">GUIA DO GUERREIRO</button>
-    </div>
-</header>
-
-<section class="comic-page">
-    <div class="panel"><div class="sfx">BAM!</div><h3>COMBATE REAL</h3><p>Soco, esquiva, rajada e impacto em tempo real. Aqui não existe turno. Só reflexo.</p></div>
-    <div class="panel"><div class="sfx">FWOO!</div><h3>MUNDO INFINITO</h3><p>Da Terra ao Reino Divino. Um mapa gigante, vivo e cheio de guerreiros.</p></div>
-    <div class="panel"><div class="sfx">AAAA!</div><h3>TRANSFORMAÇÕES</h3><p>Super Saiyajin, Deus, Blue e além. Cada forma muda tudo.</p></div>
-    <div class="panel"><div class="sfx">VS</div><h3>PVP LIVRE</h3><p>Desafie qualquer jogador. Seja herói… ou vilão.</p></div>
-</section>
-
-<section class="power-section">
-    <h2 style="font-size:52px;color:var(--db-orange);text-shadow:3px 3px 0 #000;">CAMINHO DO GUERREIRO</h2>
-    <div class="power-steps">
-        <div class="step-card"><span>1</span><p>TREINE</p></div>
-        <div class="step-card" style="background:var(--db-red)"><span>2</span><p>DERROTE</p></div>
-        <div class="step-card" style="background:var(--db-orange)"><span>3</span><p>EVOLUA</p></div>
-        <div class="step-card" style="background:#fff;color:#000"><span>4</span><p>DOMINE</p></div>
-    </div>
-</section>
-
-<div class="zones-container">
-    <h2 style="font-size:40px;margin-bottom:25px;">MAPA DO UNIVERSO</h2>
-    <div>
-        <div class="zone-tag">TERRA</div>
-        <div class="zone-tag" style="color:#0a0">NAMEK</div>
-        <div class="zone-tag" style="color:#c00">MAJIN</div>
-        <div class="zone-tag" style="color:#60f">DEUSES</div>
-        <div class="zone-tag" style="color:#555">ANDROIDES</div>
+        <div class="hero-buttons">
+            <button class="btn btn-play" onclick="location.href='https://dbz-el7n.onrender.com'">
+                JOGAR AGORA
+            </button>
+            <button class="btn btn-discord">
+                COMUNIDADE
+            </button>
+        </div>
     </div>
 </div>
 
+<!-- FEATURES -->
+<section>
+    <h2 class="section-title">O JOGO</h2>
+    <div class="features">
+        <div class="card">
+            <h3>COMBATE ABSURDO</h3>
+            <p>Lutas rápidas, reflexo puro, rajadas de Ki, voo livre e impacto real.</p>
+            <div class="sfx">BAM!</div>
+        </div>
+
+        <div class="card">
+            <h3>MUNDO VIVO</h3>
+            <p>Planetas conectados, jogadores online, bosses globais e eventos.</p>
+            <div class="sfx">WHOOSH</div>
+        </div>
+
+        <div class="card">
+            <h3>TRANSFORMAÇÕES</h3>
+            <p>Cada forma muda velocidade, aura, dano e estilo de combate.</p>
+            <div class="sfx">AURA</div>
+        </div>
+    </div>
+</section>
+
+<!-- LOOP -->
+<section class="loop">
+    <h2 class="section-title">CICLO DO PODER</h2>
+    <div class="loop-steps">
+        <div class="step">TREINAR</div>
+        <div class="step" style="background:var(--red);color:#fff;">LUTAR</div>
+        <div class="step">EVOLUIR</div>
+        <div class="step" style="background:var(--blue);color:#fff;">DOMINAR</div>
+    </div>
+</section>
+
+<!-- MAP -->
+<section class="map">
+    <div class="map-content">
+        <h2 class="section-title">UNIVERSO</h2>
+        <div class="zones">
+            <span>TERRA</span>
+            <span>NAMEK</span>
+            <span>ANDROIDES</span>
+            <span>MAJIN</span>
+            <span>DEUSES</span>
+        </div>
+    </div>
+</section>
+
 <footer>
-    DRAGON BOLT UNIVERSE © 2025 • PROJETO DE FÃ
+    UNIVERSE Z — DESTROY THE GALAXY • PROJETO DE FÃ • 2025
 </footer>
 
 </body>
