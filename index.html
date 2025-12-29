@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DRAGON BOLT: UNIVERSE</title>
+    <title>DRAGON BOLT: UNIVERSE ONLINE</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Bangers&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
@@ -17,165 +17,185 @@
             font-family: 'Orbitron', sans-serif; 
             color: #fff;
             user-select: none;
-            touch-action: none;
+            touch-action: none; /* Impede zoom/scroll no mobile */
         }
 
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* TELA DE LOGIN */
+        /* ============================
+           TELA DE LOGIN (ESTILO ANIME)
+           ============================ */
         #login-screen { 
             position: fixed; width: 100%; height: 100%; 
-            background: radial-gradient(circle at center, #3a1c00 0%, #000000 90%);
+            background: radial-gradient(circle at center, #2a1000 0%, #000000 90%);
             z-index: 1000; display: flex; align-items: center; 
             justify-content: center; flex-direction: column;
             overflow: hidden;
         }
 
         #login-screen::before {
-            content: ''; position: absolute; inset: 0;
-            background: repeating-conic-gradient(from 0deg, transparent 0deg 20deg, rgba(255, 100, 0, 0.05) 20deg 40deg);
+            content: ''; position: absolute; inset: -50%;
+            background: repeating-conic-gradient(from 0deg, transparent 0deg 20deg, rgba(255, 140, 0, 0.05) 20deg 40deg);
             animation: spinBg 60s linear infinite;
         }
         @keyframes spinBg { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         .login-box { 
-            position: relative; width: 90%; max-width: 400px;
+            position: relative; width: 90%; max-width: 380px;
             padding: 40px 20px; text-align: center; 
-            background: rgba(0, 0, 0, 0.85); 
-            border: 4px solid #F85B1A; 
-            box-shadow: 0 0 0 4px #000, 0 0 30px #F85B1A;
-            border-radius: 20px; backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.8); 
+            border: 3px solid #ff6600; 
+            box-shadow: 0 0 0 4px #000, 0 0 40px #ff4400;
+            border-radius: 15px; backdrop-filter: blur(8px);
             display: flex; flex-direction: column; align-items: center;
         }
 
         .dragon-ball {
-            width: 80px; height: 80px;
-            background: radial-gradient(circle at 30% 30%, #ffcc00, #ff9900, #d65c00);
-            border-radius: 50%; border: 3px solid #632a00;
-            box-shadow: 0 0 20px #ff9900; margin-bottom: 20px;
+            width: 70px; height: 70px;
+            background: radial-gradient(circle at 30% 30%, #ffcc00, #ff8800, #cc4400);
+            border-radius: 50%; border: 2px solid #552200;
+            box-shadow: 0 0 25px #ffaa00; margin-bottom: 15px;
             position: relative; display: flex; justify-content: center; align-items: center;
         }
-        .star { color: #cc0000; font-size: 24px; position: absolute; text-shadow: 1px 1px 0 rgba(255,255,255,0.4); }
-        .s1 { top: 15px; left: 15px; } .s2 { top: 15px; right: 15px; }
-        .s3 { bottom: 15px; left: 15px; } .s4 { bottom: 15px; right: 15px; }
+        .star { color: #aa0000; font-size: 20px; position: absolute; }
+        .s1 { top: 12px; left: 12px; } .s2 { top: 12px; right: 12px; }
+        .s3 { bottom: 12px; left: 12px; } .s4 { bottom: 12px; right: 12px; }
 
         h1 { 
-            font-family: 'Bangers', cursive; color: #ffcc00; font-size: 55px; 
-            margin: 10px 0; line-height: 0.9;
-            text-shadow: 3px 3px 0 #F85B1A, 5px 5px 0 #000; 
+            font-family: 'Bangers', cursive; color: #ffcc00; font-size: 50px; 
+            margin: 5px 0 20px 0; line-height: 0.9;
+            text-shadow: 3px 3px 0 #cc3300, 5px 5px 0 #000; 
             letter-spacing: 2px; transform: skewX(-5deg);
         }
-        h1 span { display: block; font-size: 24px; color: #0088FF; text-shadow: 2px 2px 0 #000; letter-spacing: 8px; margin-top: 5px; }
+        h1 span { display: block; font-size: 20px; color: #00ccff; text-shadow: 2px 2px 0 #000; letter-spacing: 6px; margin-top: 5px; }
 
         input { 
-            display: block; margin: 15px auto; padding: 15px; 
+            display: block; margin: 10px auto; padding: 12px; 
             background: #fff; color: #000; border: 3px solid #0050B5; 
-            font-family: 'Bangers', cursive; font-size: 20px; width: 80%; outline: none;
-            text-align: center; border-radius: 50px; box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
-        }
-
-        #btn-login { 
-            padding: 15px 50px; background: linear-gradient(180deg, #F85B1A 0%, #cc3300 100%); 
-            color: #fff; border: 3px solid #fff; cursor: pointer; 
-            font-family: 'Bangers', cursive; font-size: 28px; margin-top: 20px;
-            text-transform: uppercase; box-shadow: 0 5px 0 #882200, 0 10px 20px rgba(0,0,0,0.5);
-            border-radius: 10px; transition: transform 0.1s, box-shadow 0.1s; text-shadow: 2px 2px 0 #000;
-        }
-        #btn-login:active { transform: translateY(5px); box-shadow: 0 0 0 #882200; }
-
-        /* HUD */
-        #ui { 
-            position: fixed; top: 20px; left: 20px; z-index: 100; 
-            pointer-events: none; width: 300px; transform: skewX(-10deg); 
-        }
-        #stat-bp { color: #ffcc00; font-size: 20px; font-weight: 900; text-shadow: 2px 2px 0 #000; }
-        #stat-zone { color: #00ffcc; font-size: 14px; margin-bottom: 5px; text-shadow: 1px 1px 0 #000; }
-
-        .bar { 
-            width: 100%; height: 14px; background: rgba(0,0,0,0.8); 
-            border: 1px solid #fff; position: relative; overflow: hidden; margin-bottom: 4px;
-        }
-        .fill { height: 100%; width: 100%; transition: 0.3s ease-out; }
-        #hp-bar { background: linear-gradient(90deg, #ff3333, #aa0000); box-shadow: 0 0 10px #f00; }
-        #ki-bar { background: linear-gradient(90deg, #00ffff, #0066ff); box-shadow: 0 0 10px #0ff; }
-        #xp-bar { background: #ffff00; height: 4px !important; }
-
-        /* TEXTO NAS BARRAS E ANIMAÇÃO */
-        .bar .value-text {
-            position: absolute; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 13px; font-weight: 400; color: #ffffff;
-            pointer-events: none; letter-spacing: 1px;
-            text-shadow: 1px 1px 2px #000;
+            font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 16px; 
+            width: 85%; outline: none; text-align: center; border-radius: 30px; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+            text-transform: uppercase;
         }
         
-        #ki-bar + .value-text, .ki-bar-text {
-            font-size: 12px; font-weight: 300; letter-spacing: 0.6px; opacity: 0.8;
+        #btn-login { 
+            width: 90%; padding: 12px; margin-top: 20px;
+            background: linear-gradient(180deg, #ff6600 0%, #cc2200 100%); 
+            color: #fff; border: 2px solid #fff; cursor: pointer; 
+            font-family: 'Bangers', cursive; font-size: 26px; 
+            text-transform: uppercase; box-shadow: 0 4px 0 #882200, 0 10px 20px rgba(0,0,0,0.5);
+            border-radius: 8px; transition: transform 0.1s; text-shadow: 2px 2px 0 #000;
+        }
+        #btn-login:active { transform: translateY(4px); box-shadow: 0 0 0 #882200; }
+
+        /* ============================
+           INTERFACE HUD
+           ============================ */
+        #ui { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 100; pointer-events: none; 
+            display: none; /* Só aparece após login */
         }
 
-        /* ANIMAÇÃO DBZ (PULSO DE PODER) */
-        .bar.hp-pulse .value-text { animation: powerPulse 0.4s ease-out; }
+        #bars { 
+            position: absolute; top: 15px; left: 15px; width: 280px; 
+            transform: skewX(-10deg); pointer-events: auto;
+        }
+        #stat-bp { 
+            color: #ffcc00; font-size: 16px; font-weight: 900; 
+            text-shadow: 2px 2px 0 #000; margin-bottom: 2px;
+        }
+        
+        .bar-container { 
+            width: 100%; height: 16px; background: rgba(0,0,0,0.6); 
+            border: 2px solid #fff; margin-bottom: 4px; position: relative;
+        }
+        .bar { height: 100%; width: 100%; transition: width 0.2s ease-out; }
+        #hp-bar { background: linear-gradient(90deg, #ff4444, #aa0000); box-shadow: 0 0 8px #f00; }
+        #ki-bar { background: linear-gradient(90deg, #00ffff, #0066ff); box-shadow: 0 0 8px #0ff; }
+        #xp-bar { background: #ffff00; height: 100%; width: 0%; } 
 
-        @keyframes powerPulse {
-            0%   { transform: scale(1); }
-            50%  { transform: scale(1.35); }
-            100% { transform: scale(1); }
+        /* ============================
+           CONTROLES MOBILE
+           ============================ */
+        #mobile-ui { display: none; pointer-events: auto; } 
+        
+        #joystick-container { 
+            position: absolute; bottom: 40px; left: 40px; 
+            width: 140px; height: 140px; z-index: 300;
         }
 
-        /* CONTROLES */
-        #mobile-ui { display: none; position: fixed; inset: 0; z-index: 200; pointer-events: auto; }
-        #joystick-container { position: absolute; bottom: 40px; left: 40px; width: 150px; height: 150px; z-index: 300; pointer-events: auto; }
-        .mobile-btns { position: absolute; z-index: 300; }
         .m-btn {
-            position: absolute; background: rgba(0, 0, 0, 0.3);
-            border: 2px solid rgba(255, 153, 0, 0.6); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 12px; font-weight: bold; color: #ffcc00;
-            user-select: none; backdrop-filter: blur(2px); box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: absolute; display: flex; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.4); border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%; color: #fff; font-weight: bold; font-size: 12px;
+            user-select: none; backdrop-filter: blur(4px); 
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
         }
-        .m-btn:active { background: rgba(255, 153, 0, 0.6); color: #fff; border-color: #fff; transform: scale(0.9); }
+        .m-btn:active { background: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
 
-        /* NOVO BOTÃO SCOUTER */
-        #btn-scouter {
-            position: fixed; top: 20px; right: 20px; z-index: 400;
-            width: 60px; height: 60px;
-            background: rgba(0, 50, 0, 0.6);
-            border: 2px solid #0f0; color: #0f0;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 10px; cursor: pointer;
-            box-shadow: 0 0 15px #0f0;
-            font-family: 'Orbitron';
+        /* --- CLUSTER DE COMBATE (DIREITA) --- */
+        #btn-atk { 
+            bottom: 30px; right: 20px; width: 90px; height: 90px; 
+            background: rgba(255, 50, 50, 0.2); border-color: #ff3333; font-size: 18px;
         }
-        #btn-scouter:active { transform: scale(0.95); background: #0f0; color: #000; }
-
-        /* ESTILO BOTÃO PVP ATIVO */
-        #btn-pvp.active {
-            background: rgba(255, 0, 255, 0.6);
-            color: #fff; border-color: #fff;
-            box-shadow: 0 0 15px #ff00ff;
+        #btn-blast { 
+            bottom: 130px; right: 30px; width: 65px; height: 65px; 
+            border-color: #00ffff; color: #00ffff; font-size: 10px;
+        }
+        #btn-block { 
+            bottom: 30px; right: 130px; width: 60px; height: 60px; 
+            border-color: #5555ff; color: #aaaaff; font-size: 10px;
+        }
+        #btn-charge { 
+            bottom: 110px; right: 110px; width: 60px; height: 60px; 
+            border-color: #ffff00; color: #ffff00; font-size: 10px;
+        }
+        #btn-vanish { 
+            bottom: 180px; right: 180px; width: 50px; height: 50px; 
+            border-style: dashed; font-size: 9px; opacity: 0.8;
+        }
+        /* Movi o btn-transform para perto do combate */
+        #btn-transform { 
+            bottom: 230px; right: 40px; width: 50px; height: 50px; 
+            font-size: 9px; border-color: #ffaa00;
         }
 
+        /* --- BOTÕES DE SISTEMA (TOPO DIREITA) --- */
+        #btn-scouter { 
+            top: 20px; right: 20px; width: 50px; height: 50px; 
+            font-size: 9px; border-color: #00ff00; color: #00ff00;
+        }
+        #btn-pvp { 
+            top: 80px; right: 20px; width: 50px; height: 50px; 
+            font-size: 9px; border-color: #ff00ff; color: #ff00ff;
+        }
+        #btn-pvp.active { background: rgba(255,0,255,0.3); box-shadow: 0 0 10px #f0f; }
+
+        /* --- BOTÕES SOCIAIS (ESQUERDA - ABAIXO DA BARRA DE VIDA) --- */
+        #btn-menu {
+            position: absolute; top: 110px; left: 20px; 
+            width: 60px; height: 60px; 
+            background: rgba(50, 50, 50, 0.6); border: 2px solid #ccc;
+            font-size: 12px; z-index: 400;
+        }
+        #btn-chat {
+            position: absolute; top: 180px; left: 20px; 
+            width: 60px; height: 60px; 
+            background: rgba(0, 100, 200, 0.5); border: 2px solid #0af;
+            font-size: 24px; z-index: 400;
+        }
+
+        /* --- AJUSTES PARA PORTRAIT (CELULAR EM PÉ) --- */
         @media (orientation: portrait) {
-            .mobile-btns { right: 10px; bottom: 20px; width: 140px; height: 350px; }
-            #btn-atk { width: 85px; height: 85px; right: 10px; bottom: 10px; border-color: #ff3333; font-size: 14px; background: rgba(50,0,0,0.4); }
-            #btn-blast { width: 65px; height: 65px; right: 80px; bottom: 60px; border-color: #00ffff; color: #00ffff; }
-            #btn-charge { width: 60px; height: 60px; right: 10px; bottom: 110px; }
-            #btn-block  { width: 60px; height: 60px; right: 80px; bottom: 140px; }
-            #btn-vanish { width: 55px; height: 55px; right: 10px; bottom: 180px; border-style: dashed; }
-            #btn-transform { width: 50px; height: 50px; right: 60px; bottom: 220px; font-size: 9px; }
+            #btn-atk { width: 80px; height: 80px; bottom: 20px; right: 10px; }
+            #btn-blast { right: 100px; bottom: 30px; }
+            #btn-block { right: 20px; bottom: 120px; }
+            #btn-charge { right: 100px; bottom: 110px; }
+            #btn-vanish { right: 10px; bottom: 220px; }
+            #btn-transform { right: 80px; bottom: 200px; } /* Ajuste Form em pé */
         }
-
-        @media (orientation: landscape) {
-            .mobile-btns { right: 20px; bottom: 20px; width: 300px; height: 250px; }
-            #btn-atk { width: 90px; height: 90px; right: 10px; bottom: 10px; font-size: 16px; border-width: 3px; border-color: #ff3333; background: rgba(50,0,0,0.4); }
-            #btn-blast { width: 70px; height: 70px; right: 110px; bottom: 10px; border-color: #00ffff; color: #00ffff; }
-            #btn-charge { width: 65px; height: 65px; right: 20px; bottom: 110px; }
-            #btn-block  { width: 65px; height: 65px; right: 100px; bottom: 90px; }
-            #btn-vanish { width: 60px; height: 60px; right: 170px; bottom: 50px; border-style: dashed; }
-            #btn-transform { width: 55px; height: 55px; right: 80px; bottom: 160px; font-size: 10px; }
-        }
-        @media (max-width: 1024px) { #mobile-ui { display: block; } }
     </style>
 </head>
 <body>
@@ -186,59 +206,48 @@
             <div class="star s1">★</div> <div class="star s2">★</div>
             <div class="star s3">★</div> <div class="star s4">★</div>
         </div>
-        <h1>DRAGON BOLT<br><span>UNIVERSE</span></h1>
-        <input id="username" placeholder="NOME DO SAIYAJIN" autocomplete="off" maxlength="12">
+        <h1>DRAGON BOLT<br><span>UNIVERSE ONLINE</span></h1>
+        <input id="username" placeholder="NOME DO GUERREIRO" autocomplete="off" maxlength="12">
         <input id="password" type="password" placeholder="SENHA SECRETA">
-        <button id="btn-login">COMEÇAR MISSÃO</button>
-    </div>
-</div>
-
-<div id="ui">
-    <div id="stat-bp">BP</div> <div id="stat-zone">TERRA</div>
-    
-    <div class="bar">
-        <div id="hp-bar" class="fill"></div>
-        <div class="value-text"></div> </div>
-    
-    <div class="bar">
-        <div id="ki-bar" class="fill"></div>
-        <div class="value-text"></div> </div>
-    
-    <div class="bar" style="height:4px; border:none;">
-        <div id="xp-bar" class="fill"></div>
-    </div>
-</div>
-
-<div id="btn-scouter">SCOUTER</div>
-
-<div id="mobile-ui">
-    <div id="joystick-container"></div>
-    <div class="mobile-btns">
-        <div class="m-btn" id="btn-transform">FORM</div>
-        <div class="m-btn" id="btn-vanish">TP</div>
-        <div class="m-btn" id="btn-block">DEF</div>
-        <div class="m-btn" id="btn-charge">KI</div>
-        <div class="m-btn" id="btn-blast">BLAST</div>
-        <div class="m-btn" id="btn-atk">ATK</div>
-
-        <div class="m-btn" id="btn-pvp"
-             style="width:55px;height:55px;
-                    right:10px;bottom:260px;
-                    border-color:#ff00ff;
-                    color:#ff00ff;
-                    font-size:11px;">
-            PVP
-        </div>
+        <button id="btn-login">ENTRAR NO UNIVERSO</button>
     </div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
+
+<div id="ui">
+    <div id="bars">
+        <div id="stat-bp">BP: 0 | TERRA</div>
+        <div class="bar-container"><div id="hp-bar" class="bar"></div></div>
+        <div class="bar-container"><div id="ki-bar" class="bar"></div></div>
+        <div class="bar-container" style="border:none; height:6px; background:#333;"><div id="xp-bar" class="bar"></div></div>
+    </div>
+    
+    <div id="mobile-ui">
+        <div id="joystick-container"></div>
+        
+        <div id="btn-atk" class="m-btn">ATK</div>
+        <div id="btn-blast" class="m-btn">KI</div>
+        <div id="btn-block" class="m-btn">DEF</div>
+        <div id="btn-charge" class="m-btn">PWR</div>
+        <div id="btn-vanish" class="m-btn">TP</div>
+        <div id="btn-transform" class="m-btn">FORM</div>
+        
+        <div id="btn-scouter" class="m-btn">SCAN</div>
+        <div id="btn-pvp" class="m-btn">PVP</div>
+        
+        <div id="btn-menu" class="m-btn">MENU</div>
+        <div id="btn-chat" class="m-btn">💬</div>
+    </div>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="game.js"></script>
 <script>
-if (navigator.maxTouchPoints > 0) {
-    document.getElementById('mobile-ui').style.display = 'block';
-}
+    // Detecta Mobile e Ativa UI
+    if (navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent)) {
+        document.getElementById('mobile-ui').style.display = 'block';
+    }
 </script>
 </body>
 </html>
