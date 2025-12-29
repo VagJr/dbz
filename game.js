@@ -14,6 +14,9 @@ let scouterActive = false;
 let showMap = true;
 let showLeaderboard = false;
 
+// Sistema de Anúncios Globais
+let announcement = { text: "", life: 0, color: "#f00" };
+
 const ZOOM_SCALE = 0.7;
 const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
 
@@ -82,12 +85,10 @@ window.addEventListener("keydown", e => {
     if(e.code === "KeyM") showMap = !showMap; 
     if(e.code === "KeyP") window.socket.emit("toggle_pvp"); 
     if(e.code === "KeyK") showLeaderboard = !showLeaderboard;
-    // Atalho para Guilda Rápida (Exemplo: /guild [nome])
     if(e.code === "Enter") {
         let g = prompt("Criar/Entrar Guilda (Max 12 chars):");
         if(g) socket.emit("create_guild", g);
     }
-    // Troca de Título (Simples, rotativo via comando no chat futuro, aqui via prompt para teste)
     if(e.code === "KeyL") {
          let t = prompt("Definir Título Atual (Ex: Novato, Guerreiro Z):");
          if(t) socket.emit("set_title", t);
@@ -143,8 +144,13 @@ window.socket.on("fx", data => {
         texts.push({x: data.x, y: data.y - 80, text: "LEVEL UP!", color: "#00ffff", life: 120, vy: -0.5});
         shockwaves.push({ x: data.x, y: data.y, r: 10, maxR: 400, a: 1, color: "#fff" });
     }
+    // NOVO: Banner Global de Evento
     if(data.type === "bp_limit") {
-        texts.push({x: data.x, y: data.y - 100, text: data.text, color: "#ff0000", life: 60, vy: -0.5});
+        // Texto flutuante no local
+        texts.push({x: data.x, y: data.y - 100, text: data.text, color: "#ff0000", life: 150, vy: -0.5});
+        // Banner Global no Centro da Tela
+        announcement = { text: data.text, life: 300, color: "#ff3300" };
+        screenShake = 20;
     }
 });
 
@@ -294,7 +300,6 @@ function drawDominationZones() {
         ctx.save();
         ctx.translate(z.x, z.y);
         
-        // Círculo de Dominação no chão
         ctx.beginPath();
         ctx.arc(0, 0, z.radius, 0, Math.PI*2);
         ctx.strokeStyle = z.owner ? "#00ff00" : "#ffaa00";
@@ -303,7 +308,6 @@ function drawDominationZones() {
         ctx.setLineDash([20, 10]);
         ctx.stroke();
         
-        // Efeito de preenchimento (Progresso)
         if(z.progress > 0) {
             ctx.globalAlpha = 0.3;
             ctx.fillStyle = z.owner ? "#00ff00" : "#ffff00";
@@ -312,7 +316,6 @@ function drawDominationZones() {
             ctx.fill();
         }
 
-        // Texto da Zona
         ctx.font = "bold 40px Orbitron";
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
@@ -326,7 +329,6 @@ function drawDominationZones() {
              ctx.fillStyle = "#ccc";
              ctx.fillText(`NEUTRO - ${z.progress}%`, 0, -z.radius + 10);
         }
-        
         ctx.restore();
     });
 }
@@ -404,7 +406,6 @@ function drawEntity(e) {
         ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
         ctx.fillText(`${e.name.substring(0,12)}`, 5, -8);
 
-        // EXIBIR TÍTULO E GUILDA
         if(!e.isNPC) {
             ctx.font = "italic 12px Arial";
             ctx.fillStyle = "#ffcc00";
@@ -616,6 +617,22 @@ function drawSchematicMap(me) {
             }
         }
     });
+    
+    // Desenhar Bosses no Mapa (Novidade)
+    npcs.forEach(n => {
+        if(n.isBoss && !n.isDead) {
+            const bx = n.x * scale; const by = n.y * scale;
+            if(Math.hypot(bx, by) < size) {
+                ctx.fillStyle = "#ff0000"; 
+                ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI*2); ctx.fill();
+                // Icone de caveira simples (cruz)
+                ctx.strokeStyle = "#fff"; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(bx-2, by-2); ctx.lineTo(bx+2, by+2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(bx+2, by-2); ctx.lineTo(bx-2, by+2); ctx.stroke();
+            }
+        }
+    });
+
     ctx.restore();
 }
 
@@ -643,6 +660,35 @@ function drawLeaderboard() {
         ctx.fillText(text, X + 20, Y + 60 + (i*25));
     });
     ctx.restore();
+}
+
+function drawAnnouncement() {
+    if (announcement.life > 0) {
+        announcement.life--;
+        const cx = canvas.width / 2;
+        const cy = 100;
+        
+        ctx.save();
+        ctx.textAlign = "center";
+        
+        // Fundo semitransparente
+        const w = ctx.measureText(announcement.text).width + 100;
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(cx - 300, cy - 30, 600, 60);
+        
+        // Texto Piscante
+        ctx.font = "bold 32px Orbitron";
+        if (Math.floor(Date.now() / 200) % 2 === 0) {
+            ctx.fillStyle = announcement.color;
+        } else {
+            ctx.fillStyle = "#fff";
+        }
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = announcement.color;
+        ctx.fillText(announcement.text, cx, cy + 10);
+        
+        ctx.restore();
+    }
 }
 
 function draw() {
@@ -700,6 +746,7 @@ function draw() {
         drawScouterHUD(me);
     }
     drawLeaderboard();
+    drawAnnouncement();
 }
 
 let lastInputSent = 0;
@@ -737,7 +784,7 @@ function update() {
         let inputY = (keys["KeyS"]?1:0)-(keys["KeyW"]?1:0);
         if (isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) { inputX = joystickMove.x; inputY = joystickMove.y; }
 
-        if(performance.now()-lastInputSent>45){ 
+        if(performance.now()-lastInputSent>30){ // Sincronizado com 30FPS do server
             lastInputSent=performance.now(); 
             window.socket.emit("input", { x: inputX, y: inputY, angle: ang, block: keys["KeyQ"], charge: keys["KeyC"], holdAtk: mouseLeft, holdBlast: mouseRight }); 
         }
@@ -746,43 +793,27 @@ function update() {
 }
 update();
 
-// =============================================================================
-// 🔊 DBZ SFX SYSTEM — IMPACT / SPACE / FIGHT
-// =============================================================================
 (function(){
-
     let audioUnlocked = false;
-
     const SFX = {
-        hit:       [],
-        heavy:     [],
-        blast:     [],
-        charge:    [],
-        teleport:  [],
-        transform: [],
-        scouter:   [],
-        levelup:   []
+        hit: [], heavy: [], blast: [], charge: [], teleport: [], transform: [], scouter: [], levelup: []
     };
-
-    // 🎧 SONS MAIS PESADOS, METÁLICOS, ESPACIAIS
     const SOURCES = {
-        hit:       "https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3",
-        heavy:     "https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3",
-        blast:     "https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3",
-        charge:    "https://assets.mixkit.co/active_storage/sfx/388/388-preview.mp3",
-        teleport:  "https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3",
+        hit: "https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3",
+        heavy: "https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3",
+        blast: "https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3",
+        charge: "https://assets.mixkit.co/active_storage/sfx/388/388-preview.mp3",
+        teleport: "https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3",
         transform: "https://assets.mixkit.co/active_storage/sfx/411/411-preview.mp3",
-        scouter:   "https://assets.mixkit.co/active_storage/sfx/1114/1114-preview.mp3",
-        levelup:   "https://assets.mixkit.co/active_storage/sfx/201/201-preview.mp3"
+        scouter: "https://assets.mixkit.co/active_storage/sfx/1114/1114-preview.mp3",
+        levelup: "https://assets.mixkit.co/active_storage/sfx/201/201-preview.mp3"
     };
 
     function buildPool() {
         Object.keys(SOURCES).forEach(key => {
             for (let i = 0; i < 6; i++) {
                 const a = new Audio(SOURCES[key]);
-                a.preload = "auto";
-                a.volume = 0.85;
-                SFX[key].push(a);
+                a.preload = "auto"; a.volume = 0.85; SFX[key].push(a);
             }
         });
     }
@@ -797,12 +828,9 @@ update();
         if (!audioUnlocked) return;
         const list = SFX[key];
         if (!list) return;
-
         const a = list.find(x => x.paused);
         if (!a) return;
-
-        a.currentTime = 0;
-        a.play().catch(()=>{});
+        a.currentTime = 0; a.play().catch(()=>{});
     }
 
     window.addEventListener("pointerdown", unlockAudio, { once:true });
@@ -815,6 +843,7 @@ update();
             if (fx.type === "vanish") play("teleport");
             if (fx.type === "transform") play("transform");
             if (fx.type === "levelup") play("levelup");
+            if (fx.type === "bp_limit") play("scouter"); // Som de alerta para eventos
         });
     }
 
@@ -831,38 +860,4 @@ update();
         if (scouterActive && !lastScouter) play("scouter");
         lastScouter = scouterActive;
     }, 300);
-
 })();
-
-// ============================================================================
-// PATCH V2 FINAL — COMBATE TÉCNICO (APPEND-ONLY)
-// ============================================================================
-const COMBAT_STATE = { ATTACK:0, DEFEND:1, STUN:2, VANISH:3 };
-let combatState = COMBAT_STATE.ATTACK;
-let comboChain = 0;
-let comboWindow = 0;
-let attackCooldown = 0;
-let parryWindow = 0;
-
-setInterval(()=>{
-  if(attackCooldown>0) attackCooldown--;
-  if(comboWindow>0) comboWindow--; else comboChain=0;
-  if(parryWindow>0) parryWindow--;
-},16);
-
-function canAttack(){ return attackCooldown<=0 && combatState!==COMBAT_STATE.STUN; }
-function onAttack(){
-  if(!canAttack()) return false;
-  comboChain++;
-  comboWindow = 18;
-  attackCooldown = comboChain>=4 ? 20 : 8;
-  if(comboChain>=4) comboChain=0;
-  return true;
-}
-
-function startDefend(){ combatState=COMBAT_STATE.DEFEND; parryWindow=6; }
-function endDefend(){ combatState=COMBAT_STATE.ATTACK; }
-function isParry(){ return combatState===COMBAT_STATE.DEFEND && parryWindow>0; }
-
-let hologramPulse=0;
-socket.on("fx",fx=>{if(fx.type==="hit"&&fx.targetId===myId)hologramPulse=6;});
