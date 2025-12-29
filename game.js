@@ -97,16 +97,11 @@ window.socket.on("auth_success", (data) => {
     myId = data.id; 
     document.getElementById("login-screen").style.display = "none"; 
     document.getElementById("ui").style.display = "block"; 
-
-    // 🔓 GARANTE QUE O BGM DESTRAVA
-    unlockBGM();
-
     if (isMobile) {
         document.getElementById("mobile-ui").style.display = "block";
         requestAnimationFrame(() => { initMobileControls(); });
     }
 });
-
 
 window.socket.on("state", data => {
     if(!myId) return;
@@ -570,10 +565,7 @@ function draw() {
     craters.forEach(c => { ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill(); });
     rocks.forEach(r => { 
         ctx.fillStyle = r.type === "rock_namek" ? "#446" : "#543";
-        if(r.type === "rock_magic") ctx.fillStyle = "#636"; 
-        if(r.type === "rock_god") ctx.fillStyle = "#eee"; // Divine Realm mais claro
-        if(r.type === "rock_city") ctx.fillStyle = "#444"; // Adicionado suporte visual para o FUTURO
-        
+        if(r.type === "rock_magic") ctx.fillStyle = "#636"; if(r.type === "rock_god") ctx.fillStyle = "#333";
         ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI*2); ctx.fill(); 
         ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.arc(r.x-r.r/3, r.y+r.r/3, r.r/2, 0, Math.PI*2); ctx.fill();
     });
@@ -618,18 +610,6 @@ function update() {
         
         const dist = Math.hypot(me.x, me.y);
         const angle = Math.atan2(me.y, me.x);
-		let zoneKey = "EARTH";
-
-if (dist >= 5000) {
-    if (Math.abs(angle) > 2.35) zoneKey = "SPACE";
-    else if (Math.abs(angle) < 0.78) zoneKey = "FUTURE";
-    else if (angle >= 0.78 && angle <= 2.35) zoneKey = "DEMON";
-    else zoneKey = "KAIOH";
-}
-
-if (BGM_TRACKS[zoneKey]) {
-    playBGM(BGM_TRACKS[zoneKey]);
-}
         let zoneName = "PLANETA TERRA";
         if (dist >= 5000) {
             if (Math.abs(angle) > 2.35) zoneName = "SETOR OESTE (ESPAÇO)";
@@ -658,280 +638,152 @@ if (BGM_TRACKS[zoneKey]) {
         }
     }
     draw(); requestAnimationFrame(update);
-	// ============================================================================
-// 🌍 TROCA DE BGM AUTOMÁTICA POR ZONA
-// ============================================================================
-
-// ============================================================================
-// 🎵 BGM — DETECÇÃO DE ZONA (LOCAL CORRETO)
-// ============================================================================
-
-
-
-
 }
 update();
 
 // =============================================================================
-// 🔊 DBZ PROCEDURAL AUDIO ENGINE — FIXED & SAFE
+// 🔊 DBZ SFX SYSTEM — IMPACT / SPACE / FIGHT
 // =============================================================================
 (function(){
 
-    let audioCtx = null;
-    let unlocked = false;
+    let audioUnlocked = false;
 
-    function getAudioCtx(){
-        if(!audioCtx){
-            const AC = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AC(); // criado APÓS gesto
-        }
-        return audioCtx;
-    }
+    const SFX = {
+        hit:       [],
+        heavy:     [],
+        blast:     [],
+        charge:    [],
+        teleport:  [],
+        transform: [],
+        scouter:   [],
+        levelup:   []
+    };
 
-    function unlockAudio(){
-        if(unlocked) return;
-        unlocked = true;
-        getAudioCtx(); // apenas cria, não resume canvas
-    }
+    // 🎧 SONS MAIS PESADOS, METÁLICOS, ESPACIAIS
+    const SOURCES = {
+        // Poradas secas, impacto físico
+        hit:       "https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3",
 
-    window.addEventListener("pointerdown", unlockAudio, { once:true });
-    window.addEventListener("keydown", unlockAudio, { once:true });
-    window.addEventListener("touchstart", unlockAudio, { once:true });
+        // Pancada forte, corpo sendo arremessado
+        heavy:     "https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3",
 
-    // =========================
-    // 🥊 SOCO SECO
-    // =========================
-    function punch(){
-        if(!unlocked) return;
-        const ctxA = getAudioCtx();
+        // Ki blast / energia explodindo
+        blast:     "https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3",
 
-        const o = ctxA.createOscillator();
-        const g = ctxA.createGain();
+        // Carregar energia (loop curto e denso)
+        charge:    "https://assets.mixkit.co/active_storage/sfx/388/388-preview.mp3",
 
-        o.type = "square";
-        o.frequency.setValueAtTime(220, ctxA.currentTime);
-        o.frequency.exponentialRampToValueAtTime(60, ctxA.currentTime + 0.05);
+        // Teleporte / vanish / rasgo no espaço
+        teleport:  "https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3",
 
-        g.gain.setValueAtTime(0.8, ctxA.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctxA.currentTime + 0.07);
+        // Transformação poderosa
+        transform: "https://assets.mixkit.co/active_storage/sfx/411/411-preview.mp3",
 
-        o.connect(g);
-        g.connect(ctxA.destination);
+        // Scouter eletrônico sci-fi
+        scouter:   "https://assets.mixkit.co/active_storage/sfx/1114/1114-preview.mp3",
 
-        o.start();
-        o.stop(ctxA.currentTime + 0.07);
-    }
+        // Level up energético
+        levelup:   "https://assets.mixkit.co/active_storage/sfx/201/201-preview.mp3"
+    };
 
-    // =========================
-    // 💥 IMPACTO PESADO
-    // =========================
-    function heavy(){
-        if(!unlocked) return;
-        const ctxA = getAudioCtx();
-
-        const o = ctxA.createOscillator();
-        const g = ctxA.createGain();
-
-        o.type = "sine";
-        o.frequency.setValueAtTime(90, ctxA.currentTime);
-        o.frequency.exponentialRampToValueAtTime(30, ctxA.currentTime + 0.18);
-
-        g.gain.setValueAtTime(1, ctxA.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctxA.currentTime + 0.2);
-
-        o.connect(g);
-        g.connect(ctxA.destination);
-
-        o.start();
-        o.stop(ctxA.currentTime + 0.2);
-    }
-
-    // =========================
-    // 🔥 KI BLAST
-    // =========================
-    function blast(){
-        if(!unlocked) return;
-        const ctxA = getAudioCtx();
-
-        const o = ctxA.createOscillator();
-        const g = ctxA.createGain();
-
-        o.type = "sawtooth";
-        o.frequency.setValueAtTime(400, ctxA.currentTime);
-        o.frequency.exponentialRampToValueAtTime(900, ctxA.currentTime + 0.15);
-
-        g.gain.setValueAtTime(0.6, ctxA.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctxA.currentTime + 0.18);
-
-        o.connect(g);
-        g.connect(ctxA.destination);
-
-        o.start();
-        o.stop(ctxA.currentTime + 0.18);
-    }
-
-    function transform(){ punch(); heavy(); blast(); }
-    function vanish(){ blast(); }
-    function scouter(){ punch(); }
-
-    // =========================
-    // 🔗 INTEGRAÇÃO SOCKET
-    // =========================
-    if(window.socket){
-        socket.on("fx", fx=>{
-            if(!fx || !fx.type) return;
-            if(fx.type==="hit") punch();
-            if(fx.type==="heavy") heavy();
-            if(fx.type==="vanish") vanish();
-            if(fx.type==="transform") transform();
-            if(fx.type==="bp_limit") scouter();
+    function buildPool() {
+        Object.keys(SOURCES).forEach(key => {
+            for (let i = 0; i < 6; i++) {
+                const a = new Audio(SOURCES[key]);
+                a.preload = "auto";
+                a.volume = 0.85;
+                SFX[key].push(a);
+            }
         });
     }
 
-    const _emit = window.socket.emit;
-    window.socket.emit = function(ev,data){
-        if(ev==="release_attack") punch();
-        if(ev==="release_blast") blast();
-        _emit.apply(this, arguments);
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
+        buildPool();
+    }
+
+    function play(key) {
+        if (!audioUnlocked) return;
+        const list = SFX[key];
+        if (!list) return;
+
+        const a = list.find(x => x.paused);
+        if (!a) return;
+
+        a.currentTime = 0;
+        a.play().catch(()=>{});
+    }
+
+    // 🔓 Gesto obrigatório
+    window.addEventListener("pointerdown", unlockAudio, { once:true });
+
+    // 🔊 FX do servidor
+    if (window.socket) {
+        socket.on("fx", fx => {
+            if (!fx || !fx.type) return;
+            if (fx.type === "hit") play("hit");
+            if (fx.type === "heavy") play("heavy");
+            if (fx.type === "vanish") play("teleport");
+            if (fx.type === "transform") play("transform");
+            if (fx.type === "levelup") play("levelup");
+        });
+    }
+
+    // 🔫 Ação local imediata
+    const originalEmit = socket.emit;
+    socket.emit = function(ev, data){
+        if (ev === "release_attack") play("hit");
+        if (ev === "release_blast") play("blast");
+        originalEmit.apply(this, arguments);
     };
+
+    // 📡 Scouter
+    let lastScouter = false;
+    setInterval(()=>{
+        if (typeof scouterActive !== "boolean") return;
+        if (scouterActive && !lastScouter) play("scouter");
+        lastScouter = scouterActive;
+    }, 300);
 
 })();
 
 
+
+    window.addEventListener('click', () => {
+        if (bgmPlayer.paused && currentBiome) bgmPlayer.play().catch(()=>{});
+    }, { once: true });
 // ============================================================================
-// 🎵 BGM LOCAL — TRILHAS POR ZONA (PASTA /audio)
+// PATCH V2 FINAL — COMBATE TÉCNICO (APPEND-ONLY)
 // ============================================================================
+const COMBAT_STATE = { ATTACK:0, DEFEND:1, STUN:2, VANISH:3 };
+let combatState = COMBAT_STATE.ATTACK;
+let comboChain = 0;
+let comboWindow = 0;
+let attackCooldown = 0;
+let parryWindow = 0;
 
-const BGM_TRACKS = {
-    EARTH:  new Audio("audio/earth.mp3"),
-    FUTURE: new Audio("audio/future.mp3"),
-    KAIOH:  new Audio("audio/kaioh.mp3"),
-    DEMON:  new Audio("audio/demon.mp3"),
-    SPACE:  new Audio("audio/space.mp3")
-};
+setInterval(()=>{
+  if(attackCooldown>0) attackCooldown--;
+  if(comboWindow>0) comboWindow--; else comboChain=0;
+  if(parryWindow>0) parryWindow--;
+},16);
 
-// Configuração padrão
-Object.values(BGM_TRACKS).forEach(bgm => {
-    bgm.loop = true;
-    bgm.volume = 0.25;
-});
-
-let currentBGM = null;
-let audioUnlocked = false;
-
-// 🔓 Desbloqueio obrigatório do navegador
-function unlockBGM(){
-    if(audioUnlocked) return;
-    audioUnlocked = true;
-
-    Object.values(BGM_TRACKS).forEach(bgm => {
-        bgm.load();        // 🔥 IMPORTANTE
-        bgm.muted = true;  // hack de autoplay
-        bgm.play().then(()=>{
-            bgm.pause();
-            bgm.currentTime = 0;
-            bgm.muted = false;
-        }).catch(()=>{});
-    });
+function canAttack(){ return attackCooldown<=0 && combatState!==COMBAT_STATE.STUN; }
+function onAttack(){
+  if(!canAttack()) return false;
+  comboChain++;
+  comboWindow = 18;
+  attackCooldown = comboChain>=4 ? 20 : 8;
+  if(comboChain>=4) comboChain=0;
+  return true;
 }
 
-
-// Gatilhos seguros
-window.addEventListener("click", unlockBGM, { once:true });
-window.addEventListener("touchstart", unlockBGM, { once:true });
-window.addEventListener("keydown", unlockBGM, { once:true });
-
-// 🎶 Controle de troca (sem reiniciar se for a mesma)
-function playBGM(track){
-    if(!audioUnlocked) return;
-    if(currentBGM === track) return;
-
-    if(currentBGM){
-        currentBGM.pause();
-        currentBGM.currentTime = 0;
-    }
-
-    currentBGM = track;
-    currentBGM.play().catch(()=>{});
-}
+function startDefend(){ combatState=COMBAT_STATE.DEFEND; parryWindow=6; }
+function endDefend(){ combatState=COMBAT_STATE.ATTACK; }
+function isParry(){ return combatState===COMBAT_STATE.DEFEND && parryWindow>0; }
 
 
-// Hook leve no draw (não substitui, só desenha depois)
-const __oldDraw = draw;
-draw = function(){
-    __oldDraw();
-
-    if (!window.cosmicEvents) return;
-
-    ctx.save();
-    ctx.translate(canvas.width/2, canvas.height/2);
-    ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
-    ctx.translate(-cam.x, -cam.y);
-
-    window.cosmicEvents.forEach((e,i)=>{
-        e.r += 20;
-        e.life--;
-
-        ctx.strokeStyle = e.color;
-        ctx.globalAlpha = Math.max(0, e.life / 120);
-        ctx.lineWidth = 10;
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
-        ctx.stroke();
-
-        if(e.life <= 0) window.cosmicEvents.splice(i,1);
-    });
-
-    ctx.restore();
-};
-
-
-// --- 3) MARCADORES DE BOSSES LENDÁRIOS NO MAPA ---
-const legendaryBosses = [
-    {name:"BROLY", x:-25000, y:-5000},
-    {name:"JIREN", x:10000, y:-35000},
-    {name:"KID BUU", x:0, y:40000},
-    {name:"BEERUS", x:0, y:-30000}
-];
-
-const __oldDrawMap = drawSchematicMap;
-drawSchematicMap = function(me){
-    __oldDrawMap(me);
-    ctx.save();
-    const size = isMobile ? 60 : 150;
-    const scale = size / 60000;
-    const mapCX = canvas.width - size - 20;
-    const mapCY = size + 20;
-    ctx.translate(mapCX, mapCY);
-    legendaryBosses.forEach(b=>{
-        const bx = b.x * scale;
-        const by = b.y * scale;
-        if(Math.hypot(bx,by) < size){
-            ctx.fillStyle = "#ff0000";
-            ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI*2); ctx.fill();
-        }
-    });
-    ctx.restore();
-};
-
-// --- 4) TEXTO DE AMEAÇA EM ZONAS ENDGAME ---
-const __oldScouter = drawScouterHUD;
-drawScouterHUD = function(me){
-    __oldScouter(me);
-    if(!me) return;
-    const dist = Math.hypot(me.x, me.y);
-    if(dist > 35000){
-        ctx.save();
-        ctx.fillStyle = "#ff0000";
-        ctx.font = "bold 22px Orbitron";
-        ctx.textAlign = "center";
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#f00";
-        ctx.fillText("⚠ ZONA DE ANIQUILAÇÃO ⚠", canvas.width/2, 80);
-        ctx.restore();
-    }
-};
-
-// ============================================================================
-// === PATCH DESTROY THE GALAXY :: CLIENT END ==================================
-// ============================================================================
+// === PATCH V3 HOLOGRAMA / DRAGON BALL UI ===
+let hologramPulse=0;
+socket.on("fx",fx=>{if(fx.type==="hit"&&fx.targetId===myId)hologramPulse=6;});

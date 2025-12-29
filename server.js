@@ -5,12 +5,15 @@ const { Server } = require("socket.io");
 const { Pool } = require('pg'); // Cliente PostgreSQL
 const isRender = !!process.env.DATABASE_URL;
 
+
 // ==================================================================================
-// CONFIGURAÇÃO DO BANCO DE DADOS
+// CONFIGURAÇÃO DO BANCO DE DADOS (POSTGRESQL NO RENDER)
 // ==================================================================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 pool.query(`
@@ -32,7 +35,7 @@ let rocks = [];
 let craters = [];
 
 // ==================================================================================
-// ESTATÍSTICAS RPG E BESTIÁRIO EXPANDIDO (PATCH: DESTROY THE GALAXY)
+// ESTATÍSTICAS RPG E BESTIÁRIO EXPANDIDO (OBRA PRIMA)
 // ==================================================================================
 const FORM_STATS = {
     "BASE": { spd: 5,  dmg: 1.0, hpMult: 1.0, kiMult: 1.0 },
@@ -45,49 +48,35 @@ const FORM_STATS = {
 };
 
 const BP_TRAIN_CAP = {
-    BASE: 1200, SSJ: 5000, SSJ2: 15000, SSJ3: 40000,
-    GOD: 150000, BLUE: 500000, UI: 999999999
+    BASE:  1200, SSJ: 2500, SSJ2: 5000, SSJ3: 9000,
+    GOD: 16000, BLUE: 28000, UI: 45000
 };
 
-// --- EXPANSÃO 4X DO BESTIÁRIO ---
 const BESTIARY = {
+    // CENTRO: TERRA (Clássico + Z Início)
     EARTH: { 
-        mobs: [
-            "RR_DROID_A", "RR_DROID_B", "SAIBAMAN_GREEN", "SAIBAMAN_BLACK", 
-            "RADITZ_SOLDIER", "NAPPA_ELITE", "WOLF_BANDIT", "DINOSAUR_REX",
-            "RED_RIBBON_MECH", "KING_PICCOLO_MINION"
-        ], 
-        bosses: ["NAPPA", "VEGETA_SCOUTER", "TURLES", "LORD_SLUG", "PICCOLO_DAIMAOH", "RADITZ", "TAO_PAI_PAI_CYBORG"] 
+        mobs: ["RR_SOLDIER", "WOLF_BANDIT", "DINOSAUR", "SAIBAMAN", "RADITZ_MINION"], 
+        bosses: ["TAO_PAI_PAI", "KING_PICCOLO", "RADITZ", "NAPPA", "VEGETA_SCOUTER"] 
     },
+    // OESTE: ESPAÇO (Namek, Yardrat, Planeta Vegeta)
     DEEP_SPACE: { 
-        mobs: [
-            "FRIEZA_SOLDIER_1", "FRIEZA_SOLDIER_2", "APPULE", "RASPBERRY",
-            "NAMEK_WARRIOR", "FROG_GINYU", "COOLER_SQUAD_A", "COOLER_SQUAD_B",
-            "SPACE_PIRATE", "GALACTIC_PATROL_TRAINEE"
-        ], 
-        bosses: ["FRIEZA_FINAL", "COOLER_METAL", "LEGENDARY_BROLY", "CAPTAIN_GINYU", "RECOOME", "ZARBON_MONSTER", "DODORIA"] 
+        mobs: ["FRIEZA_SOLDIER", "ZARBON_MONSTER", "DODORIA_ELITE", "NAMEK_WARRIOR", "GINYU_FORCE_MEMBER"], 
+        bosses: ["CAPTAIN_GINYU", "FRIEZA_FINAL", "COOLER_METAL", "LEGENDARY_BROLY"] 
     },
+    // LESTE: FUTURO/TECH (Androids, Cell, Black)
     FUTURE_TIMELINE: { 
-        mobs: [
-            "ANDROID_19", "ANDROID_20", "CELL_JR_BLUE", "CELL_JR_GREEN",
-            "FUTURE_ANDROID_A", "FUTURE_ANDROID_B", "BIO_WARRIOR", "MACHINE_MUTANT",
-            "DR_GERO_ROBOT", "MECHA_FRIEZA_CLONE"
-        ], 
-        bosses: ["PERFECT_CELL", "GOKU_BLACK", "FUSED_ZAMASU", "ANDROID_17", "ANDROID_18", "SUPER_13", "BOJACK"] 
+        mobs: ["ANDROID_19", "ANDROID_20", "CELL_JR", "MACHINE_MUTANT", "ZAMASU_CLONE"], 
+        bosses: ["ANDROID_18", "PERFECT_CELL", "GOKU_BLACK_ROSE", "SUPER_17", "OMEGA_SHENRON"] 
     },
+    // SUL: REINO DEMONÍACO (Buu, Janemba, Daima)
     DEMON_REALM: { 
-        mobs: [
-            "MAJIN_SOLDIER", "JANEMBA_MINI", "DABURA_GUARD", "PUI_PUI", "YAKON",
-            "BUU_SLIME", "DEMON_GARGOYLE", "HELL_FIGHTER_17", "DARK_NAMEKIAN"
-        ], 
-        bosses: ["KID_BUU", "SUPER_JANEMBA", "HIRUDEGARN", "DABURA_KING", "SUPER_BUU_GOTENKS", "OMEGA_SHENRON"] 
+        mobs: ["PUIPUI", "YAKON", "DABURA_MINION", "JANEMBA_MINI", "GOMAH_SOLDIER"], 
+        bosses: ["DABURA", "FAT_BUU", "KID_BUU", "JANEMBA", "KING_GOMAH"] 
     },
+    // NORTE: DOMÍNIO DIVINO (Super, Bills, Zeno)
     DIVINE_REALM: { 
-        mobs: [
-            "PRIDE_TROOPER", "GOD_DESTRUCTION_APP", "ANGEL_ATTENDANT", "TRIO_DE_DANGERS",
-            "UNIVERSE_6_BOT", "GALACTIC_POACHER", "KAIOH_TRAINEE", "YARDRAT_ELITE"
-        ], 
-        bosses: ["JIREN", "TOPPO_GOD", "BEERUS", "WHIS", "HIT_ASSASSIN", "KEFLA_SSJ2", "GOKU_UI_SIGN"] 
+        mobs: ["PRIDE_TROOPER", "U6_BOTAMO", "ANGEL_TRAINEE", "HAKAISHIN_GUARD"], 
+        bosses: ["GOLDEN_FRIEZA", "HIT_ASSASSIN", "TOPPO_GOD", "JIREN_FULL_POWER", "BEERUS"] 
     }
 };
 
@@ -119,70 +108,62 @@ function findSnapTarget(p) {
 
 function getZoneInfo(x, y) {
     const dist = Math.hypot(x, y);
-    if (dist < 6000) return { id: "EARTH", level: Math.max(1, Math.floor(dist/1000)) };
-    
+    let level = 1 + Math.floor(dist / 2000); 
+    if (dist < 6000) return { id: "EARTH", level: Math.max(1, level) };
     const angle = Math.atan2(y, x);
-    let level = 1 + Math.floor(dist / 3000); 
-    
-    if (Math.abs(angle) > 2.35) return { id: "DEEP_SPACE", level: level + 5 }; // Oeste
-    if (Math.abs(angle) < 0.78) return { id: "FUTURE_TIMELINE", level: level + 10 }; // Leste
-    if (angle >= 0.78 && angle <= 2.35) return { id: "DEMON_REALM", level: level + 20 }; // Sul
-    return { id: "DIVINE_REALM", level: level + 40 }; // Norte
+    if (Math.abs(angle) > 2.35) return { id: "DEEP_SPACE", level };
+    if (Math.abs(angle) < 0.78) return { id: "FUTURE_TIMELINE", level };
+    if (angle >= 0.78 && angle <= 2.35) return { id: "DEMON_REALM", level };
+    return { id: "DIVINE_REALM", level };
 }
 
 function initWorld() {
-    // === DECORAÇÃO MACIÇA PARA EFEITO "MAQUETE" ===
-    for(let i=0; i<2000; i++) {
+    // Rochas e Decoração
+    for(let i=0; i<1500; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 500 + Math.random() * 75000;
+        const dist = Math.random() * 70000;
         const x = Math.cos(angle) * dist; const y = Math.sin(angle) * dist;
         const zone = getZoneInfo(x, y);
         let type = "rock_earth";
-        
         if(zone.id === "DEEP_SPACE") type = "rock_namek";
         if(zone.id === "FUTURE_TIMELINE") type = "rock_city";
         if(zone.id === "DEMON_REALM") type = "rock_magic";
         if(zone.id === "DIVINE_REALM") type = "rock_god";
-        
         rocks.push({ id: i, x, y, r: 30 + Math.random() * 80, hp: 200 + (dist/100), type });
     }
 
-    // === POPULAÇÃO INICIAL (600 Mobs) ===
-    for(let i=0; i<600; i++) spawnMobRandomly();
+    // Mobs Aleatórios
+    for(let i=0; i<500; i++) spawnMobRandomly();
 
-    // === CHECKLIST DE BOSSES (RAID SPOTS) ===
-    
-    // Terra (Early Game)
+    // === PONTOS DE INTERESSE (PLANETAS E BOSSES) ===
+    // Terra (Centro)
     spawnBossAt(2000, 2000, "VEGETA_SCOUTER");
-    spawnBossAt(-3000, 1000, "NAPPA");
-    spawnBossAt(4000, -2000, "TURLES");
 
-    // Oeste: Espaço (Mid Game)
-    spawnBossAt(-15000, 2000, "FRIEZA_FINAL"); 
-    spawnBossAt(-25000, -5000, "LEGENDARY_BROLY"); 
-    spawnBossAt(-18000, 8000, "COOLER_METAL");
+    // Oeste: Espaço (Namek & Planeta Vegeta Antigo)
+    spawnBossAt(-15000, 2000, "FRIEZA_FINAL"); // Namek
+    spawnBossAt(-25000, -5000, "LEGENDARY_BROLY"); // Vampa/Vegeta
+    spawnBossAt(-40000, 0, "MORO_YOUNG"); // Espaço Profundo
 
-    // Leste: Futuro (Mid/High Game)
+    // Leste: Futuro (Ruínas e GT)
     spawnBossAt(15000, 0, "PERFECT_CELL"); 
     spawnBossAt(25000, 5000, "GOKU_BLACK_ROSE");
-    spawnBossAt(30000, -5000, "FUSED_ZAMASU");
+    spawnBossAt(40000, 0, "OMEGA_SHENRON");
 
-    // Sul: Reino Demoníaco (High Game)
+    // Sul: Reino Demoníaco (Magia e Buu)
     spawnBossAt(0, 15000, "FAT_BUU");
-    spawnBossAt(5000, 25000, "KID_BUU");
-    spawnBossAt(-5000, 35000, "JANEMBA");
-    spawnBossAt(0, 45000, "OMEGA_SHENRON");
+    spawnBossAt(5000, 25000, "JANEMBA");
+    spawnBossAt(0, 40000, "KING_GOMAH"); // Daima
 
-    // Norte: Divino (END GAME)
+    // Norte: Divino (Kaioh, Bills, Zeno)
+    // Kaioh fica em 0, -20000 (Local Seguro)
     spawnBossAt(0, -30000, "BEERUS");
-    spawnBossAt(10000, -35000, "JIREN");
-    spawnBossAt(-10000, -40000, "TOPPO_GOD");
-    spawnBossAt(0, -60000, "WHIS"); // Desafio Supremo
+    spawnBossAt(10000, -35000, "JIREN_FULL_POWER");
+    spawnBossAt(0, -50000, "WHIS"); // Treino Final
 }
 
 function spawnMobRandomly() {
     const angle = Math.random() * Math.PI * 2;
-    const dist = 2000 + Math.random() * 65000; 
+    const dist = 2000 + Math.random() * 60000; 
     const x = Math.cos(angle) * dist; const y = Math.sin(angle) * dist;
     spawnMobAt(x, y);
 }
@@ -195,21 +176,11 @@ function spawnMobAt(x, y) {
     
     let stats = { name: type, hp: 600 * zone.level, bp: 1200 * zone.level, level: zone.level, color: "#fff", aggro: 700 + (zone.level * 10), aiType: "MELEE" };
     
-    // === LÓGICA VISUAL (CORES) ===
-    if(zone.id === "EARTH") stats.color = "#4a4"; // Verde Terra
-    if(zone.id === "DEEP_SPACE") stats.color = "#90f"; // Alien Roxo
-    if(zone.id === "FUTURE_TIMELINE") stats.color = "#789"; // Metálico
-    if(zone.id === "DEMON_REALM") stats.color = "#c33"; // Vermelho Demônio
-    if(zone.id === "DIVINE_REALM") stats.color = "#0ff"; // Azul Divino
-
-    // Cores Específicas
     if(type.includes("RR_")) stats.color = "#555";
-    if(type.includes("SAIBAMAN")) stats.color = "#262";
-    if(type.includes("FRIEZA")) stats.color = "#fff";
-    if(type.includes("MAJIN")) stats.color = "#f9f";
-    if(type.includes("CELL")) stats.color = "#0a0";
-    if(type.includes("BLACK")) stats.color = "#111";
-    if(type.includes("GOLDEN")) stats.color = "#fd0";
+    if(type.includes("FRIEZA")) stats.color = "#848";
+    if(type.includes("MAJIN") || type.includes("DEMON")) stats.color = "#909";
+    if(type.includes("PRIDE") || type.includes("ANGEL")) stats.color = "#aaf";
+    if(type.includes("CELL") || type.includes("SAIBAMAN")) stats.color = "#484";
     
     npcs.push({ id, isNPC: true, r: 25, x, y, vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 200, maxKi: 200, level: stats.level, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0, name: stats.name, zoneId: zone.id, aiType: stats.aiType });
 }
@@ -222,15 +193,14 @@ function spawnBossAt(x, y, forcedType = null) {
         type = bosses[Math.floor(Math.random() * bosses.length)];
     }
     
-    let stats = { name: type, hp: 25000 * zone.level, bp: 90000 * zone.level, color: "#f00", r: 70 };
+    let stats = { name: type, hp: 20000 * zone.level, bp: 80000 * zone.level, color: "#f00", r: 60 };
     
     if(type.includes("VEGETA")) stats.color = "#33f";
-    if(type.includes("FRIEZA")) stats.color = "#eee"; 
-    if(type.includes("CELL")) stats.color = "#0a0";
+    if(type.includes("FRIEZA")) stats.color = "#fff"; 
+    if(type.includes("CELL")) stats.color = "#484";
     if(type.includes("BUU")) stats.color = "#fbb";
-    if(type.includes("BLACK") || type.includes("ROSE")) stats.color = "#f0f";
+    if(type.includes("BLACK") || type.includes("ROSE")) stats.color = "#333";
     if(type.includes("JIREN") || type.includes("TOPPO")) stats.color = "#f22";
-    if(type.includes("WHIS") || type.includes("UI")) stats.color = "#fff";
     
     npcs.push({ id: "BOSS_" + type + "_" + Date.now(), name: type, isNPC: true, isBoss: true, x, y, vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 10000, maxKi: 10000, level: zone.level + 15, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0 });
 }
@@ -261,40 +231,91 @@ function packStateForPlayer(pid) {
 
     return { players: playersObj, npcs: npcs.filter(inRange), projectiles: projectiles.filter(inRange), rocks: rocks.filter(inRange), craters };
 }
-
 const localUsers = {};
 io.on("connection", (socket) => {
     socket.on("login", async (data) => {
-        try {
-            let user;
-            if (isRender) {
-                const res = await pool.query('SELECT * FROM users WHERE name = $1', [data.user]);
-                user = res.rows[0];
-                if (!user) {
-                    const insert = await pool.query('INSERT INTO users (name, pass, level, xp, bp) VALUES ($1,$2,$3,$4,$5) RETURNING *', [data.user, data.pass, 1, 0, 500]);
-                    user = insert.rows[0];
-                } else if (user.pass !== data.pass) return;
-            } else {
-                user = localUsers[data.user];
-                if (!user) {
-                    user = { name: data.user, pass: data.pass, level: 1, xp: 0, bp: 500 };
-                    localUsers[data.user] = user;
-                } else if (user.pass !== data.pass) return;
+    try {
+        let user;
+
+        if (isRender) {
+            // ===== POSTGRES (RENDER) =====
+            const res = await pool.query(
+                'SELECT * FROM users WHERE name = $1',
+                [data.user]
+            );
+
+            user = res.rows[0];
+
+            if (!user) {
+                const insert = await pool.query(
+                    'INSERT INTO users (name, pass, level, xp, bp) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+                    [data.user, data.pass, 1, 0, 500]
+                );
+                user = insert.rows[0];
+            } else if (user.pass !== data.pass) {
+                return;
             }
 
-            const xpToNext = user.level * 800;
-            players[socket.id] = {
-                ...user, id: socket.id, r: 20, x: 0, y: 0, vx: 0, vy: 0, angle: 0,
-                baseMaxHp: 1000 + user.level * 200, baseMaxKi: 100 + user.level * 10,
-                hp: 1000 + user.level * 200, maxHp: 1000 + user.level * 200,
-                ki: 100, maxKi: 100 + user.level * 10, form: "BASE", xpToNext,
-                state: "IDLE", combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk: 0,
-                isDead: false, isSpirit: false, stun: 0, color: "#ff9900", chargeStart: 0, pvpMode: false,
-                lastTransform: 0, bpCapped: false
-            };
-            socket.emit("auth_success", players[socket.id]);
-        } catch (err) { console.error("Erro no Login:", err); }
-    });
+        } else {
+            // ===== LOCAL (SEM BANCO) =====
+            user = localUsers[data.user];
+
+            if (!user) {
+                user = {
+                    name: data.user,
+                    pass: data.pass,
+                    level: 1,
+                    xp: 0,
+                    bp: 500
+                };
+                localUsers[data.user] = user;
+            } else if (user.pass !== data.pass) {
+                return;
+            }
+        }
+
+        const xpToNext = user.level * 800;
+
+        players[socket.id] = {
+            ...user,
+            id: socket.id,
+            r: 20,
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            baseMaxHp: 1000 + user.level * 200,
+            baseMaxKi: 100 + user.level * 10,
+            hp: 1000 + user.level * 200,
+            maxHp: 1000 + user.level * 200,
+            ki: 100,
+            maxKi: 100 + user.level * 10,
+            form: "BASE",
+            xpToNext,
+            state: "IDLE",
+            combo: 0,
+            comboTimer: 0,
+            attackLock: 0,
+            counterWindow: 0,
+            lastAtk: 0,
+            isDead: false,
+            isSpirit: false,
+            stun: 0,
+            color: "#ff9900",
+            chargeStart: 0,
+            pvpMode: false,
+            lastTransform: 0,
+            bpCapped: false
+        };
+
+        socket.emit("auth_success", players[socket.id]);
+
+    } catch (err) {
+        console.error("Erro no Login:", err);
+    }
+});
+
 
     socket.on("toggle_pvp", () => { const p = players[socket.id]; if(p) p.pvpMode = !p.pvpMode; });
 
@@ -341,6 +362,7 @@ io.on("connection", (socket) => {
 
         [...Object.values(players), ...npcs].forEach(t => {
             if(t.id === p.id || t.isDead || t.isSpirit) return;
+            // REGRA PVP: Só acerta jogador se PVP estiver ON
             if(!t.isNPC && !p.pvpMode) return;
 
             const dx = t.x - p.x; const dy = t.y - p.y;
@@ -412,6 +434,9 @@ io.on("connection", (socket) => {
             const stats = FORM_STATS[nextForm];
             p.maxHp = p.baseMaxHp * stats.hpMult;
             p.maxKi = p.baseMaxKi * stats.kiMult;
+            // REMOVIDO CURA AO TRANSFORMAR PARA EVITAR EXPLOIT
+            // p.hp += p.maxHp * 0.1; 
+
             const knockbackRadius = 350; const pushForce = 150;
             [...Object.values(players), ...npcs].forEach(t => {
                 if (t.id === p.id || t.isDead || t.isSpirit) return;
@@ -445,7 +470,7 @@ function handleKill(killer, victim) {
                 killer.maxHp = killer.baseMaxHp * stats.hpMult; killer.maxKi = killer.baseMaxKi * stats.kiMult;
                 killer.hp = killer.maxHp; killer.ki = killer.maxKi; killer.xpToNext = killer.level * 800; 
                 io.emit("fx", { type: "levelup", x: killer.x, y: killer.y });
-                if(isRender) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [killer.level, killer.xp, killer.bp, killer.name]).catch(e => console.error(e));
+                pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [killer.level, killer.xp, killer.bp, killer.name]).catch(e => console.error(e));
             }
         }
         setTimeout(() => { npcs = npcs.filter(n => n.id !== victim.id); spawnMobRandomly(); }, 5000);
@@ -480,13 +505,15 @@ setInterval(() => {
                    p.maxHp = p.baseMaxHp * stats.hpMult; p.maxKi = p.baseMaxKi * stats.kiMult;
                    p.hp = p.maxHp; p.ki = p.maxKi; p.xpToNext = p.level * 800;
                    io.emit("fx", { type: "levelup", x: p.x, y: p.y });
-                   if(isRender) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [p.level, p.xp, p.bp, p.name]).catch(e => console.error(e));
+                   pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [p.level, p.xp, p.bp, p.name]).catch(e => console.error(e));
                 }
             } else if(p.ki < p.maxKi && p.state === "IDLE") { p.ki += 0.5; }
 
             // LÓGICA DE CURA NO PLANETA KAIOH (Se estiver vivo, voe lá para curar)
+            // Localização Sr. Kaioh: 0, -20000
             const distToKingKai = Math.hypot(p.x - 0, p.y + 20000); 
             if (distToKingKai < 1500) {
+                // Regeneração rápida
                 p.hp = Math.min(p.maxHp, p.hp + (p.maxHp * 0.05));
                 p.ki = Math.min(p.maxKi, p.ki + (p.maxKi * 0.05));
             }
@@ -543,7 +570,7 @@ setInterval(() => {
         [...Object.values(players), ...npcs].forEach(t => {
             if (!hit && t.id !== pr.owner && !t.isSpirit && !t.isDead) {
                 const dist = Math.hypot(pr.x - t.x, pr.y - t.y);
-                if (dist < (45 + pr.size)) { 
+                if (dist < (45 + pr.size)) { // Hitbox corrigida
                     if(!t.isNPC && !pr.pvp) return;
                     let dmg = pr.dmg;
                     if (!t.isNPC) dmg *= 0.5;
@@ -564,67 +591,28 @@ setInterval(() => {
 
 }, TICK);
 
+server.listen(3000, () => console.log("Dragon Bolt Universe Online"));
 // ============================================================================
-// === PATCH DESTROY THE GALAXY :: SERVER (APPEND ONLY) ========================
+// PATCH FINAL — ESFERAS DO DRAGÃO + PvP FORÇADO (SAFE)
 // ============================================================================
 
-// --- 1) EXPANSÃO MASSIVA DO BESTIÁRIO (4×) ---
-Object.assign(BESTIARY.EARTH.mobs, [
-    "RR_DROID","RR_ELITE","LOW_CLASS_SAIYAN","BANDIT_ELITE"
-]);
-Object.assign(BESTIARY.DEEP_SPACE.mobs, [
-    "FRIEZA_ELITE","SPACE_HUNTER","NAMEK_FUSED","GALACTIC_ASSASSIN"
-]);
-Object.assign(BESTIARY.FUTURE_TIMELINE.mobs, [
-    "ANDROID_HUNTER","CELL_EVOLVED","TIME_RAIDER","BLACK_DISCIPLE"
-]);
-Object.assign(BESTIARY.DEMON_REALM.mobs, [
-    "MAJIN_BRUTE","HELL_WARRIOR","DEMON_SUMMONER","JANEMBA_DISTORTED"
-]);
-Object.assign(BESTIARY.DIVINE_REALM.mobs, [
-    "PRIDE_ELITE","ANGEL_GUARDIAN","DESTRUCTION_AVATAR","COSMIC_EXECUTOR"
-]);
+global.DRAGON_BALLS = global.DRAGON_BALLS || Array.from({ length: 7 }).map((_, i) => ({
+    id: i + 1,
+    x: (Math.random() * 60000) - 30000,
+    y: (Math.random() * 60000) - 30000,
+    holder: null
+}));
 
-// --- 2) BOSSES LENDÁRIOS FIXOS (END GAME) ---
-const LEGENDARY_BOSSES = [
-    {x:-25000,y:-5000,type:"LEGENDARY_BROLY"},
-    {x:10000,y:-35000,type:"JIREN_FULL_POWER"},
-    {x:0,y:40000,type:"KID_BUU"},
-    {x:0,y:-30000,type:"BEERUS"}
-];
-LEGENDARY_BOSSES.forEach(b=>spawnBossAt(b.x,b.y,b.type));
-
-// --- 3) EVENTOS CÓSMICOS DINÂMICOS ---
-setInterval(()=>{
-    if(Math.random()>0.85){
-        const angle=Math.random()*Math.PI*2;
-        const dist=40000+Math.random()*30000;
-        spawnBossAt(Math.cos(angle)*dist, Math.sin(angle)*dist);
-    }
-}, 300000);
-
-// --- 4) ESCALONAMENTO DE IA POR ZONA (SEM MUDAR LÓGICA BASE) ---
-npcs.forEach(n=>{
-    if(n.level>60) n.aggro+=500;
-    if(n.isBoss) n.aggro+=1000;
-});
-
-// --- 5) RECOMPENSA ENDGAME ---
-function grantLegendaryReward(p){
-    if(!p || p.isNPC) return;
-    p.bp += 20000;
-    clampBP(p);
+function playerHasDragonBall(player){
+    return global.DRAGON_BALLS.some(b => b.holder === player.id);
 }
-io.on("connection", socket=>{
-    socket.on("legendary_kill", ()=>{
-        const p=players[socket.id];
-        grantLegendaryReward(p);
+
+function dropDragonBalls(player){
+    global.DRAGON_BALLS.forEach(b => {
+        if (b.holder === player.id) {
+            b.holder = null;
+            b.x = player.x;
+            b.y = player.y;
+        }
     });
-});
-
-// ============================================================================
-// === PATCH DESTROY THE GALAXY :: SERVER END ==================================
-// ============================================================================
-
-
-server.listen(3000, () => console.log("Dragon Bolt Universe Online - Patch Destroy The Galaxy"));
+}
