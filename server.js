@@ -6,14 +6,13 @@ const { Pool } = require('pg');
 const isRender = !!process.env.DATABASE_URL;
 
 // ==================================================================================
-// CONFIGURAÇÃO DO BANCO DE DADOS (POSTGRESQL - ATUALIZADO)
+// CONFIGURAÇÃO DO BANCO DE DADOS
 // ==================================================================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-// Atualização da Tabela para Suportar Guildas, Títulos e Conquistas
 const initDB = async () => {
     try {
         await pool.query(`
@@ -31,7 +30,7 @@ const initDB = async () => {
                 pvp_score INTEGER DEFAULT 0
             );
         `);
-        // Tenta adicionar colunas caso o banco já exista (Migração simples)
+        // Migrações seguras
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS guild VARCHAR(50) DEFAULT NULL").catch(()=>{});
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS titles TEXT DEFAULT 'Novato'").catch(()=>{});
         await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_title VARCHAR(50) DEFAULT 'Novato'").catch(()=>{});
@@ -52,7 +51,7 @@ let rocks = [];
 let craters = [];
 
 // ==================================================================================
-// SISTEMA DE DOMINAÇÃO E EVENTOS GLOBAIS
+// CONFIGURAÇÕES GLOBAIS
 // ==================================================================================
 const DOMINATION_ZONES = [
     { id: "EARTH_CORE", name: "Capital do Oeste", x: 2000, y: 2000, radius: 800, owner: null, guild: null, progress: 0, state: "PEACE" },
@@ -72,9 +71,6 @@ const TITLES_DATA = {
     "CONQUEROR": { req: "domination", val: 1, name: "Imperador" }
 };
 
-// ==================================================================================
-// ESTATÍSTICAS RPG E BESTIÁRIO
-// ==================================================================================
 const FORM_STATS = {
     "BASE": { spd: 5,  dmg: 1.0, hpMult: 1.0, kiMult: 1.0 },
     "SSJ":  { spd: 7,  dmg: 1.5, hpMult: 1.5, kiMult: 1.2 },
@@ -98,6 +94,9 @@ const BESTIARY = {
     DIVINE_REALM: { mobs: ["PRIDE_TROOPER", "U6_BOTAMO", "ANGEL_TRAINEE", "HAKAISHIN_GUARD"], bosses: ["GOLDEN_FRIEZA", "HIT_ASSASSIN", "TOPPO_GOD", "JIREN_FULL_POWER", "BEERUS"] }
 };
 
+// ==================================================================================
+// FUNÇÕES DE MAPA E SPAWN
+// ==================================================================================
 function getMaxBP(p) {
     const form = p.form || "BASE";
     const formCap = BP_TRAIN_CAP[form] || BP_TRAIN_CAP.BASE;
@@ -116,11 +115,11 @@ function findSnapTarget(p) {
     [...Object.values(players), ...npcs].forEach(t => {
         if (t.id === p.id || t.isDead || t.isSpirit) return;
         const d = Math.hypot(t.x - p.x, t.y - p.y);
-        if (d > 320) return;
+        if (d > 400) return; 
         const angToT = Math.atan2(t.y - p.y, t.x - p.x);
         let diff = Math.abs(angToT - p.angle);
         if (diff > Math.PI) diff = Math.PI * 2 - diff;
-        if (diff < 2.3) { const score = d + diff * 250; if (score < bestScore) { bestScore = score; best = t; } }
+        if (diff < 2.5) { const score = d + diff * 100; if (score < bestScore) { bestScore = score; best = t; } }
     });
     return best;
 }
@@ -137,6 +136,7 @@ function getZoneInfo(x, y) {
 }
 
 function initWorld() {
+    rocks = []; // Limpa antes de gerar
     for(let i=0; i<1500; i++) {
         const angle = Math.random() * Math.PI * 2;
         const dist = Math.random() * 70000;
@@ -147,22 +147,24 @@ function initWorld() {
         if(zone.id === "FUTURE_TIMELINE") type = "rock_city";
         if(zone.id === "DEMON_REALM") type = "rock_magic";
         if(zone.id === "DIVINE_REALM") type = "rock_god";
-        rocks.push({ id: i, x, y, r: 30 + Math.random() * 80, hp: 200 + (dist/100), type });
+        // Rocks agora têm HP baseado na distância (mais longe = mais duras)
+        rocks.push({ id: i, x, y, r: 30 + Math.random() * 80, hp: 300 + (dist/50), maxHp: 300 + (dist/50), type });
     }
+    
+    npcs = []; // Limpa mobs antes de gerar
     for(let i=0; i<500; i++) spawnMobRandomly();
+    
+    // Bosses Fixos
     spawnBossAt(2000, 2000, "VEGETA_SCOUTER");
     spawnBossAt(-15000, 2000, "FRIEZA_FINAL"); 
     spawnBossAt(-25000, -5000, "LEGENDARY_BROLY");
-    spawnBossAt(-40000, 0, "MORO_YOUNG");
     spawnBossAt(15000, 0, "PERFECT_CELL"); 
     spawnBossAt(25000, 5000, "GOKU_BLACK_ROSE");
-    spawnBossAt(40000, 0, "OMEGA_SHENRON");
     spawnBossAt(0, 15000, "FAT_BUU");
-    spawnBossAt(5000, 25000, "JANEMBA");
     spawnBossAt(0, 40000, "KING_GOMAH");
-    spawnBossAt(0, -30000, "BEERUS");
     spawnBossAt(10000, -35000, "JIREN_FULL_POWER");
-    spawnBossAt(0, -50000, "WHIS");
+    
+    console.log(`Mundo Gerado: ${rocks.length} rochas, ${npcs.length} NPCs.`);
 }
 
 function spawnMobRandomly() {
@@ -178,7 +180,9 @@ function spawnMobAt(x, y, aggressive = false) {
     const type = list[Math.floor(Math.random() * list.length)];
     const id = "mob_" + Math.random().toString(36).substr(2, 9);
     
-    let stats = { name: type, hp: 600 * zone.level, bp: 1200 * zone.level, level: zone.level, color: "#fff", aggro: aggressive ? 2000 : (700 + (zone.level * 10)), aiType: "MELEE" };
+    // --- BALANCEAMENTO INICIAL (NERF NO EARLY GAME) ---
+    // Antes: hp: 600 * level. Agora: 400 * level (Mais fácil matar no começo)
+    let stats = { name: type, hp: 400 * zone.level, bp: 1200 * zone.level, level: zone.level, color: "#fff", aggro: aggressive ? 2000 : (700 + (zone.level * 10)), aiType: "MELEE" };
     
     if(type.includes("RR_")) stats.color = "#555";
     if(type.includes("FRIEZA")) stats.color = "#848";
@@ -204,7 +208,7 @@ function spawnBossAt(x, y, forcedType = null) {
     if(type.includes("BLACK") || type.includes("ROSE")) stats.color = "#333";
     if(type.includes("JIREN") || type.includes("TOPPO")) stats.color = "#f22";
     
-    npcs.push({ id: "BOSS_" + type + "_" + Date.now(), name: type, isNPC: true, isBoss: true, x, y, vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 10000, maxKi: 10000, level: zone.level + 15, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0 });
+    npcs.push({ id: "BOSS_" + type + "_" + Date.now(), name: type, isNPC: true, isBoss: true, x, y, vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 10000, maxKi: 10000, level: zone.level + 15, cancelWindow: 0, lastInputTime: 0, orbitDir: 1, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0 });
 }
 
 function checkAchievements(p) {
@@ -223,6 +227,7 @@ function checkAchievements(p) {
     }
 }
 
+// INICIALIZA O MUNDO ANTES DE COMEÇAR
 initWorld();
 
 const server = http.createServer((req, res) => {
@@ -243,15 +248,17 @@ function packStateForPlayer(pid) {
     if (!p) return null;
     const R = 4500; 
     const inRange = (o) => Math.hypot(o.x - p.x, o.y - p.y) < R;
-    const playersInRange = Object.values(players).filter(pl => Math.hypot(pl.x - p.x, pl.y - p.y) < 15000); 
-    const playersObj = {};
-    playersInRange.forEach(pl => playersObj[pl.id] = pl);
-    // Inclui estado de dominação e leaderboard no pacote
+    
+    // FILTRAGEM SEGURA PARA EVITAR QUE MAPA SUMA
+    const visibleRocks = rocks.filter(inRange);
+    const visibleNpcs = npcs.filter(inRange);
+    const visibleProjs = projectiles.filter(inRange);
+
     return { 
-        players: playersObj, 
-        npcs: npcs.filter(inRange), 
-        projectiles: projectiles.filter(inRange), 
-        rocks: rocks.filter(inRange), 
+        players: players,
+        npcs: visibleNpcs, 
+        projectiles: visibleProjs, 
+        rocks: visibleRocks, 
         craters,
         domination: DOMINATION_ZONES,
         leaderboard: leaderboard.slice(0, 5)
@@ -327,91 +334,177 @@ io.on("connection", (socket) => {
         else if(!["ATTACKING"].includes(p.state)) p.state = "IDLE";
     });
 
+    /* ==================================================================================
+       COMBAT 2.0 - COMBO RÍTMICO + DESTRUIÇÃO DE CENÁRIO
+       ================================================================================== */
     socket.on("release_attack", () => {
         const p = players[socket.id];
-        if(!p || p.isSpirit || p.stun > 0) return;
+        if (!p || p.isSpirit || p.stun > 0) return;
+
+        const now = Date.now();
+        const formStats = FORM_STATS[p.form] || FORM_STATS.BASE;
+
+        // 1. AUTO TARGET MELHORADO 
         let target = findSnapTarget(p);
         if (!target) {
-            let best = null, bestDist = 220;
-            [...Object.values(players), ...npcs].forEach(t => { 
-                if(t.id === p.id || t.isDead || t.isSpirit) return; 
-                if(!t.isNPC && !p.pvpMode) return; 
-                const d = Math.hypot(t.x - p.x, t.y - p.y); 
-                if(d < bestDist) { bestDist = d; best = t; } 
+            let best = null, bestDist = 380;
+            [...Object.values(players), ...npcs].forEach(t => {
+                if (t.id === p.id || t.isDead || t.isSpirit) return;
+                if (!t.isNPC && !p.pvpMode) return;
+                const d = Math.hypot(t.x - p.x, t.y - p.y);
+                if (d < bestDist) { bestDist = d; best = t; }
             });
             target = best;
         }
+
+        // 2. SISTEMA DE PASSOS DE COMBO
+        if (p.comboTimer <= 0) p.combo = 0;
+        
+        const COMBO_STEPS = [
+            { type: "RUSH",   range: 220, selfSpd: 65, targetPush: 5,   stun: 15, dmg: 1.0 }, // 0: Gruda no inimigo
+            { type: "HEAVY",  range: 130, selfSpd: 30, targetPush: 8,   stun: 15, dmg: 1.2 }, // 1: Porrada seca
+            { type: "MULTI",  range: 130, selfSpd: 40, targetPush: 5,   stun: 15, dmg: 0.8 }, // 2: Sequência
+            { type: "UPPER",  range: 130, selfSpd: 20, targetPush: 10,  stun: 18, dmg: 1.5 }, // 3: Gancho
+            { type: "FINISH", range: 160, selfSpd: 10, targetPush: 180, stun: 35, dmg: 2.5 }  // 4: FINALIZADOR (ISOLA)
+        ];
+
+        if (p.combo >= COMBO_STEPS.length) p.combo = 0;
+        const step = COMBO_STEPS[p.combo];
+        const isFinisher = step.type === "FINISH";
+
+        // Configura movimento do player
         if (target) {
             const dx = target.x - p.x; const dy = target.y - p.y;
             p.angle = Math.atan2(dy, dx);
-            const dist = Math.hypot(dx, dy);
-            if (dist > 55) { const pull = Math.min(80, dist - 55); p.vx = Math.cos(p.angle) * pull; p.vy = Math.sin(p.angle) * pull; }
+            if (!isFinisher) { target.vx *= 0.1; target.vy *= 0.1; } 
         }
-        const charged = (Date.now() - p.chargeStart) > 600;
-        p.state = "ATTACKING"; p.attackLock = 14; p.lastAtk = Date.now();
-        const hitRadius = charged ? 130 : 100;
-        let hitSomeone = false;
-        const formStats = FORM_STATS[p.form] || FORM_STATS["BASE"];
-        const damageMult = formStats.dmg;
 
-        [...Object.values(players), ...npcs].forEach(t => {
-            if(t.id === p.id || t.isDead || t.isSpirit) return;
-            if(!t.isNPC && !p.pvpMode) return;
+        p.vx = Math.cos(p.angle) * step.selfSpd;
+        p.vy = Math.sin(p.angle) * step.selfSpd;
 
-            const dx = t.x - p.x; const dy = t.y - p.y;
-            const dist = Math.hypot(dx, dy);
-            if (dist > hitRadius) return;
-            const ang = Math.atan2(dy, dx);
-            let diff = Math.abs(ang - p.angle); if(diff > Math.PI) diff = Math.PI * 2 - diff;
-            if (diff > 2.6) return;
-            hitSomeone = true;
-            let baseDmg = (50 + p.level * 9);
-            let dmg = Math.floor(baseDmg * damageMult * (charged ? 3.2 : (1 + p.combo * 0.3)));
-            
-            if (!t.isNPC) dmg *= 0.5;
-            if(t.state === "BLOCKING") { dmg *= 0.25; t.ki -= 12; t.counterWindow = 12; }
-            t.hp -= dmg; t.stun = charged ? 26 : 14;
-            const push = charged ? 140 : 65;
-            t.vx = Math.cos(p.angle) * push; t.vy = Math.sin(p.angle) * push;
-            io.emit("fx", { type: charged ? "heavy" : "hit", x: t.x, y: t.y, dmg });
-            if(charged) craters.push({ x: t.x, y: t.y, r: 45, life: 1200 });
-            if(t.hp <= 0) handleKill(p, t);
+        p.state = "ATTACKING";
+        p.attackLock = isFinisher ? 18 : 10;
+        p.cancelWindow = 5;
+        p.lastAtk = now;
+
+        // DANO BASE
+        let baseDmg = Math.floor((65 + p.level * 10) * formStats.dmg * step.dmg); // Buff leve no player (era 50 base)
+
+        // --- COLISÃO COM ROCHAS (CENÁRIO) ---
+        rocks.forEach((r, idx) => {
+            const dist = Math.hypot(r.x - p.x, r.y - p.y);
+            // Hitbox da rocha + alcance do soco
+            if (dist < (r.r + step.range * 0.8)) {
+                // Checa ângulo se está olhando pra rocha
+                const angToRock = Math.atan2(r.y - p.y, r.x - p.x);
+                let diff = Math.abs(angToRock - p.angle);
+                if(diff > Math.PI) diff = Math.PI*2 - diff;
+
+                if (diff < 1.5) { // Se estiver na frente
+                    r.hp -= baseDmg * 2; // Rochas tomam dano extra
+                    io.emit("fx", { type: "hit", x: r.x, y: r.y, dmg: baseDmg });
+                    if(r.hp <= 0) {
+                        rocks.splice(idx, 1);
+                        io.emit("fx", { type: "heavy", x: r.x, y: r.y }); // Explosão visual
+                        craters.push({ x: r.x, y: r.y, r: r.r, life: 1000 });
+                    }
+                }
+            }
         });
-        if (!hitSomeone) p.combo = Math.max(0, p.combo - 1);
-        else { p.combo = (p.combo + 1) % 6; p.comboTimer = 24; }
-        setTimeout(() => { if(p) p.state = "IDLE"; }, 220);
+
+        // --- COLISÃO COM INIMIGOS ---
+        let hitMade = false;
+        if (target) {
+            const dist = Math.hypot(target.x - p.x, target.y - p.y);
+            const angToT = Math.atan2(target.y - p.y, target.x - p.x);
+            let diff = Math.abs(angToT - p.angle);
+            if(diff > Math.PI) diff = Math.PI*2 - diff;
+
+            if (dist <= step.range && diff < 2.5) {
+                hitMade = true;
+                let dmg = baseDmg;
+                if (!target.isNPC) dmg *= 0.5;
+
+                if (target.state === "BLOCKING" && !isFinisher) {
+                    dmg *= 0.25; target.ki -= 12; target.counterWindow = 12;
+                    io.emit("fx", { type: "block_hit", x: target.x, y: target.y });
+                } else {
+                    if(target.state === "BLOCKING" && isFinisher) {
+                         target.state = "IDLE"; target.stun = 30; // Quebra defesa
+                         io.emit("fx", { type: "guard_break", x: target.x, y: target.y });
+                    }
+                    target.hp -= dmg;
+                    target.stun = step.stun;
+                    
+                    target.vx = Math.cos(p.angle) * step.targetPush;
+                    target.vy = Math.sin(p.angle) * step.targetPush;
+
+                    io.emit("fx", { type: isFinisher ? "finisher" : "hit", x: target.x, y: target.y, dmg });
+                    if (isFinisher) craters.push({ x: target.x, y: target.y, r: 40, life: 1000 });
+                }
+                if (target.hp <= 0) handleKill(p, target);
+            }
+        }
+
+        if (hitMade) {
+            p.combo++;
+            p.comboTimer = 35; 
+        } else {
+            if(p.combo > 0) p.comboTimer = 15; 
+        }
     });
 
     socket.on("release_blast", () => {
         const p = players[socket.id];
-        if(!p || p.isSpirit || p.ki < 10) return;
+        if (!p || p.isSpirit || p.stun > 0) return;
+        if (p.state === "ATTACKING" && p.cancelWindow <= 0) return;
+
         const isSuper = (Date.now() - p.chargeStart) > 800;
         const cost = isSuper ? 40 : 10;
-        if(p.ki < cost) return;
+        if (p.ki < cost) return;
+
         p.ki -= cost;
-        const formStats = FORM_STATS[p.form] || FORM_STATS["BASE"];
-        const damageMult = formStats.dmg;
-        let color = "#0cf"; if(p.form === "SSJ") color = "#ff0"; if(p.form === "GOD") color = "#f00";
-        projectiles.push({ 
-            id: Math.random(), owner: p.id, x: p.x, y: p.y, 
-            vx: Math.cos(p.angle) * (isSuper ? 30 : 45), vy: Math.sin(p.angle) * (isSuper ? 30 : 45), 
-            dmg: (50 + p.level*6) * damageMult * (isSuper ? 3 : 1), 
-            size: isSuper ? 80 : 12, isSuper, life: 90, color, pvp: p.pvpMode 
+        p.state = "IDLE";
+        p.attackLock = 0;
+        p.comboTimer = 0; 
+
+        const formStats = FORM_STATS[p.form] || FORM_STATS.BASE;
+
+        projectiles.push({
+            id: Math.random(),
+            owner: p.id,
+            x: p.x,
+            y: p.y,
+            vx: Math.cos(p.angle) * (isSuper ? 32 : 45),
+            vy: Math.sin(p.angle) * (isSuper ? 32 : 45),
+            dmg: (50 + p.level * 6) * formStats.dmg * (isSuper ? 3 : 1),
+            size: isSuper ? 80 : 12,
+            isSuper,
+            life: 90,
+            color: "#0cf",
+            pvp: p.pvpMode
         });
     });
 
     socket.on("vanish", () => {
         const p = players[socket.id];
-        if(!p || p.isSpirit || p.ki < 20 || p.stun > 0) return;
-        p.ki -= 20; p.x += Math.cos(p.angle)*350; p.y += Math.sin(p.angle)*350;
+        if (!p || p.isSpirit || p.ki < 20 || p.stun > 0) return;
+        
+        p.ki -= 20;
+        p.state = "IDLE";
+        p.attackLock = 0;
+        p.combo = 0; 
+
+        p.x += Math.cos(p.angle) * 350;
+        p.y += Math.sin(p.angle) * 350;
+
         io.emit("fx", { type: "vanish", x: p.x, y: p.y });
     });
 
     socket.on("transform", () => {
         const p = players[socket.id];
         if(!p || p.isSpirit) return;
-        if(p.lastTransform && Date.now() - p.lastTransform < 10000) return;
-
+        if(p.lastTransform && Date.now() - p.lastTransform < 5000) return;
         let nextForm = "BASE";
         if(p.form === "BASE" && p.level >= 5) nextForm = "SSJ";
         else if(p.form === "SSJ" && p.level >= 20) nextForm = "SSJ2";
@@ -428,14 +521,13 @@ io.on("connection", (socket) => {
             p.maxHp = p.baseMaxHp * stats.hpMult;
             p.maxKi = p.baseMaxKi * stats.kiMult;
             checkAchievements(p);
-
-            const knockbackRadius = 350; const pushForce = 150;
+            
             [...Object.values(players), ...npcs].forEach(t => {
                 if (t.id === p.id || t.isDead || t.isSpirit) return;
                 const dist = Math.hypot(t.x - p.x, t.y - p.y);
-                if (dist < knockbackRadius) {
+                if (dist < 400) {
                     const ang = Math.atan2(t.y - p.y, t.x - p.x);
-                    t.vx = Math.cos(ang) * pushForce; t.vy = Math.sin(ang) * pushForce; t.stun = 15; 
+                    t.vx = Math.cos(ang) * 150; t.vy = Math.sin(ang) * 150; t.stun = 20; 
                 }
             });
             io.emit("fx", { type: "transform", x: p.x, y: p.y, form: nextForm });
@@ -483,15 +575,14 @@ function handleKill(killer, victim) {
 setInterval(() => {
     craters = craters.filter(c => { c.life--; return c.life > 0; });
 
-    // ATUALIZAÇÃO DO RANKING (SIMPLIFICADO)
+    // ATUALIZAÇÃO DO RANKING
     leaderboard = Object.values(players).sort((a,b) => b.pvp_score - a.pvp_score).slice(0,5).map(p => ({name: p.name, score: p.pvp_score, guild: p.guild}));
 
-    // LOGICA DE DOMINAÇÃO E HORDAS
+    // EVENTOS GLOBAIS
     globalEventTimer++;
-    if(globalEventTimer > 1000) { // Ciclo de eventos
+    if(globalEventTimer > 1000) { 
         DOMINATION_ZONES.forEach(zone => {
             if(zone.owner) {
-                // Evento de Horda: Ataque a quem domina
                 io.emit("fx", { type: "bp_limit", x: zone.x, y: zone.y, text: "HORDA INIMIGA APROXIMANDO!" });
                 for(let i=0; i<5; i++) {
                    spawnMobAt(zone.x + (Math.random()-0.5)*400, zone.y + (Math.random()-0.5)*400, true);
@@ -510,13 +601,11 @@ setInterval(() => {
         });
 
         if(contesting.length > 0) {
-            // Logica simples: Se só tem 1 cara (ou 1 guilda), progride
             let dominant = contesting[0];
             let sameSide = contesting.every(c => (c.guild && c.guild === dominant.guild) || c.id === dominant.id);
             
             if(sameSide) {
                 if(zone.owner === (dominant.guild || dominant.name)) {
-                    // Já é dono, cura ou ganha pontos
                     dominant.xp += 1;
                 } else {
                     zone.progress += 1;
@@ -525,8 +614,6 @@ setInterval(() => {
                         zone.guild = dominant.guild;
                         zone.progress = 0;
                         io.emit("fx", { type: "bp_limit", x: zone.x, y: zone.y, text: "DOMINADO POR " + zone.owner });
-                        
-                        // Recompensa Título
                         if(!dominant.guild) {
                              let unlocked = dominant.titles.split(',');
                              if(!unlocked.includes("Conquistador")) {
@@ -537,7 +624,6 @@ setInterval(() => {
                     }
                 }
             } else {
-                // Conflito
                 zone.state = "WAR";
             }
         } else {
@@ -595,152 +681,91 @@ setInterval(() => {
         }
     });
 
+    // LÓGICA DE NPCs ATUALIZADA (NERF DE DANO INICIAL)
     npcs.forEach(n => {
-    if (n.isDead) return;
+        if (n.isDead) return;
 
-    /* ===============================
-       STUN / KNOCKBACK
-    =============================== */
-    if (n.stun > 0) {
-        n.stun--;
-        n.x += n.vx;
-        n.y += n.vy;
-        n.vx *= 0.9;
-        n.vy *= 0.9;
-        n.state = "STUNNED";
-        return;
-    }
-
-    /* ===============================
-       AQUISIÇÃO DE ALVO (RÁPIDA)
-    =============================== */
-    let target = null;
-    let minDist = n.aggro || 1200;
-
-    for (const p of Object.values(players)) {
-        if (p.isDead || p.isSpirit) continue;
-        const d = Math.hypot(n.x - p.x, n.y - p.y);
-        if (d < minDist) {
-            minDist = d;
-            target = p;
-        }
-    }
-
-    if (!target) {
-        n.state = "IDLE";
-        n.vx *= 0.95;
-        n.vy *= 0.95;
-        n.x += n.vx;
-        n.y += n.vy;
-        return;
-    }
-
-    /* ===============================
-       LEITURA DE COMBATE
-    =============================== */
-    const dx = target.x - n.x;
-    const dy = target.y - n.y;
-    const dist = Math.hypot(dx, dy);
-    const ang = Math.atan2(dy, dx);
-    n.angle = ang;
-
-    const MAX_SPEED = n.isBoss ? 22 : 16;
-    const ATTACK_RANGE = n.isBoss ? 170 : 100;
-    const PRESSURE_RANGE = 55;
-
-    /* ===============================
-       COMPORTAMENTO DBZ (RÁPIDO)
-    =============================== */
-
-    // 🚀 APROXIMAÇÃO AGRESSIVA (burst)
-    if (dist > ATTACK_RANGE) {
-        n.state = "CHASE";
-
-        const burst = n.isBoss ? 4.8 : 3.6;
-        n.vx += Math.cos(ang) * burst;
-        n.vy += Math.sin(ang) * burst;
-
-        // chance de dash extra (anime feel)
-        if (Math.random() > 0.85) {
-            n.vx += Math.cos(ang) * burst * 1.5;
-            n.vy += Math.sin(ang) * burst * 1.5;
-        }
-    }
-
-    // ⚔️ PRESSÃO DE CURTA DISTÂNCIA
-    else if (dist < PRESSURE_RANGE) {
-        n.state = "PRESSURE";
-
-        // micro-recuo só para não grudar
-        n.vx -= Math.cos(ang) * 1.4;
-        n.vy -= Math.sin(ang) * 1.4;
-
-        // dash lateral rápido
-        if (Math.random() > 0.55) {
-            const side = ang + (Math.random() > 0.5 ? Math.PI / 2 : -Math.PI / 2);
-            n.vx += Math.cos(side) * 4.5;
-            n.vy += Math.sin(side) * 4.5;
-        }
-    }
-
-    // 💥 ATAQUE IMEDIATO
-    else if (Date.now() - n.lastAtk > (n.isBoss ? 420 : 650)) {
-        n.lastAtk = Date.now();
-        n.state = "ATTACKING";
-
-        let dmg = (n.level * 14) + (n.isBoss ? 160 : 60);
-
-        if (target.state === "BLOCKING") {
-            dmg *= 0.3;
-            target.ki -= 14;
-            target.counterWindow = 14;
+        if (n.stun > 0) {
+            n.stun--;
+            n.x += n.vx; n.y += n.vy;
+            n.vx *= 0.9; n.vy *= 0.9;
+            n.state = "STUNNED";
+            return;
         }
 
-        target.hp -= dmg;
-        target.stun = n.isBoss ? 18 : 12;
+        let target = null;
+        let minDist = n.aggro || 1200;
 
-        // knockback forte, mas único
-        const push = n.isBoss ? 140 : 75;
-        target.vx = Math.cos(ang) * push;
-        target.vy = Math.sin(ang) * push;
+        for (const p of Object.values(players)) {
+            if (p.isDead || p.isSpirit) continue;
+            const d = Math.hypot(n.x - p.x, n.y - p.y);
+            if (d < minDist) { minDist = d; target = p; }
+        }
 
-        io.emit("fx", {
-            type: n.isBoss ? "heavy" : "hit",
-            x: target.x,
-            y: target.y,
-            dmg: Math.floor(dmg)
-        });
+        if (!target) {
+            n.state = "IDLE";
+            n.vx *= 0.95; n.vy *= 0.95;
+            n.x += n.vx; n.y += n.vy;
+            return;
+        }
 
-        // pausa mínima pós-hit (impacto)
-        n.vx *= 0.25;
-        n.vy *= 0.25;
+        const dx = target.x - n.x; const dy = target.y - n.y;
+        const dist = Math.hypot(dx, dy);
+        const ang = Math.atan2(dy, dx);
+        n.angle = ang;
 
-        if (target.hp <= 0) handleKill(n, target);
-    }
+        const MAX_SPEED = n.isBoss ? 22 : 16;
+        const ATTACK_RANGE = n.isBoss ? 170 : 100;
+        const PRESSURE_RANGE = 55;
 
-    /* ===============================
-       LIMITES & MOVIMENTO FINAL
-    =============================== */
-    const speed = Math.hypot(n.vx, n.vy);
-    if (speed > MAX_SPEED) {
-        const s = MAX_SPEED / speed;
-        n.vx *= s;
-        n.vy *= s;
-    }
+        // IA DE PERSEGUIÇÃO E ATAQUE
+        if (dist > ATTACK_RANGE) {
+            n.state = "CHASE";
+            const burst = n.isBoss ? 4.8 : 3.6;
+            n.vx += Math.cos(ang) * burst;
+            n.vy += Math.sin(ang) * burst;
+        } else if (dist < PRESSURE_RANGE) {
+            n.state = "PRESSURE";
+            n.vx -= Math.cos(ang) * 1.4; n.vy -= Math.sin(ang) * 1.4;
+        } else if (Date.now() - n.lastAtk > (n.isBoss ? 420 : 650)) {
+            n.lastAtk = Date.now();
+            n.state = "ATTACKING";
+            
+            // --- BALANCEAMENTO DE DANO ---
+            // Antes: level * 14 + 60 (Level 1 dava 74 dano)
+            // Agora: level * 10 + 30 (Level 1 dá 40 dano) -> Muito mais justo
+            let dmg = (n.level * 10) + (n.isBoss ? 100 : 30);
 
-    n.x += n.vx;
-    n.y += n.vy;
+            if (target.state === "BLOCKING") {
+                dmg *= 0.3; target.ki -= 14; target.counterWindow = 14;
+            }
 
-    // atrito leve (mantém velocidade)
-    n.vx *= 0.92;
-    n.vy *= 0.92;
-});
+            target.hp -= dmg;
+            target.stun = n.isBoss ? 18 : 12;
 
+            const push = n.isBoss ? 60 : 15; 
+            target.vx = Math.cos(ang) * push;
+            target.vy = Math.sin(ang) * push;
 
+            io.emit("fx", { type: n.isBoss ? "heavy" : "hit", x: target.x, y: target.y, dmg: Math.floor(dmg) });
 
+            n.vx *= 0.25; n.vy *= 0.25; // NPC para após bater
+            if (target.hp <= 0) handleKill(n, target);
+        }
+
+        // FÍSICA E LIMITES NPC
+        const speed = Math.hypot(n.vx, n.vy);
+        if (speed > MAX_SPEED) { const s = MAX_SPEED / speed; n.vx *= s; n.vy *= s; }
+        n.x += n.vx; n.y += n.vy;
+        n.vx *= 0.92; n.vy *= 0.92;
+    });
+
+    // PROJÉTEIS (AGORA ACERTAM ROCHAS TAMBÉM)
     projectiles.forEach((pr, i) => {
         pr.x += pr.vx; pr.y += pr.vy; pr.life--;
         let hit = false;
+        
+        // Colisão com Jogadores/NPCs
         [...Object.values(players), ...npcs].forEach(t => {
             if (!hit && t.id !== pr.owner && !t.isSpirit && !t.isDead) {
                 const dist = Math.hypot(pr.x - t.x, pr.y - t.y);
@@ -755,6 +780,26 @@ setInterval(() => {
                 }
             }
         });
+
+        // Colisão com Rochas
+        if(!hit) {
+             for(let rIdx = rocks.length-1; rIdx >= 0; rIdx--) {
+                 let r = rocks[rIdx];
+                 const dist = Math.hypot(pr.x - r.x, pr.y - r.y);
+                 if(dist < (r.r + pr.size)) {
+                     hit = true;
+                     r.hp -= pr.dmg;
+                     io.emit("fx", { type: "hit", x: pr.x, y: pr.y, dmg: Math.floor(pr.dmg) });
+                     if(r.hp <= 0) {
+                         rocks.splice(rIdx, 1);
+                         io.emit("fx", { type: "heavy", x: r.x, y: r.y });
+                         craters.push({ x: r.x, y: r.y, r: r.r, life: 1000 });
+                     }
+                     break; // Só acerta uma rocha por vez
+                 }
+             }
+        }
+
         if (hit || pr.life <= 0) projectiles.splice(i, 1);
     });
 
@@ -765,4 +810,4 @@ setInterval(() => {
 
 }, TICK);
 
-server.listen(3000, () => console.log("Universe Z - Destroy The Galaxy Online"));
+server.listen(3000, () => console.log("Dragon Bolt Z - Universe Online"));
