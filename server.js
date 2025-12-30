@@ -10,6 +10,20 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+const BOSS_PHASES = {
+    PHASE_1: { hp: 0.65, aggression: 0.6 },
+    PHASE_2: { hp: 0.35, aggression: 0.8 },
+    PHASE_3: { hp: 0.0,  aggression: 1.0 }
+};
+
+const BOSS_COOLDOWNS = {
+    DASH: 900,
+    COMBO: 700,
+    KI: 1200,
+    REPOSITION: 800
+};
+
+
 const initDB = async () => {
     try {
         await pool.query(`
@@ -485,17 +499,193 @@ setInterval(() => {
     });
 
     npcs.forEach(n => {
-        if (n.isDead) return;
-        if (n.stun > 0) { n.stun--; n.x += n.vx; n.y += n.vy; n.vx *= 0.9; n.vy *= 0.9; n.state = "STUNNED"; return; }
-        let target = null; let minDist = n.aggro || 1200;
-        if (n.targetId && players[n.targetId] && !players[n.targetId].isDead && !players[n.targetId].isSpirit) { const t = players[n.targetId]; if (Math.hypot(n.x - t.x, n.y - t.y) < 3000) { target = t; } else { n.targetId = null; } }
-        if (!target) { for (const p of Object.values(players)) { if (p.isDead || p.isSpirit) continue; if (Math.abs(p.x - n.x) > minDist || Math.abs(p.y - n.y) > minDist) continue; const d = Math.hypot(n.x - p.x, n.y - p.y); if (d < minDist) { minDist = d; target = p; } } }
-        if (!target) { n.state = "IDLE"; n.vx *= 0.95; n.vy *= 0.95; n.x += n.vx; n.y += n.vy; return; }
-        const dx = target.x - n.x; const dy = target.y - n.y; const dist = Math.hypot(dx, dy); const ang = Math.atan2(dy, dx); n.angle = ang;
-        const MAX_SPEED = n.isBoss ? 22 : 16; const ATTACK_RANGE = n.isBoss ? 170 : 100; const PRESSURE_RANGE = 55;
-        if (dist > ATTACK_RANGE) { n.state = "CHASE"; const burst = n.isBoss ? 4.8 : 3.6; n.vx += Math.cos(ang) * burst; n.vy += Math.sin(ang) * burst; } else if (dist < PRESSURE_RANGE) { n.state = "PRESSURE"; n.vx -= Math.cos(ang) * 1.4; n.vy -= Math.sin(ang) * 1.4; } else if (Date.now() - n.lastAtk > (n.isBoss ? 420 : 650)) { n.lastAtk = Date.now(); n.state = "ATTACKING"; let dmg = (n.level * 10) + (n.isBoss ? 100 : 30); if (target.state === "BLOCKING") { dmg *= 0.3; target.ki -= 14; target.counterWindow = 14; } target.hp -= dmg; target.stun = n.isBoss ? 18 : 12; const push = n.isBoss ? 60 : 15; target.vx = Math.cos(ang) * push; target.vy = Math.sin(ang) * push; io.emit("fx", { type: n.isBoss ? "heavy" : "hit", x: target.x, y: target.y, dmg: Math.floor(dmg) }); n.vx *= 0.25; n.vy *= 0.25; if (target.hp <= 0) handleKill(n, target); }
-        const speed = Math.hypot(n.vx, n.vy); if (speed > MAX_SPEED) { const s = MAX_SPEED / speed; n.vx *= s; n.vy *= s; } n.x += n.vx; n.y += n.vy; n.vx *= 0.92; n.vy *= 0.92;
-    });
+    if (n.isDead) return;
+
+    // ======================
+    // STUN
+    // ======================
+    if (n.stun > 0) {
+        n.stun--;
+        n.x += n.vx;
+        n.y += n.vy;
+        n.vx *= 0.9;
+        n.vy *= 0.9;
+        n.state = "STUNNED";
+        return;
+    }
+
+    // ======================
+    // AQUISIÇÃO DE ALVO
+    // ======================
+    let target = null;
+    let minDist = n.aggro || 1200;
+
+    if (
+        n.targetId &&
+        players[n.targetId] &&
+        !players[n.targetId].isDead &&
+        !players[n.targetId].isSpirit
+    ) {
+        const t = players[n.targetId];
+        if (Math.hypot(n.x - t.x, n.y - t.y) < 3000) {
+            target = t;
+        } else {
+            n.targetId = null;
+        }
+    }
+
+    if (!target) {
+        for (const p of Object.values(players)) {
+            if (p.isDead || p.isSpirit) continue;
+            if (Math.abs(p.x - n.x) > minDist || Math.abs(p.y - n.y) > minDist) continue;
+            const d = Math.hypot(n.x - p.x, n.y - p.y);
+            if (d < minDist) {
+                minDist = d;
+                target = p;
+            }
+        }
+    }
+
+    if (!target) {
+        n.state = "IDLE";
+        n.vx *= 0.95;
+        n.vy *= 0.95;
+        n.x += n.vx;
+        n.y += n.vy;
+        return;
+    }
+
+    // ======================
+    // BASE DE MOVIMENTO
+    // ======================
+    const dx = target.x - n.x;
+    const dy = target.y - n.y;
+    const dist = Math.hypot(dx, dy);
+    const ang = Math.atan2(dy, dx);
+    n.angle = ang;
+
+    const MAX_SPEED = n.isBoss ? 22 : 16;
+    const ATTACK_RANGE = n.isBoss ? 170 : 100;
+    const PRESSURE_RANGE = 55;
+
+    // ======================
+    // IA ESPECIAL DE BOSS
+    // ======================
+    if (n.isBoss) {
+
+        // init seguro
+        if (!n.phase) n.phase = 1;
+        if (!n.pushStreak) n.pushStreak = 0;
+        if (!n.lastDash) n.lastDash = 0;
+
+        // fases por vida
+        const hpPerc = n.hp / n.maxHp;
+        if (hpPerc <= BOSS_PHASES.PHASE_3.hp) n.phase = 3;
+else if (hpPerc <= BOSS_PHASES.PHASE_2.hp) n.phase = 2;
+
+        else n.phase = 1;
+
+        // ANTI LOCK: força pausa após empurrões seguidos
+        if (n.pushStreak >= 3) {
+            n.vx *= 0.2;
+            n.vy *= 0.2;
+            n.state = "IDLE";
+            n.pushStreak = 0;
+            n.x += n.vx;
+            n.y += n.vy;
+            return;
+        }
+
+        // DASH CONTROLADO (não infinito)
+        if (
+            dist > ATTACK_RANGE &&
+            dist < 420 &&
+            Date.now() - n.lastDash > 800
+        ) {
+            const dashSpd = n.phase === 3 ? 28 : 20;
+            n.vx += Math.cos(ang) * dashSpd;
+            n.vy += Math.sin(ang) * dashSpd;
+            n.state = "ATTACKING";
+            n.lastDash = Date.now();
+        }
+    }
+
+    // ======================
+    // COMPORTAMENTO PADRÃO
+    // ======================
+    if (dist > ATTACK_RANGE) {
+        n.state = "CHASE";
+        const burst = n.isBoss ? 2.8 : 3.6; // boss menos acelerado
+        n.vx += Math.cos(ang) * burst;
+        n.vy += Math.sin(ang) * burst;
+
+    } else if (dist < PRESSURE_RANGE) {
+        n.state = "PRESSURE";
+        n.vx -= Math.cos(ang) * 1.4;
+        n.vy -= Math.sin(ang) * 1.4;
+
+    } else if (
+    Date.now() - n.lastAtk > (n.isBoss ? 650 : 650) &&
+    target.stun <= 0
+) {
+
+        n.lastAtk = Date.now();
+        n.state = "ATTACKING";
+
+        let dmg = (n.level * 10) + (n.isBoss ? 100 : 30);
+
+        if (target.state === "BLOCKING") {
+            dmg *= 0.3;
+            target.ki -= 14;
+            target.counterWindow = 14;
+        }
+
+        target.hp -= dmg;
+        if (!target.stunImmune || Date.now() > target.stunImmune) {
+    target.stun = n.isBoss ? 10 : 12;
+    target.stunImmune = Date.now() + 700; // 0.7s de imunidade
+}
+
+
+        // PUSH CONTROLADO (SEM LOCK)
+        const push = n.isBoss
+            ? (n.phase === 3 ? 45 : 25)
+            : 15;
+
+        target.vx = Math.cos(ang) * push;
+        target.vy = Math.sin(ang) * push;
+
+        if (n.isBoss) n.pushStreak++;
+
+        io.emit("fx", {
+            type: n.isBoss ? "heavy" : "hit",
+            x: target.x,
+            y: target.y,
+            dmg: Math.floor(dmg)
+        });
+
+        n.vx *= 0.25;
+        n.vy *= 0.25;
+
+        if (target.hp <= 0) handleKill(n, target);
+    }
+
+    // ======================
+    // LIMITES FÍSICOS
+    // ======================
+    const speed = Math.hypot(n.vx, n.vy);
+    if (speed > MAX_SPEED) {
+        const s = MAX_SPEED / speed;
+        n.vx *= s;
+        n.vy *= s;
+    }
+
+    n.x += n.vx;
+    n.y += n.vy;
+    n.vx *= 0.92;
+    n.vy *= 0.92;
+});
+
 
     projectiles.forEach((pr, i) => {
         pr.x += pr.vx; pr.y += pr.vy; pr.life--; let hit = false;
