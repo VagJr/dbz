@@ -122,9 +122,21 @@ function toggleChat(forceOpen = false) {
 
 window.addEventListener("keydown", e => {
     if (textInput.style.display === "block") return;
+
+    // evita repetição infinita ao segurar a tecla
+    if (e.repeat) return;
+
     keys[e.code] = true;
-    if (e.code === "KeyG") window.socket.emit("transform"); // Tecla G para transformar
+
+    if (e.code === "KeyG") {
+        window.socket.emit("transform");
+    }
+
+    if (e.code === "KeyT") {
+        scouterActive = !scouterActive;
+    }
 });
+
 
 
 window.addEventListener("keyup", e => keys[e.code] = false);
