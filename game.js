@@ -18,6 +18,10 @@ let announcement = { text: "", life: 0, color: "#f00" };
 const ZOOM_SCALE = 0.6; // Zoom out para ver mais
 const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
 
+// COORDENADAS PARA DESENHO DO MAPA
+const SNAKE_WAY_START = { x: 0, y: -12000 };
+const KAIOH_PLANET    = { x: 0, y: -25000 };
+
 if (!document.getElementById("ui-container")) {
     const div = document.createElement("div"); div.id = "ui-container"; document.body.appendChild(div);
 }
@@ -100,33 +104,26 @@ canvas.addEventListener("touchstart", e => {
 }, { passive: false });
 
 function toggleChat(forceOpen = false) {
-    // FECHAR + ENVIAR
     if (textInput.style.display === "block" && !forceOpen) {
         const msg = textInput.value.trim();
-
         if (msg) {
             socket.emit("chat", msg);
         }
-
         textInput.value = "";
         textInput.style.display = "none";
         textInput.blur();
         return;
     }
-
-    // ABRIR
     textInput.style.display = "block";
     textInput.placeholder = "Digite sua mensagem...";
     textInput.focus();
     Object.keys(keys).forEach(k => keys[k] = false);
-
 }
 
 window.addEventListener("keydown", e => {
-    // ignora quando digitando no chat
     if (textInput.style.display === "block") return;
-
     keys[e.code] = true;
+    if (e.code === "KeyG") window.socket.emit("transform"); // Tecla G para transformar
 });
 
 
@@ -158,7 +155,6 @@ function handleCanvasUIInteraction(x, y) {
     const cy = canvas.height / 2;
 
     if (activeWindow === "menu") {
-        // áreas clicáveis do menu
         const options = [
             { name: "ranking", y: cy - 100 },
             { name: "guild",   y: cy - 50 },
@@ -179,39 +175,24 @@ function handleCanvasUIInteraction(x, y) {
     }
 }
 function onMenuOption(option) {
-    if (option === "ranking") {
-        activeWindow = "ranking";
-    }
-
-    if (option === "guild") {
-        textInput.placeholder = "Digite: /guild NomeDaGuilda";
-        toggleChat();
-    }
-
-    if (option === "title") {
-        textInput.placeholder = "Digite: /title MeuTitulo";
-        toggleChat();
-    }
-
-    if (option === "rebirth") {
-        socket.emit("rebirth");
-        activeWindow = null;
-    }
+    if (option === "ranking") activeWindow = "ranking";
+    if (option === "guild") { textInput.placeholder = "Digite: /guild NomeDaGuilda"; toggleChat(); }
+    if (option === "title") { textInput.placeholder = "Digite: /title MeuTitulo"; toggleChat(); }
+    if (option === "rebirth") { socket.emit("rebirth"); activeWindow = null; }
 }
 
 function drawBackground(camX, camY) {
     const viewW = canvas.width / ZOOM_SCALE; const viewH = canvas.height / ZOOM_SCALE; const buffer = 1000; const startX = camX - viewW / 2 - buffer; const startY = camY - viewH / 2 - buffer; const width = viewW + buffer * 2; const height = viewH + buffer * 2; const endX = startX + width; const endY = startY + height;
-    const dist = Math.hypot(camX, camY); 
     
     // Background Dinâmico por Zona Y
     let c1 = "#1a3a1a", c2 = "#000500"; 
     
-    if (camY < -80000) { c1 = "#300030"; c2 = "#100010"; } // Beerus (Roxo Escuro)
-    else if (camY < -30000) { c1 = "#002040"; c2 = "#000510"; } // Kaioshin (Azul Místico)
-    else if (camY < -10000) { c1 = "#403000"; c2 = "#100500"; } // Kaio / Snake Way (Amarelo)
-    else if (camY > 30000) { c1 = "#400000"; c2 = "#100000"; } // Demon (Vermelho Sangue)
-    else if (camY > 10000) { c1 = "#200040"; c2 = "#050010"; } // Hell (Roxo)
-    else { c1 = "#001020"; c2 = "#000205"; } // Espaço (Azul Escuro)
+    if (camY < -80000) { c1 = "#300030"; c2 = "#100010"; } 
+    else if (camY < -30000) { c1 = "#002040"; c2 = "#000510"; } 
+    else if (camY < -10000) { c1 = "#403000"; c2 = "#100500"; } 
+    else if (camY > 30000) { c1 = "#400000"; c2 = "#100000"; } 
+    else if (camY > 10000) { c1 = "#200040"; c2 = "#050010"; } 
+    else { c1 = "#001020"; c2 = "#000205"; } 
 
     const grd = ctx.createRadialGradient(camX, camY, viewH * 0.1, camX, camY, viewH * 1.5); grd.addColorStop(0, c1); grd.addColorStop(1, c2); ctx.fillStyle = grd; ctx.fillRect(startX, startY, width, height);
     
@@ -225,25 +206,60 @@ function drawBackground(camX, camY) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.2)"; dustParticles.forEach(p => { p.x += p.vx; p.y += p.vy; if(p.x > 2000) p.x = 0; if(p.x < 0) p.x = 2000; if(p.y > 1000) p.y = 0; if(p.y < 0) p.y = 1000; const screenPx = camX - viewW/2 + ((p.x + camX * 0.2) % viewW); const screenPy = camY - viewH/2 + ((p.y + camY * 0.2) % viewH); ctx.beginPath(); ctx.arc(screenPx, screenPy, p.size, 0, Math.PI*2); ctx.fill(); });
 }
 
-function drawOtherWorld(camX, camY) {
-    // Caminho da Serpente (Visual Guide)
-    if (camY > -30000 && camY < 0) { 
-        ctx.save(); ctx.shadowBlur = 30; ctx.shadowColor = "#e6b800"; ctx.strokeStyle = "#e6b800"; ctx.lineWidth = 60; ctx.lineCap = "round"; 
-        ctx.beginPath(); 
-        ctx.moveTo(0, -15000); ctx.lineTo(0, -25000); 
-        ctx.stroke(); ctx.restore();
+// ======================================
+// DESENHO DO CAMINHO DA SERPENTE
+// ======================================
+function drawSnakeWay() {
+    // Desenha a "estrada" do ponto Y inicial até o Kaioh
+    // Usando curvas para parecer uma serpente
+    const startY = SNAKE_WAY_START.y;
+    const endY = KAIOH_PLANET.y;
+    
+    // Só desenha se estiver visível na tela
+    if (cam.y > endY - 2000 && cam.y < startY + 2000) {
+        ctx.save();
+        ctx.shadowBlur = 40;
+        ctx.shadowColor = "#e6b800";
+        ctx.strokeStyle = "#e6b800";
+        ctx.lineWidth = 80;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        
+        ctx.beginPath();
+        ctx.moveTo(0, startY);
+        
+        // Cria curvas senoidais
+        for (let y = startY; y > endY; y -= 1000) {
+            const wave = Math.sin(y * 0.002) * 500; // Curva
+            ctx.lineTo(wave, y);
+        }
+        
+        ctx.stroke();
+        
+        // Planeta do Kaioh
+        ctx.fillStyle = "#4a8"; // Verde grama
+        ctx.beginPath();
+        ctx.arc(0, endY, 400, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Casa do Kaioh (Simples)
+        ctx.fillStyle = "#a33";
+        ctx.fillRect(-100, endY - 480, 200, 150);
+        ctx.beginPath();
+        ctx.moveTo(-120, endY - 480);
+        ctx.lineTo(0, endY - 600);
+        ctx.lineTo(120, endY - 480);
+        ctx.fill();
+
+        ctx.restore();
     }
 }
 
+function drawOtherWorld(camX, camY) {
+    drawSnakeWay();
+}
+
 function drawDominationZones() { dominationZones.forEach(z => { ctx.save(); ctx.translate(z.x, z.y); ctx.beginPath(); ctx.arc(0, 0, z.radius, 0, Math.PI*2); ctx.strokeStyle = z.owner ? "#00ff00" : "#ffaa00"; if(z.state === "WAR") ctx.strokeStyle = "#ff0000"; ctx.lineWidth = 10; ctx.setLineDash([20, 10]); ctx.stroke(); if(z.progress > 0) { ctx.globalAlpha = 0.3; ctx.fillStyle = z.owner ? "#00ff00" : "#ffff00"; ctx.beginPath(); ctx.arc(0, 0, z.radius * (z.progress/100), 0, Math.PI*2); ctx.fill(); } ctx.font = "bold 40px Orbitron"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText(z.name, 0, -z.radius - 20); ctx.font = "20px Orbitron"; if(z.owner) { ctx.fillStyle = "#00ff00"; ctx.fillText(`DOMINADO: ${z.owner} [${z.guild || "SOLO"}]`, 0, -z.radius + 10); } else { ctx.fillStyle = "#ccc"; ctx.fillText(`NEUTRO - ${z.progress}%`, 0, -z.radius + 10); } ctx.restore(); }); }
-
-// ============================================================================
-// NOVA RENDERIZAÇÃO: MINI WARRIORS Z (PROCEDURAL ANIMATED)
-// ============================================================================
-
-// ===============================
-// MINI DBZ WARRIOR (PROCEDURAL)
-// ===============================
 
 function drawEntityHUD(e, sizeMult) {
     if (e.isSpirit) return;
@@ -360,6 +376,7 @@ function drawMiniWarrior(e, sizeMult) {
         ctx.restore();
     }
 
+    // CORPO E CINTO
     ctx.fillStyle = giColor;
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 1.5;
@@ -375,6 +392,7 @@ function drawMiniWarrior(e, sizeMult) {
     ctx.fillStyle = beltColor;
     ctx.fillRect(-10 * sizeMult, 8 * sizeMult, 20 * sizeMult, 4 * sizeMult);
 
+    // CABEÇA
     ctx.save();
     ctx.translate(-lean, breathe);
 
@@ -384,7 +402,7 @@ function drawMiniWarrior(e, sizeMult) {
     ctx.fill();
     ctx.stroke();
 
-    // Cor do olho corrigida para usar currentForm
+    // OLHOS
     ctx.fillStyle = (currentForm && currentForm !== "BASE") ? eyeColor : "#fff";
     ctx.beginPath();
     ctx.moveTo(2 * sizeMult, -4 * sizeMult);
@@ -397,6 +415,7 @@ function drawMiniWarrior(e, sizeMult) {
     ctx.closePath();
     ctx.fill();
 
+    // CABELO (SEU DESENHO MANTIDO)
     ctx.fillStyle = hairColor;
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 1.2;
@@ -442,8 +461,18 @@ function drawMiniWarrior(e, sizeMult) {
     ctx.fill();
     ctx.stroke();
 
+    // AURÉOLA DE ESPÍRITO
+    if (e.isSpirit) {
+        ctx.strokeStyle = "#ffff00";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, -25 * sizeMult, 12 * sizeMult, 4 * sizeMult, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
     ctx.restore();
 }
+
 function drawEntity(e) {
     if (!e) return;
     if (e.isDead && e.isNPC) return;
@@ -453,103 +482,73 @@ function drawEntity(e) {
     ctx.save();
     ctx.translate(e.x, e.y);
 
-    // ===============================
-    // CORPO (ROTACIONA)
-    // ===============================
+    // CORPO
     ctx.save();
     ctx.rotate(e.angle);
     drawMiniWarrior(e, sizeMult);
     ctx.restore();
 
-    // ===============================
-    // HUD (NÃO ROTACIONA)
-    // ===============================
+    // HUD
     ctx.save();
     drawEntityHUD(e, sizeMult);
     ctx.restore();
 
-    // ===============================
-    // BLOQUEIO (CORRIGIDO: GIRA 360°)
-    // ===============================
+    // BLOQUEIO
     if (e.state === "BLOCKING") {
-    ctx.save();
-
-    let blockAngle = e.angle;
-
-    // 🖱️ PC: usa mouse
-    if (e.id === myId && !isMobile) {
-        blockAngle = Math.atan2(mouse.y, mouse.x);
-    }
-
-    // 📱 MOBILE: usa direção do joystick
-    if (e.id === myId && isMobile) {
-        if (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1) {
-            blockAngle = Math.atan2(joystickMove.y, joystickMove.x);
+        ctx.save();
+        let blockAngle = e.angle;
+        if (e.id === myId && !isMobile) blockAngle = Math.atan2(mouse.y, mouse.x);
+        if (e.id === myId && isMobile) {
+            if (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1) {
+                blockAngle = Math.atan2(joystickMove.y, joystickMove.x);
+            }
         }
+        ctx.rotate(blockAngle);
+        ctx.strokeStyle = "rgba(100,200,255,0.85)";
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "#00ffff";
+        ctx.beginPath();
+        ctx.arc(0, 0, 30 * sizeMult, -1, 1);
+        ctx.stroke();
+        ctx.restore();
     }
 
-    ctx.rotate(blockAngle);
-
-    ctx.strokeStyle = "rgba(100,200,255,0.85)";
-    ctx.lineWidth = 4;
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = "#00ffff";
-
-    ctx.beginPath();
-    ctx.arc(0, 0, 30 * sizeMult, -1, 1);
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-
-
-    // ===============================
-    // RASTRO (CONTROLADO – NÃO TRAVA)
-    // ===============================
+    // RASTRO
     const speedTrail = Math.hypot(e.vx, e.vy);
-
-    if (
-        hitStop <= 0 &&
-        speedTrail > 8 &&
-        (!e.lastTrail || performance.now() - e.lastTrail > 80)
-    ) {
+    if (hitStop <= 0 && speedTrail > 8 && (!e.lastTrail || performance.now() - e.lastTrail > 80)) {
         e.lastTrail = performance.now();
-
         if (trails.length < 100) {
             trails.push({
-                x: e.x,
-                y: e.y,
-                angle: e.angle,
-                color: getTrailColor(e),
-                alpha: 0.35,
-                sizeMult
+                x: e.x, y: e.y, angle: e.angle,
+                color: getTrailColor(e), alpha: 0.35, sizeMult
             });
         }
     }
-
     ctx.restore();
 }
-
-
-
 
 function drawScouterHUD(me) {
     if (!me) return; const W = canvas.width; const H = canvas.height; const cx = W / 2; const cy = H / 2; const time = Date.now();
     ctx.save(); ctx.globalCompositeOperation = "source-over"; let grad = ctx.createRadialGradient(cx, cy, H/2, cx, cy, H); grad.addColorStop(0, "rgba(0, 255, 0, 0)"); grad.addColorStop(1, "rgba(0, 255, 0, 0.3)"); ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
     const scanY = (time * 0.5) % H; ctx.fillStyle = "rgba(0, 255, 0, 0.15)"; ctx.fillRect(0, scanY, W, 4); ctx.strokeStyle = "rgba(0, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 40, 0, Math.PI*2); ctx.stroke();
     ctx.save(); ctx.translate(W - 150, 100); ctx.fillStyle = "rgba(0, 255, 0, 0.8)"; ctx.font = "12px monospace"; for(let i=0; i<15; i++) { const randomHex = Math.random().toString(16).substring(2, 10).toUpperCase(); ctx.fillText(randomHex, 0, i*14); } ctx.restore();
-    let dangerDetected = false;
-    [...npcs, ...Object.values(players)].forEach(e => { if (e.id === me.id || e.isDead || e.isSpirit) return; const screenX = cx + (e.x - cam.x) * ZOOM_SCALE; const screenY = cy + (e.y - cam.y) * ZOOM_SCALE; const dist = Math.hypot(e.x - me.x, e.y - me.y); const onScreen = screenX > -50 && screenX < W + 50 && screenY > -50 && screenY < H + 50; if (e.bp > me.bp * 1.5 && dist < 3000) dangerDetected = true; if (onScreen) { const bracketSize = 30 + Math.sin(time/200)*5; const isTarget = Math.hypot(screenX-cx, screenY-cy) < 100; const color = isTarget ? "#ff0000" : (e.isNPC ? "#00ff00" : "#00ffff"); ctx.save(); ctx.translate(screenX, screenY); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-bracketSize, -bracketSize+10); ctx.lineTo(-bracketSize, -bracketSize); ctx.lineTo(-bracketSize+10, -bracketSize); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bracketSize, bracketSize-10); ctx.lineTo(bracketSize, bracketSize); ctx.lineTo(bracketSize-10, bracketSize); ctx.stroke(); ctx.fillStyle = color; ctx.font = "bold 12px Orbitron"; const bpDisplay = isTarget ? e.bp.toLocaleString() : Math.floor(Math.random()*99999); ctx.fillText(`BP: ${bpDisplay}`, bracketSize+5, -10); ctx.font = "10px Orbitron"; ctx.fillText(e.name, bracketSize+5, 5); if(!e.isNPC) { ctx.fillStyle = "#00ffff"; ctx.fillText("[P]", -bracketSize-15, 0); } ctx.restore(); } else { if (dist < 4000) { const angle = Math.atan2(screenY - cy, screenX - cx); const radius = Math.min(W, H) / 2 - 30; const ix = cx + Math.cos(angle) * radius; const iy = cy + Math.sin(angle) * radius; ctx.save(); ctx.translate(ix, iy); ctx.rotate(angle); ctx.fillStyle = e.isBoss ? "#ff0000" : (!e.isNPC ? "#00ffff" : "#00ff00"); ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-10, 5); ctx.lineTo(-10, -5); ctx.fill(); ctx.rotate(-angle); ctx.fillStyle = "#fff"; ctx.font = "10px Arial"; ctx.textAlign = "center"; ctx.fillText(`${Math.floor(dist)}m`, 0, 20); if(!e.isNPC) ctx.fillText("P", 0, 5); ctx.restore(); } } });
-    if (dangerDetected && (Math.floor(time / 300) % 2 === 0)) { ctx.save(); ctx.translate(cx, cy - 150); ctx.fillStyle = "#ff0000"; ctx.font = "bold 24px Orbitron"; ctx.textAlign = "center"; ctx.shadowBlur = 20; ctx.shadowColor = "#ff0000"; ctx.fillText("WARNING: HIGH POWER LEVEL", 0, 0); ctx.strokeStyle = "#ff0000"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-150, 10); ctx.lineTo(150, 10); ctx.stroke(); ctx.restore(); }
+    
+    [...npcs, ...Object.values(players)].forEach(e => { if (e.id === me.id || e.isDead || e.isSpirit) return; const screenX = cx + (e.x - cam.x) * ZOOM_SCALE; const screenY = cy + (e.y - cam.y) * ZOOM_SCALE; const dist = Math.hypot(e.x - me.x, e.y - me.y); const onScreen = screenX > -50 && screenX < W + 50 && screenY > -50 && screenY < H + 50; if (onScreen) { const bracketSize = 30 + Math.sin(time/200)*5; const isTarget = Math.hypot(screenX-cx, screenY-cy) < 100; const color = isTarget ? "#ff0000" : (e.isNPC ? "#00ff00" : "#00ffff"); ctx.save(); ctx.translate(screenX, screenY); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-bracketSize, -bracketSize+10); ctx.lineTo(-bracketSize, -bracketSize); ctx.lineTo(-bracketSize+10, -bracketSize); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bracketSize, bracketSize-10); ctx.lineTo(bracketSize, bracketSize); ctx.lineTo(bracketSize-10, bracketSize); ctx.stroke(); ctx.fillStyle = color; ctx.font = "bold 12px Orbitron"; const bpDisplay = isTarget ? e.bp.toLocaleString() : Math.floor(Math.random()*99999); ctx.fillText(`BP: ${bpDisplay}`, bracketSize+5, -10); ctx.font = "10px Orbitron"; ctx.fillText(e.name, bracketSize+5, 5); if(!e.isNPC) { ctx.fillStyle = "#00ffff"; ctx.fillText("[P]", -bracketSize-15, 0); } ctx.restore(); } else { if (dist < 4000) { const angle = Math.atan2(screenY - cy, screenX - cx); const radius = Math.min(W, H) / 2 - 30; const ix = cx + Math.cos(angle) * radius; const iy = cy + Math.sin(angle) * radius; ctx.save(); ctx.translate(ix, iy); ctx.rotate(angle); ctx.fillStyle = e.isBoss ? "#ff0000" : (!e.isNPC ? "#00ffff" : "#00ff00"); ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-10, 5); ctx.lineTo(-10, -5); ctx.fill(); ctx.rotate(-angle); ctx.fillStyle = "#fff"; ctx.font = "10px Arial"; ctx.textAlign = "center"; ctx.fillText(`${Math.floor(dist)}m`, 0, 20); if(!e.isNPC) ctx.fillText("P", 0, 5); ctx.restore(); } } });
     ctx.restore();
 }
 
 function drawNavigationMarkers(me) {
     const cx = canvas.width / 2; const cy = canvas.height / 2; ctx.save(); ctx.font = "bold 12px Arial"; ctx.textAlign = "center";
-    WAYPOINTS.forEach(wp => { const dx = wp.x - me.x; const dy = wp.y - me.y; const dist = Math.hypot(dx, dy); if(dist > 2000 && dist < 120000) { const angle = Math.atan2(dy, dx); const radius = Math.min(canvas.width, canvas.height) / 2 - 50; const sx = cx + Math.cos(angle) * radius; const sy = cy + Math.sin(angle) * radius; ctx.fillStyle = "rgba(0, 255, 255, 0.6)"; ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill(); ctx.shadowColor = "#0ff"; ctx.shadowBlur = 10; ctx.fillStyle = "#0ff"; ctx.fillText(wp.name, sx, sy - 15); ctx.font = "10px Arial"; ctx.fillText(`${Math.floor(dist)}m`, sx, sy - 5); } });
+    
+    // Se estiver morto, mostra apenas o Kaioh
+    const targets = me.isSpirit ? [ { name: "KAIOH", x: KAIOH_PLANET.x, y: KAIOH_PLANET.y } ] : WAYPOINTS;
+
+    targets.forEach(wp => { const dx = wp.x - me.x; const dy = wp.y - me.y; const dist = Math.hypot(dx, dy); if(dist > 2000 && dist < 120000) { const angle = Math.atan2(dy, dx); const radius = Math.min(canvas.width, canvas.height) / 2 - 50; const sx = cx + Math.cos(angle) * radius; const sy = cy + Math.sin(angle) * radius; ctx.fillStyle = "rgba(0, 255, 255, 0.6)"; ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill(); ctx.shadowColor = "#0ff"; ctx.shadowBlur = 10; ctx.fillStyle = "#0ff"; ctx.fillText(wp.name, sx, sy - 15); ctx.font = "10px Arial"; ctx.fillText(`${Math.floor(dist)}m`, sx, sy - 5); } });
     ctx.restore();
 }
+
+// ... rest of file same as provided ...
 
 function drawSchematicMap(me) {
     if(!showMap) return; const size = isMobile ? 60 : 150; const padding = 20; const mapCX = canvas.width - size - padding; const mapCY = size + padding; const scale = size / 90000; 

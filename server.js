@@ -5,6 +5,10 @@ const { Server } = require("socket.io");
 const { Pool } = require('pg'); 
 const isRender = !!process.env.DATABASE_URL;
 
+// COORDENADAS DO OUTRO MUNDO
+const SNAKE_WAY_START = { x: 0, y: -12000 };
+const KAIOH_PLANET    = { x: 0, y: -25000 };
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -22,7 +26,6 @@ const BOSS_COOLDOWNS = {
     KI: 1200,
     REPOSITION: 800
 };
-
 
 const initDB = async () => {
     try {
@@ -57,7 +60,7 @@ let projectiles = [];
 let npcs = [];
 let rocks = []; 
 let craters = [];
-let chats = []; // Armazena mensagens temporárias
+let chats = []; 
 
 const DOMINATION_ZONES = [
     { id: "EARTH_CORE", name: "Capital do Oeste", x: 2000, y: 2000, radius: 800, owner: null, guild: null, progress: 0, state: "PEACE" },
@@ -87,6 +90,18 @@ const FORM_STATS = {
     "GOD":  { spd: 11, dmg: 3.0, hpMult: 3.0, kiMult: 2.0 },
     "BLUE": { spd: 13, dmg: 4.5, hpMult: 4.0, kiMult: 3.0 },
     "UI":   { spd: 16, dmg: 6.0, hpMult: 5.0, kiMult: 5.0 }
+};
+
+// Ordem correta das transformações
+const FORM_ORDER = ["BASE", "SSJ", "SSJ2", "SSJ3", "GOD", "BLUE", "UI"];
+const FORM_REQS = {
+    "BASE": 0,
+    "SSJ": 5,
+    "SSJ2": 20,
+    "SSJ3": 40,
+    "GOD": 60,
+    "BLUE": 80,
+    "UI": 100
 };
 
 const BP_TRAIN_CAP = { BASE: 1200, SSJ: 2500, SSJ2: 5000, SSJ3: 9000, GOD: 16000, BLUE: 28000, UI: 45000 };
@@ -240,40 +255,38 @@ const io = new Server(server, { transports: ['websocket'], pingInterval: 25000, 
 function packStateForPlayer(pid) {
     const p = players[pid];
     if (!p) return null;
-    const VIEW_DIST = 2200; 
+    const VIEW_DIST = 2500; 
     const filterFunc = (o) => Math.abs(o.x - p.x) < VIEW_DIST && Math.abs(o.y - p.y) < VIEW_DIST;
     const packedPlayers = {};
     for (const pid in players) {
         const pl = players[pid];
         if (pid === p.id || filterFunc(pl)) {
             packedPlayers[pid] = {
-    id: pl.id,
-    name: pl.name,
-    x: Math.round(pl.x),
-    y: Math.round(pl.y),
-    vx: Math.round(pl.vx),
-    vy: Math.round(pl.vy),
-    hp: pl.hp,
-    maxHp: pl.maxHp,
-    ki: pl.ki,
-    maxKi: pl.maxKi,
-    xp: pl.xp,
-    xpToNext: pl.xpToNext,
-    level: pl.level,
-    bp: pl.bp,
-    state: pl.state,
-    form: pl.form,
-    color: pl.color,
-    stun: pl.stun
-};
-
+                id: pl.id,
+                name: pl.name,
+                x: Math.round(pl.x),
+                y: Math.round(pl.y),
+                vx: Math.round(pl.vx),
+                vy: Math.round(pl.vy),
+                hp: pl.hp,
+                maxHp: pl.maxHp,
+                ki: pl.ki,
+                maxKi: pl.maxKi,
+                xp: pl.xp,
+                xpToNext: pl.xpToNext,
+                level: pl.level,
+                bp: pl.bp,
+                state: pl.state,
+                form: pl.form,
+                color: pl.color,
+                stun: pl.stun,
+                isSpirit: pl.isSpirit
+            };
         }
     }
     const visibleRocks = rocks.filter(filterFunc);
     const visibleNpcs = npcs.filter(filterFunc).map(n => ({...n, x: Math.round(n.x), y: Math.round(n.y)}));
     const visibleProjs = projectiles.filter(filterFunc).map(pr => ({...pr, x: Math.round(pr.x), y: Math.round(pr.y)}));
-    
-    // Filtra chats próximos
     const visibleChats = chats.filter(c => c.life > 0 && Math.abs(c.x - p.x) < VIEW_DIST && Math.abs(c.y - p.y) < VIEW_DIST);
 
     return { 
@@ -282,7 +295,7 @@ function packStateForPlayer(pid) {
         projectiles: visibleProjs, 
         rocks: visibleRocks, 
         craters,
-        chats: visibleChats, // Módulo Social: Envia chats
+        chats: visibleChats,
         domination: DOMINATION_ZONES,
         leaderboard: leaderboard.slice(0, 5)
     };
@@ -311,10 +324,10 @@ io.on("connection", (socket) => {
             hp: 1000 + user.level * 200, maxHp: 1000 + user.level * 200,
             ki: 100, maxKi: 100 + user.level * 10, form: "BASE", xpToNext,
             state: "IDLE", lastHit: 0,
-stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk: 0,
+            stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk: 0,
             isDead: false, isSpirit: false, stun: 0, color: "#ff9900", chargeStart: 0,
             pvpMode: false, lastTransform: 0, bpCapped: false, pvp_kills: 0,
-            reviveTimer: 0, linkId: null // Módulos Sociais
+            reviveTimer: 0, linkId: null
         };
         socket.emit("auth_success", players[socket.id]);
     } catch (err) { console.error("Erro no Login:", err); }
@@ -324,7 +337,6 @@ stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk
     socket.on("set_title", (title) => { const p = players[socket.id]; if(p && p.titles.includes(title)) { p.current_title = title; if(isRender) pool.query('UPDATE users SET current_title=$1 WHERE name=$2', [title, p.name]).catch(console.error); } });
     socket.on("create_guild", (guildName) => { const p = players[socket.id]; if(p && !p.guild && guildName.length < 15) { p.guild = guildName; if(isRender) pool.query('UPDATE users SET guild=$1 WHERE name=$2', [guildName, p.name]).catch(console.error); io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "GUILDA CRIADA: " + guildName }); } });
 
-    // MÓDULO SOCIAL: Chat
     socket.on("chat", (msg) => {
         const p = players[socket.id];
         if(!p || msg.length > 50 || (p.lastMsg && Date.now() - p.lastMsg < 1000)) return;
@@ -332,7 +344,6 @@ stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk
         chats.push({ x: p.x, y: p.y, text: msg, owner: p.name, life: 150 });
     });
 
-    // MÓDULO SOCIAL: Emotes
     socket.on("emote", (type) => {
         const p = players[socket.id];
         if(!p) return;
@@ -344,23 +355,20 @@ stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk
         if(!p || p.stun > 0 || p.isDead) return; 
         const formStats = FORM_STATS[p.form] || FORM_STATS["BASE"];
         let speed = formStats.spd;
+        if(p.isSpirit) speed *= 0.8; // Espírito é mais lento
         const moveMod = (p.state === "BLOCKING" || p.state === "CHARGING_ATK") ? 0.3 : 1.0;
         if(input.x || input.y) { p.vx += input.x * speed * moveMod; p.vy += input.y * speed * moveMod; if(!["ATTACKING"].includes(p.state)) p.state = "MOVING"; }
         if (p.attackLock <= 0) p.angle = input.angle;
         if(input.block) { if(p.ki > 0) { p.state = "BLOCKING"; p.ki -= 0.5; } else { p.state = "IDLE"; } }
         else if(input.charge) { 
             p.state = "CHARGING"; 
-            
-            // MÓDULO SOCIAL: Co-op Charging (Elo de Ki)
             let boost = 1;
             Object.values(players).forEach(other => {
                 if(other.id !== p.id && other.state === "CHARGING" && Math.hypot(other.x - p.x, other.y - p.y) < 200) {
-                    boost = 2; // Dobra a velocidade se tiver amigo perto
-                    p.linkId = other.id; // Visual Link
+                    boost = 2; p.linkId = other.id;
                 }
             });
             if(boost === 1) p.linkId = null;
-
             p.ki = Math.min(p.maxKi, p.ki + (p.level * 0.8 * boost)); 
         } 
         else if(input.holdAtk) { if(p.state !== "CHARGING_ATK") p.chargeStart = Date.now(); p.state = "CHARGING_ATK"; } 
@@ -435,53 +443,56 @@ stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk
     });
 
     socket.on("vanish", () => { const p = players[socket.id]; if (!p || p.isSpirit || p.ki < 20 || p.stun > 0) return; p.ki -= 20; p.state = "IDLE"; p.attackLock = 0; p.combo = 0; p.x += Math.cos(p.angle) * 350; p.y += Math.sin(p.angle) * 350; io.emit("fx", { type: "vanish", x: p.x, y: p.y }); });
+    
+    // ======================================
+    // SISTEMA DE TRANSFORMAÇÃO CORRIGIDO (CICLO)
+    // ======================================
     socket.on("transform", () => {
         const p = players[socket.id];
         if (!p || p.isSpirit || p.isDead || p.stun > 0) return;
 
-        // Cooldown de 2 segundos para evitar spam
         if (p.lastTransform && Date.now() - p.lastTransform < 2000) return;
 
-        let nextForm = p.form;
+        const currentIdx = FORM_ORDER.indexOf(p.form || "BASE");
+        let nextIdx = currentIdx + 1;
 
-        // Lógica de Progressão (Requisito de Nível)
-        if (p.form === "BASE") {
-            if (p.level >= 100) nextForm = "UI";
-            else if (p.level >= 80) nextForm = "BLUE";
-            else if (p.level >= 60) nextForm = "GOD";
-            else if (p.level >= 40) nextForm = "SSJ3";
-            else if (p.level >= 20) nextForm = "SSJ2";
-            else if (p.level >= 5) nextForm = "SSJ";
-        } else {
-            // Se já estiver transformado, volta para BASE
-            nextForm = "BASE";
+        // Se chegou no final (UI), volta para BASE
+        if (nextIdx >= FORM_ORDER.length) {
+            nextIdx = 0;
         }
 
-        // Se o nível não for suficiente para mudar nada, cancela
-        if (nextForm === p.form) return;
+        const nextForm = FORM_ORDER[nextIdx];
+        const reqLevel = FORM_REQS[nextForm];
 
-        // Custo de Ki para transformar
-        if (p.ki < 50) return;
+        // Se não tiver nível para a próxima, tenta voltar para a BASE (reset)
+        if (p.level < reqLevel) {
+            if (p.form !== "BASE") {
+                nextIdx = 0; // Força volta pra base
+            } else {
+                return; // Já está na base e não pode subir
+            }
+        }
 
-        const stats = FORM_STATS[nextForm];
+        const newFormName = FORM_ORDER[nextIdx];
+        const stats = FORM_STATS[newFormName];
+
         if (!stats) return;
 
-        // Aplica a transformação
-        p.form = nextForm;
-        p.ki -= 50;
+        // Custo
+        if (newFormName !== "BASE" && p.ki < 50) return;
+        if (newFormName !== "BASE") p.ki -= 50;
+
+        p.form = newFormName;
         p.lastTransform = Date.now();
 
-        // RECALCULA STATUS: Aplica multiplicador sobre o valor BASE do nível
+        // Recalcula Status
         p.maxHp = Math.floor(p.baseMaxHp * stats.hpMult);
         p.maxKi = Math.floor(p.baseMaxKi * stats.kiMult);
-        
-        // Cura um pouco ao transformar (estilo anime)
         p.hp = Math.min(p.maxHp, p.hp + (p.maxHp * 0.1));
 
-        // Impacto visual e repulsão
-        io.emit("fx", { type: "transform", x: p.x, y: p.y, form: nextForm });
+        io.emit("fx", { type: "transform", x: p.x, y: p.y, form: newFormName });
 
-        // Repulsão de inimigos próximos
+        // Empurrão
         [...Object.values(players), ...npcs].forEach(t => {
             if (t.id === p.id || t.isDead || t.isSpirit) return;
             const dist = Math.hypot(t.x - p.x, t.y - p.y);
@@ -505,17 +516,36 @@ function handleKill(killer, victim) {
         victim.isDead = true;
         if(!killer.isNPC) {
             killer.hp = Math.min(killer.maxHp, killer.hp + (killer.maxHp * 0.2)); const xpGain = victim.level * 100; const xpReq = killer.level * 800; killer.xp += xpGain;
-killer.xpToNext = killer.level * 800;
- io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: xpGain });
+            killer.xpToNext = killer.level * 800;
+            io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: xpGain });
             if(killer.xp >= xpReq) { killer.level++; killer.xp = 0; killer.bp += 5000; clampBP(killer); killer.baseMaxHp += 1000; killer.baseMaxKi += 100; const stats = FORM_STATS[killer.form] || FORM_STATS["BASE"]; killer.maxHp = killer.baseMaxHp * stats.hpMult; killer.maxKi = killer.baseMaxKi * stats.kiMult; killer.hp = killer.maxHp; killer.ki = killer.maxKi; killer.xpToNext = killer.level * 800; io.emit("fx", { type: "levelup", x: killer.x, y: killer.y }); if(isRender) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [killer.level, killer.xp, killer.bp, killer.name]).catch(e => console.error(e)); }
         }
         setTimeout(() => { npcs = npcs.filter(n => n.id !== victim.id); spawnMobRandomly(); }, 5000);
     } else {
-        // MÓDULO SOCIAL: Reanimação (Spirit Revive)
-        victim.isSpirit = true; victim.hp = 1; victim.reviveTimer = 450; // 15 segundos para ser salvo
-        // Não reseta posição imediatamente!
+        // ======================================
+        // SISTEMA DE MORTE CORRIGIDO
+        // ======================================
+        victim.isSpirit = true;
+        victim.hp = 1;
+        victim.ki = 0;
+        victim.state = "SPIRIT";
+        victim.vx = 0; 
+        victim.vy = 0;
+        
+        // TELEPORTA PARA O INÍCIO DO CAMINHO DA SERPENTE
+        victim.x = SNAKE_WAY_START.x;
+        victim.y = SNAKE_WAY_START.y;
+        victim.angle = -Math.PI / 2; // Aponta para cima
+
         io.emit("fx", { type: "vanish", x: victim.x, y: victim.y });
-        if(!killer.isNPC) { killer.pvp_score += 10; killer.pvp_kills = (killer.pvp_kills || 0) + 1; checkAchievements(killer); io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: 50 }); if(isRender) pool.query('UPDATE users SET pvp_score=$1 WHERE name=$2', [killer.pvp_score, killer.name]).catch(console.error); }
+        
+        if(!killer.isNPC) { 
+            killer.pvp_score += 10; 
+            killer.pvp_kills = (killer.pvp_kills || 0) + 1; 
+            checkAchievements(killer); 
+            io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: 50 }); 
+            if(isRender) pool.query('UPDATE users SET pvp_score=$1 WHERE name=$2', [killer.pvp_score, killer.name]).catch(console.error); 
+        }
     }
 }
 
@@ -552,23 +582,22 @@ p.xpToNext = p.level * 800;
         }
         if (p.bp >= getMaxBP(p)) { if (!p.bpCapped) { p.bpCapped = true; io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "BP NO LIMITE" }); } } else { p.bpCapped = false; }
 
-        // MÓDULO SOCIAL: Lógica de Espírito e Reanimação
+        // ======================================
+        // SISTEMA DE REANIMAÇÃO NO KAIOH
+        // ======================================
         if (p.isSpirit) {
-            if(p.reviveTimer > 0) {
-                p.reviveTimer--;
-                // Se algum jogador vivo tocar nele, revive
-                Object.values(players).forEach(hero => {
-                    if(hero.id !== p.id && !hero.isSpirit && !hero.isDead && Math.hypot(hero.x - p.x, hero.y - p.y) < 50) {
-                        p.isSpirit = false; p.hp = p.maxHp * 0.3; p.reviveTimer = 0; // Revive
-                        io.emit("fx", { type: "transform", x: p.x, y: p.y, form: "BASE" });
-                        io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: hero.name + " RESGATOU " + p.name + "!" });
-                    }
-                });
-            } else {
-                // Tempo acabou, vai pro Kaioh
-                p.ki = p.maxKi; p.x = 0; p.y = -6000; p.vx = 0; p.vy = 0;
-                const distToKingKai = Math.hypot(p.x - 0, p.y + 20000); 
-                if (distToKingKai < 1000) { p.hp = Math.min(p.maxHp, p.hp + 20); p.ki = Math.min(p.maxKi, p.ki + 5); if (distToKingKai < 300) { p.isSpirit = false; p.hp = p.maxHp; p.ki = p.maxKi; p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; io.emit("fx", { type: "transform", x: 0, y: 0, form: "BASE" }); io.emit("fx", { type: "levelup", x: 0, y: 0 }); } }
+            // Verifica distância até o Planeta do Kaioh
+            const distToKai = Math.hypot(p.x - KAIOH_PLANET.x, p.y - KAIOH_PLANET.y);
+            
+            // Se chegou perto, revive
+            if (distToKai < 600) {
+                p.isSpirit = false;
+                p.hp = p.maxHp;
+                p.ki = p.maxKi;
+                p.x = 0; p.y = 0; // Volta pra Terra
+                p.vx = 0; p.vy = 0;
+                io.emit("fx", { type: "transform", x: 0, y: 0, form: "BASE" });
+                io.emit("fx", { type: "levelup", x: 0, y: 0 }); // Efeito visual de retorno
             }
         }
     });
@@ -576,9 +605,6 @@ p.xpToNext = p.level * 800;
     npcs.forEach(n => {
     if (n.isDead) return;
 
-    // ======================
-    // STUN
-    // ======================
     if (n.stun > 0) {
         n.stun--;
         n.x += n.vx;
@@ -589,24 +615,13 @@ p.xpToNext = p.level * 800;
         return;
     }
 
-    // ======================
-    // AQUISIÇÃO DE ALVO
-    // ======================
     let target = null;
     let minDist = n.aggro || 1200;
 
-    if (
-        n.targetId &&
-        players[n.targetId] &&
-        !players[n.targetId].isDead &&
-        !players[n.targetId].isSpirit
-    ) {
+    if (n.targetId && players[n.targetId] && !players[n.targetId].isDead && !players[n.targetId].isSpirit) {
         const t = players[n.targetId];
-        if (Math.hypot(n.x - t.x, n.y - t.y) < 3000) {
-            target = t;
-        } else {
-            n.targetId = null;
-        }
+        if (Math.hypot(n.x - t.x, n.y - t.y) < 3000) target = t;
+        else n.targetId = null;
     }
 
     if (!target) {
@@ -614,25 +629,17 @@ p.xpToNext = p.level * 800;
             if (p.isDead || p.isSpirit) continue;
             if (Math.abs(p.x - n.x) > minDist || Math.abs(p.y - n.y) > minDist) continue;
             const d = Math.hypot(n.x - p.x, n.y - p.y);
-            if (d < minDist) {
-                minDist = d;
-                target = p;
-            }
+            if (d < minDist) { minDist = d; target = p; }
         }
     }
 
     if (!target) {
         n.state = "IDLE";
-        n.vx *= 0.95;
-        n.vy *= 0.95;
-        n.x += n.vx;
-        n.y += n.vy;
+        n.vx *= 0.95; n.vy *= 0.95;
+        n.x += n.vx; n.y += n.vy;
         return;
     }
 
-    // ======================
-    // BASE DE MOVIMENTO
-    // ======================
     const dx = target.x - n.x;
     const dy = target.y - n.y;
     const dist = Math.hypot(dx, dy);
@@ -643,128 +650,54 @@ p.xpToNext = p.level * 800;
     const ATTACK_RANGE = n.isBoss ? 170 : 100;
     const PRESSURE_RANGE = 55;
 
-    // ======================
-    // IA ESPECIAL DE BOSS
-    // ======================
     if (n.isBoss) {
-
-        // init seguro
         if (!n.phase) n.phase = 1;
         if (!n.pushStreak) n.pushStreak = 0;
         if (!n.lastDash) n.lastDash = 0;
-
-        // fases por vida
         const hpPerc = n.hp / n.maxHp;
         if (hpPerc <= BOSS_PHASES.PHASE_3.hp) n.phase = 3;
-else if (hpPerc <= BOSS_PHASES.PHASE_2.hp) n.phase = 2;
-
+        else if (hpPerc <= BOSS_PHASES.PHASE_2.hp) n.phase = 2;
         else n.phase = 1;
 
-        // ANTI LOCK: força pausa após empurrões seguidos
         if (n.pushStreak >= 3) {
-            n.vx *= 0.2;
-            n.vy *= 0.2;
-            n.state = "IDLE";
-            n.pushStreak = 0;
-            n.x += n.vx;
-            n.y += n.vy;
+            n.vx *= 0.2; n.vy *= 0.2; n.state = "IDLE"; n.pushStreak = 0;
+            n.x += n.vx; n.y += n.vy;
             return;
         }
 
-        // DASH CONTROLADO (não infinito)
-        if (
-            dist > ATTACK_RANGE &&
-            dist < 420 &&
-            Date.now() - n.lastDash > 800
-        ) {
+        if (dist > ATTACK_RANGE && dist < 420 && Date.now() - n.lastDash > 800) {
             const dashSpd = n.phase === 3 ? 28 : 20;
-            n.vx += Math.cos(ang) * dashSpd;
-            n.vy += Math.sin(ang) * dashSpd;
-            n.state = "ATTACKING";
-            n.lastDash = Date.now();
+            n.vx += Math.cos(ang) * dashSpd; n.vy += Math.sin(ang) * dashSpd;
+            n.state = "ATTACKING"; n.lastDash = Date.now();
         }
     }
 
-    // ======================
-    // COMPORTAMENTO PADRÃO
-    // ======================
     if (dist > ATTACK_RANGE) {
         n.state = "CHASE";
-        const burst = n.isBoss ? 2.8 : 3.6; // boss menos acelerado
-        n.vx += Math.cos(ang) * burst;
-        n.vy += Math.sin(ang) * burst;
-
+        const burst = n.isBoss ? 2.8 : 3.6;
+        n.vx += Math.cos(ang) * burst; n.vy += Math.sin(ang) * burst;
     } else if (dist < PRESSURE_RANGE) {
         n.state = "PRESSURE";
-        n.vx -= Math.cos(ang) * 1.4;
-        n.vy -= Math.sin(ang) * 1.4;
-
-    } else if (
-    Date.now() - n.lastAtk > 650 &&
-    (!target.lastHit || Date.now() - target.lastHit > 400)
-) {
-
-
+        n.vx -= Math.cos(ang) * 1.4; n.vy -= Math.sin(ang) * 1.4;
+    } else if (Date.now() - n.lastAtk > 650 && (!target.lastHit || Date.now() - target.lastHit > 400)) {
         n.lastAtk = Date.now();
         n.state = "ATTACKING";
-
         let dmg = (n.level * 10) + (n.isBoss ? 100 : 30);
-
-        if (target.state === "BLOCKING") {
-    dmg *= 0.3;
-    target.ki -= 14;
-    target.counterWindow = 14;
-}
-
-target.hp -= dmg;
-if (target.hp < 0) target.hp = 0;
-
-target.lastHit = Date.now();
-
-if (!target.stunImmune || Date.now() > target.stunImmune) {
-    target.stun = n.isBoss ? 10 : 4;
-    target.stunImmune = Date.now() + 700;
-}
-
-
-
-        // PUSH CONTROLADO (SEM LOCK)
-        const push = n.isBoss
-            ? (n.phase === 3 ? 45 : 25)
-            : 15;
-
-        target.vx = Math.cos(ang) * push;
-        target.vy = Math.sin(ang) * push;
-
+        if (target.state === "BLOCKING") { dmg *= 0.3; target.ki -= 14; target.counterWindow = 14; }
+        target.hp -= dmg; if (target.hp < 0) target.hp = 0;
+        target.lastHit = Date.now();
+        if (!target.stunImmune || Date.now() > target.stunImmune) { target.stun = n.isBoss ? 10 : 4; target.stunImmune = Date.now() + 700; }
+        const push = n.isBoss ? (n.phase === 3 ? 45 : 25) : 15;
+        target.vx = Math.cos(ang) * push; target.vy = Math.sin(ang) * push;
         if (n.isBoss) n.pushStreak++;
-
-        io.emit("fx", {
-            type: n.isBoss ? "heavy" : "hit",
-            x: target.x,
-            y: target.y,
-            dmg: Math.floor(dmg)
-        });
-
-        n.vx *= 0.25;
-        n.vy *= 0.25;
-
+        io.emit("fx", { type: n.isBoss ? "heavy" : "hit", x: target.x, y: target.y, dmg: Math.floor(dmg) });
+        n.vx *= 0.25; n.vy *= 0.25;
         if (target.hp <= 0) handleKill(n, target);
     }
 
-    // ======================
-    // LIMITES FÍSICOS
-    // ======================
     const speed = Math.hypot(n.vx, n.vy);
-    if (speed > MAX_SPEED) {
-        const s = MAX_SPEED / speed;
-        n.vx *= s;
-        n.vy *= s;
-    }
-
-    n.x += n.vx;
-    n.y += n.vy;
-    n.vx *= 0.92;
-    n.vy *= 0.92;
+    if (speed > MAX_SPEED) { const s = MAX_SPEED / speed; n.vx *= s; n.vy *= s; }
+    n.x += n.vx; n.y += n.vy; n.vx *= 0.92; n.vy *= 0.92;
 });
 
 
