@@ -247,26 +247,14 @@ function drawDominationZones() { dominationZones.forEach(z => { ctx.save(); ctx.
 
 function drawEntityHUD(e, sizeMult) {
     if (e.isSpirit) return;
-
-
     ctx.save();
-
-    // ===============================
-    // POSIÇÃO + EIXO DIAGONAL (PROJEÇÃO)
-    // ===============================
     ctx.translate(30 * sizeMult, -50 * sizeMult);
-    ctx.transform(1, -0.22, 0, 1, 0, 0); // 🔥 eixo holográfico
+    ctx.transform(1, -0.22, 0, 1, 0, 0); 
 
-    const mainColor = e.isBoss
-        ? "#ff3333"
-        : (e.isNPC ? "#ffaa00" : "#00ffff");
-
+    const mainColor = e.isBoss ? "#ff3333" : (e.isNPC ? "#ffaa00" : "#00ffff");
     ctx.shadowBlur = 8;
     ctx.shadowColor = mainColor;
 
-    // ===============================
-    // LINHAS DE SUPORTE DO HOLOGRAMA
-    // ===============================
     ctx.strokeStyle = "rgba(0,255,255,0.35)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -275,16 +263,10 @@ function drawEntityHUD(e, sizeMult) {
     ctx.lineTo(110, 0);
     ctx.stroke();
 
-    // ===============================
-    // NOME
-    // ===============================
     ctx.fillStyle = mainColor;
     ctx.font = "bold 20px Orbitron";
     ctx.fillText(e.name?.substring(0, 12) || "???", 5, -8);
 
-    // ===============================
-    // GUILD / TÍTULO
-    // ===============================
     if (!e.isNPC) {
         ctx.font = "italic 12px Arial";
         ctx.fillStyle = "#ffcc00";
@@ -293,39 +275,25 @@ function drawEntityHUD(e, sizeMult) {
         ctx.fillText(title, 5, -28);
     }
 
-    // ===============================
-    // BARRA DE VIDA (HOLOGRÁFICA)
-    // ===============================
     const hpPerc = Math.max(0, e.hp / e.maxHp);
-
     ctx.fillStyle = "rgba(0,0,0,0.5)";
     ctx.fillRect(0, 5, 100, 6);
-
-    ctx.fillStyle = e.isBoss
-        ? "#ff0000"
-        : (e.isNPC ? "#ffaa00" : "#00ff00");
-
+    ctx.fillStyle = e.isBoss ? "#ff0000" : (e.isNPC ? "#ffaa00" : "#00ff00");
     ctx.shadowBlur = 0;
     ctx.fillRect(0, 5, 100 * hpPerc, 6);
 
-    // ===============================
-    // BP
-    // ===============================
     if (!e.isNPC) {
         ctx.fillStyle = "#ffffff";
         ctx.font = "12px Orbitron";
         ctx.fillText(`BP: ${e.bp.toLocaleString()}`, 5, 20);
-
         if (e.pvpMode) {
             ctx.fillStyle = "#ff0000";
             ctx.font = "bold 10px Arial";
             ctx.fillText("PVP ON", 5, 32);
         }
     }
-
     ctx.restore();
 }
-
 
 function drawMiniWarrior(e, sizeMult) {
     const time = Date.now();
@@ -337,23 +305,25 @@ function drawMiniWarrior(e, sizeMult) {
     let auraColor = null;
     let lightning = false;
 
-    // Definição de Cores e Formas
-    if (e.form === "SSJ" || e.form === "SSJ2") {
+    // Normalização da forma para garantir que a cor mude
+    const currentForm = (e.form || "BASE").toUpperCase();
+
+    if (currentForm === "SSJ" || currentForm === "SSJ2") {
         hairColor = "#ffeb3b"; eyeColor = "#00ffff";
         auraColor = "rgba(255,235,59,0.5)";
-        if (e.form === "SSJ2") lightning = true;
-    } else if (e.form === "SSJ3") {
+        if (currentForm === "SSJ2") lightning = true;
+    } else if (currentForm === "SSJ3") {
         hairColor = "#ffcc00"; eyeColor = "#00ffff";
         auraColor = "rgba(255,170,0,0.6)";
         lightning = true;
-    } else if (e.form === "GOD") {
+    } else if (currentForm === "GOD") {
         hairColor = "#ff0055"; eyeColor = "#ff0055";
         auraColor = "rgba(255,0,80,0.5)";
         skinColor = "#ffe0e0";
-    } else if (e.form === "BLUE") {
+    } else if (currentForm === "BLUE") {
         hairColor = "#00e5ff"; eyeColor = "#00e5ff";
         auraColor = "rgba(0,229,255,0.6)";
-    } else if (e.form === "UI") {
+    } else if (currentForm === "UI") {
         hairColor = "#e0e0e0"; eyeColor = "#c0c0c0";
         auraColor = "rgba(255,255,255,0.8)";
         giColor = "#ff4400";
@@ -365,7 +335,6 @@ function drawMiniWarrior(e, sizeMult) {
 
     ctx.rotate(e.angle);
 
-    // 1. AURA (Sempre no fundo)
     if ((auraColor || e.state === "CHARGING") && !e.isDead) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
@@ -378,10 +347,19 @@ function drawMiniWarrior(e, sizeMult) {
         ctx.beginPath();
         ctx.arc(0, 0, auraSize, 0, Math.PI * 2);
         ctx.fill();
+        
+        if (lightning) {
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            const lAng = Math.random() * Math.PI * 2;
+            ctx.moveTo(Math.cos(lAng) * 10, Math.sin(lAng) * 10);
+            ctx.lineTo(Math.cos(lAng) * 30, Math.sin(lAng) * 30);
+            ctx.stroke();
+        }
         ctx.restore();
     }
 
-    // 2. CORPO E CINTO
     ctx.fillStyle = giColor;
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 1.5;
@@ -397,74 +375,64 @@ function drawMiniWarrior(e, sizeMult) {
     ctx.fillStyle = beltColor;
     ctx.fillRect(-10 * sizeMult, 8 * sizeMult, 20 * sizeMult, 4 * sizeMult);
 
-    // 3. CABEÇA (ROSTO) - Agora desenhado ANTES do cabelo
     ctx.save();
     ctx.translate(-lean, breathe);
 
-    // Pele
     ctx.fillStyle = skinColor;
     ctx.beginPath();
     ctx.arc(0, 0, 11 * sizeMult, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // Olhos (Estilo Z: mais sérios e angulares)
-    ctx.fillStyle = (e.form && e.form !== "Base") ? eyeColor : "#fff";
+    // Cor do olho corrigida para usar currentForm
+    ctx.fillStyle = (currentForm && currentForm !== "BASE") ? eyeColor : "#fff";
     ctx.beginPath();
-    // Olho Direito
     ctx.moveTo(2 * sizeMult, -4 * sizeMult);
     ctx.lineTo(7 * sizeMult, -5 * sizeMult);
     ctx.lineTo(6 * sizeMult, -1 * sizeMult);
     ctx.closePath();
-    // Olho Esquerdo
     ctx.moveTo(2 * sizeMult, 4 * sizeMult);
     ctx.lineTo(7 * sizeMult, 5 * sizeMult);
     ctx.lineTo(6 * sizeMult, 1 * sizeMult);
     ctx.closePath();
     ctx.fill();
 
-    // 4. CABELO (POR CIMA DO ROSTO)
     ctx.fillStyle = hairColor;
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
 
-    if (e.form === "SSJ3") {
-        // SSJ3: Cabelo massivo que cobre as costas
+    if (currentForm === "SSJ3") {
         ctx.moveTo(-8, -5);
-        ctx.quadraticCurveTo(-25 * sizeMult, 5, -5 * sizeMult, 35 * sizeMult); // Mecha longa descendo
+        ctx.quadraticCurveTo(-25 * sizeMult, 5, -5 * sizeMult, 35 * sizeMult);
         ctx.lineTo(5 * sizeMult, 35 * sizeMult);
         ctx.quadraticCurveTo(25 * sizeMult, 5, 8 * sizeMult, -5 * sizeMult);
         ctx.lineTo(10 * sizeMult, -12 * sizeMult);
         ctx.lineTo(0, -20 * sizeMult);
         ctx.lineTo(-10 * sizeMult, -12 * sizeMult);
-    } else if (e.form && e.form !== "Base") {
-        // SSJ, Blue, God: Espetos para cima (V de Vegeta/Goku)
-        ctx.moveTo(-11 * sizeMult, -2 * sizeMult); // Base orelha esq
-        ctx.lineTo(-16 * sizeMult, -15 * sizeMult); // Espeto 1
+    } else if (currentForm && currentForm !== "BASE") {
+        ctx.moveTo(-11 * sizeMult, -2 * sizeMult);
+        ctx.lineTo(-16 * sizeMult, -15 * sizeMult);
         ctx.lineTo(-8 * sizeMult, -8 * sizeMult);
-        ctx.lineTo(-6 * sizeMult, -25 * sizeMult); // Espeto 2 (Alto)
+        ctx.lineTo(-6 * sizeMult, -25 * sizeMult);
         ctx.lineTo(0, -12 * sizeMult);
-        ctx.lineTo(6 * sizeMult, -25 * sizeMult);  // Espeto 3 (Alto)
+        ctx.lineTo(6 * sizeMult, -25 * sizeMult);
         ctx.lineTo(8 * sizeMult, -8 * sizeMult);
-        ctx.lineTo(16 * sizeMult, -15 * sizeMult); // Espeto 4
-        ctx.lineTo(11 * sizeMult, -2 * sizeMult);  // Base orelha dir
-        // Franja (O segredo para ficar na frente do rosto)
+        ctx.lineTo(16 * sizeMult, -15 * sizeMult);
+        ctx.lineTo(11 * sizeMult, -2 * sizeMult);
         ctx.lineTo(5 * sizeMult, -2 * sizeMult);
-        ctx.lineTo(0, 4 * sizeMult); // Mecha no meio da testa
+        ctx.lineTo(0, 4 * sizeMult);
         ctx.lineTo(-5 * sizeMult, -2 * sizeMult);
     } else {
-        // BASE: Cabelo espetado clássico mas com volume lateral
         ctx.moveTo(-11 * sizeMult, 2 * sizeMult);
-        ctx.lineTo(-18 * sizeMult, -8 * sizeMult); // Ponta lateral esq
+        ctx.lineTo(-18 * sizeMult, -8 * sizeMult);
         ctx.lineTo(-9 * sizeMult, -5 * sizeMult);
-        ctx.lineTo(-12 * sizeMult, -22 * sizeMult); // Ponta topo esq
+        ctx.lineTo(-12 * sizeMult, -22 * sizeMult);
         ctx.lineTo(-2 * sizeMult, -10 * sizeMult);
-        ctx.lineTo(8 * sizeMult, -20 * sizeMult);  // Ponta topo dir
+        ctx.lineTo(8 * sizeMult, -20 * sizeMult);
         ctx.lineTo(6 * sizeMult, -5 * sizeMult);
-        ctx.lineTo(16 * sizeMult, -2 * sizeMult);  // Ponta lateral dir
+        ctx.lineTo(16 * sizeMult, -2 * sizeMult);
         ctx.lineTo(10 * sizeMult, 6 * sizeMult);
-        // Pequena mecha na testa
         ctx.lineTo(3 * sizeMult, 1 * sizeMult);
         ctx.lineTo(0, 5 * sizeMult);
         ctx.lineTo(-3 * sizeMult, 1 * sizeMult);
@@ -474,7 +442,7 @@ function drawMiniWarrior(e, sizeMult) {
     ctx.fill();
     ctx.stroke();
 
-    ctx.restore(); // Fecha o translate do rosto/cabelo
+    ctx.restore();
 }
 function drawEntity(e) {
     if (!e) return;

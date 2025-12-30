@@ -436,65 +436,66 @@ stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk
 
     socket.on("vanish", () => { const p = players[socket.id]; if (!p || p.isSpirit || p.ki < 20 || p.stun > 0) return; p.ki -= 20; p.state = "IDLE"; p.attackLock = 0; p.combo = 0; p.x += Math.cos(p.angle) * 350; p.y += Math.sin(p.angle) * 350; io.emit("fx", { type: "vanish", x: p.x, y: p.y }); });
     socket.on("transform", () => {
-    const p = players[socket.id];
-    if (!p || p.isSpirit || p.isDead) return;
+        const p = players[socket.id];
+        if (!p || p.isSpirit || p.isDead || p.stun > 0) return;
 
-    // Cooldown
-    if (p.lastTransform && Date.now() - p.lastTransform < 5000) return;
+        // Cooldown de 2 segundos para evitar spam
+        if (p.lastTransform && Date.now() - p.lastTransform < 2000) return;
 
-    let nextForm = p.form;
+        let nextForm = p.form;
 
-    // Progressão de formas
-    if (p.form === "BASE" && p.level >= 5) nextForm = "SSJ";
-    else if (p.form === "SSJ" && p.level >= 20) nextForm = "SSJ2";
-    else if (p.form === "SSJ2" && p.level >= 40) nextForm = "SSJ3";
-    else if (p.form === "SSJ3" && p.level >= 60) nextForm = "GOD";
-    else if (p.form === "GOD" && p.level >= 80) nextForm = "BLUE";
-    else if (p.form === "BLUE" && p.level >= 100) nextForm = "UI";
-    else if (p.form !== "BASE" && p.form !== "UI") nextForm = "BASE"; 
-    // 👆 só permite voltar pra BASE se já estiver em forma alta
-
-    // Nada mudou → sai
-    if (nextForm === p.form) return;
-
-    // Ki
-    if (p.ki < 50) return;
-
-    const stats = FORM_STATS[nextForm];
-    if (!stats) return; // proteção total
-
-    // Aplica transformação
-    p.form = nextForm;
-    p.ki -= 50;
-    p.lastTransform = Date.now();
-
-    p.maxHp = Math.floor(p.baseMaxHp * stats.hpMult);
-    p.maxKi = Math.floor(p.baseMaxKi * stats.kiMult);
-
-    checkAchievements(p);
-
-    // Onda de energia DBZ
-    [...Object.values(players), ...npcs].forEach(t => {
-        if (!t || t.id === p.id || t.isDead || t.isSpirit) return;
-
-        const dist = Math.hypot(t.x - p.x, t.y - p.y);
-        if (dist < 400) {
-            const ang = Math.atan2(t.y - p.y, t.x - p.x);
-            t.vx = Math.cos(ang) * 150;
-            t.vy = Math.sin(ang) * 150;
-            t.stun = 20;
+        // Lógica de Progressão (Requisito de Nível)
+        if (p.form === "BASE") {
+            if (p.level >= 100) nextForm = "UI";
+            else if (p.level >= 80) nextForm = "BLUE";
+            else if (p.level >= 60) nextForm = "GOD";
+            else if (p.level >= 40) nextForm = "SSJ3";
+            else if (p.level >= 20) nextForm = "SSJ2";
+            else if (p.level >= 5) nextForm = "SSJ";
+        } else {
+            // Se já estiver transformado, volta para BASE
+            nextForm = "BASE";
         }
-    });
 
-    io.emit("fx", {
-        type: "transform",
-        x: p.x,
-        y: p.y,
-        form: nextForm
-    });
+        // Se o nível não for suficiente para mudar nada, cancela
+        if (nextForm === p.form) return;
 
-    clampBP(p);
-});
+        // Custo de Ki para transformar
+        if (p.ki < 50) return;
+
+        const stats = FORM_STATS[nextForm];
+        if (!stats) return;
+
+        // Aplica a transformação
+        p.form = nextForm;
+        p.ki -= 50;
+        p.lastTransform = Date.now();
+
+        // RECALCULA STATUS: Aplica multiplicador sobre o valor BASE do nível
+        p.maxHp = Math.floor(p.baseMaxHp * stats.hpMult);
+        p.maxKi = Math.floor(p.baseMaxKi * stats.kiMult);
+        
+        // Cura um pouco ao transformar (estilo anime)
+        p.hp = Math.min(p.maxHp, p.hp + (p.maxHp * 0.1));
+
+        // Impacto visual e repulsão
+        io.emit("fx", { type: "transform", x: p.x, y: p.y, form: nextForm });
+
+        // Repulsão de inimigos próximos
+        [...Object.values(players), ...npcs].forEach(t => {
+            if (t.id === p.id || t.isDead || t.isSpirit) return;
+            const dist = Math.hypot(t.x - p.x, t.y - p.y);
+            if (dist < 300) {
+                const ang = Math.atan2(t.y - p.y, t.x - p.x);
+                t.vx = Math.cos(ang) * 40;
+                t.vy = Math.sin(ang) * 40;
+                t.stun = 15;
+            }
+        });
+
+        checkAchievements(p);
+        clampBP(p);
+    });
 
     socket.on("disconnect", () => delete players[socket.id]);
 });
