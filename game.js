@@ -15,6 +15,32 @@ let showMap = true;
 let activeWindow = null; 
 let announcement = { text: "", life: 0, color: "#f00" };
 
+// ===============================
+// SISTEMA DE TUTORIAL (SCOUTER AI)
+// ===============================
+let tutorialActive = false;
+let tutorialStep = 0;
+let tutorialText = "";
+let tutorialIndex = 0;
+let tutorialTimer = 0;
+const TUTORIAL_DATA = [
+    { text: "INICIANDO SISTEMA... ANALISANDO USUÁRIO...", duration: 200 },
+    { text: "PODER DE LUTA: BAIXO. ESCUTE COM ATENÇÃO, GUERREIRO.", duration: 250 },
+    { text: "MOVIMENTAÇÃO: [W, A, S, D] OU JOYSTICK NA TELA.", duration: 300 },
+    { text: "COMBATE: [CLIQUE ESQUERDO] PARA SOCOS. [DIREITO] PARA KI BLAST.", duration: 300 },
+    { text: "ENERGIA: SEGURE [C] PARA CARREGAR SEU KI.", duration: 300 },
+    { text: "DEFESA: SEGURE [Q] PARA BLOQUEAR ATAQUES.", duration: 300 },
+    { text: "EVOLUÇÃO: APERTE [G] QUANDO TIVER NÍVEL PARA TRANSFORMAR.", duration: 300 },
+    { text: "OBJETIVO: DERROTE INIMIGOS, DOMINE ZONAS E SUBA NO RANKING.", duration: 350 },
+    { text: "SISTEMA ONLINE. BOA SORTE.", duration: 200 }
+];
+
+function initTutorial() {
+    if (!localStorage.getItem("dbz_tutorial_complete")) {
+        tutorialActive = true;
+    }
+}
+
 const ZOOM_SCALE = 0.6; // Zoom out para ver mais
 const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
 
@@ -34,6 +60,12 @@ document.body.appendChild(textInput);
 textInput.addEventListener("keydown", e => {
     if (e.key === "Enter") {
         toggleChat();
+    }
+});
+socket.on("pvp_status", (state) => {
+    const btnPvp = document.getElementById("btn-pvp");
+    if (btnPvp) {
+        btnPvp.classList.toggle("active", state);
     }
 });
 
@@ -88,9 +120,31 @@ if(btnLogin) btnLogin.onclick = () => { const user = document.getElementById("us
 
 window.addEventListener("contextmenu", e => e.preventDefault());
 window.addEventListener("mousemove", e => { mouse.x = (e.clientX - window.innerWidth / 2) / ZOOM_SCALE; mouse.y = (e.clientY - window.innerHeight / 2) / ZOOM_SCALE; });
-window.addEventListener("mousedown", e => { if(e.button === 0) mouseLeft = true; if(e.button === 2) mouseRight = true; if(activeWindow && mouse.x > 200 || mouse.x < -200) activeWindow = null; });
+window.addEventListener("mousedown", e => { 
+    if(tutorialActive) {
+        // Clique avança tutorial
+        tutorialStep++;
+        tutorialIndex = 0;
+        tutorialTimer = 0;
+        if (tutorialStep >= TUTORIAL_DATA.length) {
+            tutorialActive = false;
+            localStorage.setItem("dbz_tutorial_complete", "true");
+        }
+    }
+    if(e.button === 0) mouseLeft = true; if(e.button === 2) mouseRight = true; if(activeWindow && mouse.x > 200 || mouse.x < -200) activeWindow = null; 
+});
 window.addEventListener("mouseup", e => { if(e.button === 0) { mouseLeft = false; window.socket.emit("release_attack"); } if(e.button === 2) { mouseRight = false; window.socket.emit("release_blast"); } });
 canvas.addEventListener("touchstart", e => {
+    if (tutorialActive) {
+        tutorialStep++;
+        tutorialIndex = 0;
+        tutorialTimer = 0;
+        if (tutorialStep >= TUTORIAL_DATA.length) {
+            tutorialActive = false;
+            localStorage.setItem("dbz_tutorial_complete", "true");
+        }
+        return;
+    }
     if (!activeWindow) return;
 
     const touch = e.touches[0];
@@ -122,60 +176,32 @@ function toggleChat(forceOpen = false) {
 
 window.addEventListener("keydown", e => {
     if (textInput.style.display === "block") return;
-    if (e.repeat) return;
-
     keys[e.code] = true;
+    if (e.code === "KeyG") window.socket.emit("transform"); // Tecla G para transformar
+    if (e.code === "KeyH") tutorialActive = !tutorialActive; // Ajuda
+	if (e.code === "KeyT") scouterActive = !scouterActive;           // SCOUTER
+if (e.code === "KeyL") activeWindow = activeWindow ? null : "menu"; // MENU
+if (e.code === "KeyR") activeWindow = "ranking";                // RANKING
+if (e.code === "Escape") activeWindow = null;                   // FECHAR
+if (e.code === "KeyP") {
+    socket.emit("toggle_pvp");
+}
 
-    switch (e.code) {
-        case "KeyG": // Transformar
-            socket.emit("transform");
-            break;
 
-        case "KeyT": // Scouter
-            scouterActive = !scouterActive;
-            break;
-
-        case "Space": // VANISH
-            e.preventDefault(); // MUITO IMPORTANTE
-            socket.emit("vanish");
-            break;
-
-        case "KeyR": // Rebirth
-            socket.emit("rebirth");
-            break;
-
-        case "KeyP": // PVP
-            socket.emit("toggle_pvp");
-            break;
-
-        case "Escape": // Menu
-            activeWindow = activeWindow ? null : "menu";
-            break;
-
-        case "Enter": // Chat
-            toggleChat(true);
-            break;
-
-        case "Tab": // Ranking
-            e.preventDefault();
-            activeWindow = activeWindow === "ranking" ? null : "ranking";
-            break;
-    }
 });
-
-
-
-
 
 
 window.addEventListener("keyup", e => keys[e.code] = false);
 
-bindBtn('btn-pvp', () => {
-    socket.emit("toggle_pvp");
+const btnPvp = document.getElementById("btn-pvp"); if (btnPvp) { btnPvp.addEventListener("touchstart", e => { e.preventDefault(); socket.emit("toggle_pvp"); btnPvp.classList.toggle("active"); }); btnPvp.addEventListener("click", () => { socket.emit("toggle_pvp"); btnPvp.classList.toggle("active"); }); }
+
+window.socket.on("auth_success", (data) => { 
+    myId = data.id; 
+    document.getElementById("login-screen").style.display = "none"; 
+    document.getElementById("ui").style.display = "block"; 
+    initTutorial(); // INICIA TUTORIAL
+    if (isMobile) { document.getElementById("mobile-ui").style.display = "block"; requestAnimationFrame(() => { initMobileControls(); }); } 
 });
-
-
-window.socket.on("auth_success", (data) => { myId = data.id; document.getElementById("login-screen").style.display = "none"; document.getElementById("ui").style.display = "block"; if (isMobile) { document.getElementById("mobile-ui").style.display = "block"; requestAnimationFrame(() => { initMobileControls(); }); } });
 
 window.socket.on("state", data => {
     if(!myId) return;
@@ -191,13 +217,6 @@ window.socket.on("fx", data => {
     if(data.type === "bp_limit") { texts.push({x: data.x, y: data.y - 100, text: data.text, color: "#ff0000", life: 150, vy: -0.5}); announcement = { text: data.text, life: 300, color: "#ff3300" }; screenShake = 20; }
     if(data.type === "emote") { texts.push({x: data.x, y: data.y - 60, text: data.icon, color: "#fff", life: 100, vy: -1, isEmote: true }); }
 });
-
-socket.on("pvp_status", enabled => {
-    const btn = document.getElementById("btn-pvp");
-    if (btn) btn.classList.toggle("active", enabled);
-
-    });
-
 
 let joystick = null;
 function initMobileControls() { if (!isMobile || !window.nipplejs) return; if (joystick) return; const zone = document.getElementById('joystick-container'); if (!zone) return; joystick = nipplejs.create({ zone, mode: 'static', position: { left: '50%', top: '50%' }, color: '#ff9900', size: 120 }); joystick.on('move', (evt, data) => { if (!data || !data.vector) return; joystickMove.x = data.vector.x; joystickMove.y = -data.vector.y; }); joystick.on('end', () => { joystickMove.x = 0; joystickMove.y = 0; }); }
@@ -354,24 +373,10 @@ function drawEntityHUD(e, sizeMult) {
         ctx.font = "12px Orbitron";
         ctx.fillText(`BP: ${e.bp.toLocaleString()}`, 5, 20);
         if (e.pvpMode) {
-    const pulse = 0.5 + Math.sin(Date.now() * 0.01) * 0.5;
-
-    ctx.fillStyle = `rgba(255,0,51,${0.6 + pulse * 0.4})`;
-    ctx.font = "bold 12px Orbitron";
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = "#ff0033";
-    ctx.fillText("⚔ PVP", 5, 34);
-    ctx.shadowBlur = 0;
-}
-if (e.pvpMode) {
-    ctx.strokeStyle = "#ff0033";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, 42);
-    ctx.lineTo(100, 42);
-    ctx.stroke();
-}
-
+            ctx.fillStyle = "#ff0000";
+            ctx.font = "bold 10px Arial";
+            ctx.fillText("PVP ON", 5, 32);
+        }
     }
     ctx.restore();
 }
@@ -613,8 +618,6 @@ function drawNavigationMarkers(me) {
     ctx.restore();
 }
 
-// ... rest of file same as provided ...
-
 function drawSchematicMap(me) {
     if(!showMap) return; const size = isMobile ? 60 : 150; const padding = 20; const mapCX = canvas.width - size - padding; const mapCY = size + padding; const scale = size / 90000; 
     ctx.save(); ctx.translate(mapCX, mapCY); ctx.fillStyle = "rgba(0, 20, 0, 0.7)"; ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle = "rgba(0, 255, 0, 0.5)"; ctx.lineWidth = 2; ctx.stroke(); 
@@ -750,6 +753,81 @@ function drawAnnouncement() {
     ctx.restore();
 }
 
+function drawTutorial() {
+    if (!tutorialActive || tutorialStep >= TUTORIAL_DATA.length) return;
+
+    const currentData = TUTORIAL_DATA[tutorialStep];
+    const cx = canvas.width / 2;
+    const cy = canvas.height - 150; // Posição inferior
+
+    // Lógica de "Digitação"
+    tutorialTimer++;
+    if (tutorialTimer % 2 === 0 && tutorialIndex < currentData.text.length) {
+        tutorialIndex++;
+        // Efeito sonoro sutil de digitação (opcional, usando o scouter sound existente)
+        if(tutorialIndex % 3 === 0) {
+            // play('scouter'); // Descomentar se quiser som
+        }
+    }
+
+    // Se acabou de digitar, espera um pouco e avança
+    if (tutorialIndex >= currentData.text.length) {
+        if (tutorialTimer > currentData.text.length * 2 + currentData.duration) {
+            tutorialStep++;
+            tutorialIndex = 0;
+            tutorialTimer = 0;
+            if (tutorialStep >= TUTORIAL_DATA.length) {
+                tutorialActive = false;
+                localStorage.setItem("dbz_tutorial_complete", "true");
+            }
+        }
+    }
+
+    const displayText = currentData.text.substring(0, tutorialIndex);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Fundo Tech Scouter
+    ctx.fillStyle = "rgba(0, 20, 0, 0.85)";
+    ctx.strokeStyle = "#00ff00";
+    ctx.lineWidth = 2;
+    
+    // Caixa principal
+    ctx.beginPath();
+    ctx.moveTo(-300, -40);
+    ctx.lineTo(300, -40);
+    ctx.lineTo(320, 0);
+    ctx.lineTo(300, 40);
+    ctx.lineTo(-300, 40);
+    ctx.lineTo(-320, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Texto
+    ctx.font = "bold 16px monospace"; // Estilo terminal
+    ctx.fillStyle = "#00ff00";
+    ctx.textAlign = "center";
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = "#00ff00";
+    ctx.fillText(displayText, 0, 5);
+
+    // Cursor piscando
+    if (Math.floor(Date.now() / 300) % 2 === 0 && tutorialIndex < currentData.text.length) {
+        const w = ctx.measureText(displayText).width;
+        ctx.fillRect(w / 2 + 5, -8, 10, 16);
+    }
+
+    // Instrução de pular
+    ctx.font = "10px Arial";
+    ctx.fillStyle = "#00aa00";
+    ctx.shadowBlur = 0;
+    ctx.fillText("[CLIQUE NA TELA PARA AVANÇAR]", 0, 55);
+
+    ctx.restore();
+}
+
 
 function draw() {
     if(hitStop > 0) hitStop--; if(flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash/10})`; ctx.fillRect(0,0,canvas.width,canvas.height); flash--; } else { ctx.clearRect(0,0,canvas.width,canvas.height); }
@@ -769,6 +847,7 @@ function draw() {
     drawChatBubbles(); 
     drawSchematicMap(me); if (scouterActive) { drawNavigationMarkers(me); drawScouterHUD(me); } 
     drawLeaderboard(); drawMenu(); drawAnnouncement();
+    drawTutorial(); // DESENHA O TUTORIAL
 }
 function getTrailColor(e) {
     if (e.form === "SSJ" || e.form === "SSJ2") return "#ffea00";
