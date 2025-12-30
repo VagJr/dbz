@@ -122,26 +122,58 @@ function toggleChat(forceOpen = false) {
 
 window.addEventListener("keydown", e => {
     if (textInput.style.display === "block") return;
-
-    // evita repetição infinita ao segurar a tecla
     if (e.repeat) return;
 
     keys[e.code] = true;
 
-    if (e.code === "KeyG") {
-        window.socket.emit("transform");
-    }
+    switch (e.code) {
+        case "KeyG": // Transformar
+            socket.emit("transform");
+            break;
 
-    if (e.code === "KeyT") {
-        scouterActive = !scouterActive;
+        case "KeyT": // Scouter
+            scouterActive = !scouterActive;
+            break;
+
+        case "Space": // VANISH
+            e.preventDefault(); // MUITO IMPORTANTE
+            socket.emit("vanish");
+            break;
+
+        case "KeyR": // Rebirth
+            socket.emit("rebirth");
+            break;
+
+        case "KeyP": // PVP
+            socket.emit("toggle_pvp");
+            break;
+
+        case "Escape": // Menu
+            activeWindow = activeWindow ? null : "menu";
+            break;
+
+        case "Enter": // Chat
+            toggleChat(true);
+            break;
+
+        case "Tab": // Ranking
+            e.preventDefault();
+            activeWindow = activeWindow === "ranking" ? null : "ranking";
+            break;
     }
 });
 
 
 
+
+
+
 window.addEventListener("keyup", e => keys[e.code] = false);
 
-const btnPvp = document.getElementById("btn-pvp"); if (btnPvp) { btnPvp.addEventListener("touchstart", e => { e.preventDefault(); socket.emit("toggle_pvp"); btnPvp.classList.toggle("active"); }); btnPvp.addEventListener("click", () => { socket.emit("toggle_pvp"); btnPvp.classList.toggle("active"); }); }
+bindBtn('btn-pvp', () => {
+    socket.emit("toggle_pvp");
+});
+
 
 window.socket.on("auth_success", (data) => { myId = data.id; document.getElementById("login-screen").style.display = "none"; document.getElementById("ui").style.display = "block"; if (isMobile) { document.getElementById("mobile-ui").style.display = "block"; requestAnimationFrame(() => { initMobileControls(); }); } });
 
@@ -159,6 +191,13 @@ window.socket.on("fx", data => {
     if(data.type === "bp_limit") { texts.push({x: data.x, y: data.y - 100, text: data.text, color: "#ff0000", life: 150, vy: -0.5}); announcement = { text: data.text, life: 300, color: "#ff3300" }; screenShake = 20; }
     if(data.type === "emote") { texts.push({x: data.x, y: data.y - 60, text: data.icon, color: "#fff", life: 100, vy: -1, isEmote: true }); }
 });
+
+socket.on("pvp_status", enabled => {
+    const btn = document.getElementById("btn-pvp");
+    if (btn) btn.classList.toggle("active", enabled);
+
+    });
+
 
 let joystick = null;
 function initMobileControls() { if (!isMobile || !window.nipplejs) return; if (joystick) return; const zone = document.getElementById('joystick-container'); if (!zone) return; joystick = nipplejs.create({ zone, mode: 'static', position: { left: '50%', top: '50%' }, color: '#ff9900', size: 120 }); joystick.on('move', (evt, data) => { if (!data || !data.vector) return; joystickMove.x = data.vector.x; joystickMove.y = -data.vector.y; }); joystick.on('end', () => { joystickMove.x = 0; joystickMove.y = 0; }); }
@@ -315,10 +354,24 @@ function drawEntityHUD(e, sizeMult) {
         ctx.font = "12px Orbitron";
         ctx.fillText(`BP: ${e.bp.toLocaleString()}`, 5, 20);
         if (e.pvpMode) {
-            ctx.fillStyle = "#ff0000";
-            ctx.font = "bold 10px Arial";
-            ctx.fillText("PVP ON", 5, 32);
-        }
+    const pulse = 0.5 + Math.sin(Date.now() * 0.01) * 0.5;
+
+    ctx.fillStyle = `rgba(255,0,51,${0.6 + pulse * 0.4})`;
+    ctx.font = "bold 12px Orbitron";
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#ff0033";
+    ctx.fillText("⚔ PVP", 5, 34);
+    ctx.shadowBlur = 0;
+}
+if (e.pvpMode) {
+    ctx.strokeStyle = "#ff0033";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 42);
+    ctx.lineTo(100, 42);
+    ctx.stroke();
+}
+
     }
     ctx.restore();
 }

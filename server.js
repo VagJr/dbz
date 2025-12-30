@@ -218,7 +218,7 @@ function spawnBossAt(x, y, forcedType = null) {
     if(type.includes("BUU")) stats.color = "#fbb";
     if(type.includes("BLACK") || type.includes("ROSE")) stats.color = "#333";
     if(type.includes("JIREN") || type.includes("TOPPO")) stats.color = "#f22";
-    const boss = { id: "BOSS_" + type + "_" + Date.now(), name: type, isNPC: true, isBoss: true, x: Math.round(x), y: Math.round(y), vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 10000, maxKi: 10000, level: zone.level + 15, cancelWindow: 0, lastInputTime: 0, orbitDir: 1, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0, targetId: null };
+    const boss = { id: "BOSS_" + type + "_" + Date.now(), name: type, isNPC: true, isBoss: true, x: Math.round(x), y: Math.round(y), pvpMode: false, vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 10000, maxKi: 10000, level: zone.level + 15, cancelWindow: 0, lastInputTime: 0, orbitDir: 1, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0, targetId: null };
     npcs.push(boss);
     return boss;
 }
@@ -262,26 +262,27 @@ function packStateForPlayer(pid) {
         const pl = players[pid];
         if (pid === p.id || filterFunc(pl)) {
             packedPlayers[pid] = {
-                id: pl.id,
-                name: pl.name,
-                x: Math.round(pl.x),
-                y: Math.round(pl.y),
-                vx: Math.round(pl.vx),
-                vy: Math.round(pl.vy),
-                hp: pl.hp,
-                maxHp: pl.maxHp,
-                ki: pl.ki,
-                maxKi: pl.maxKi,
-                xp: pl.xp,
-                xpToNext: pl.xpToNext,
-                level: pl.level,
-                bp: pl.bp,
-                state: pl.state,
-                form: pl.form,
-                color: pl.color,
-                stun: pl.stun,
-                isSpirit: pl.isSpirit
-            };
+    id: pl.id,
+    name: pl.name,
+    x: Math.round(pl.x),
+    y: Math.round(pl.y),
+    vx: Math.round(pl.vx),
+    vy: Math.round(pl.vy),
+    hp: pl.hp,
+    maxHp: pl.maxHp,
+    ki: pl.ki,
+    maxKi: pl.maxKi,
+    xp: pl.xp,
+    xpToNext: pl.xpToNext,
+    level: pl.level,
+    bp: pl.bp,
+    state: pl.state,
+    form: pl.form,
+    color: pl.color,
+    stun: pl.stun,
+    isSpirit: pl.isSpirit,
+   pvpMode: pl.pvpMode
+};
         }
     }
     const visibleRocks = rocks.filter(filterFunc);
@@ -333,7 +334,17 @@ io.on("connection", (socket) => {
     } catch (err) { console.error("Erro no Login:", err); }
     });
 
-    socket.on("toggle_pvp", () => { const p = players[socket.id]; if(p) p.pvpMode = !p.pvpMode; });
+    socket.on("toggle_pvp", () => {
+    const p = players[socket.id];
+    if (!p || p.isDead || p.isSpirit) return;
+
+    p.pvpMode = !p.pvpMode;
+
+    // feedback opcional
+    socket.emit("pvp_status", p.pvpMode);
+});
+
+
     socket.on("set_title", (title) => { const p = players[socket.id]; if(p && p.titles.includes(title)) { p.current_title = title; if(isRender) pool.query('UPDATE users SET current_title=$1 WHERE name=$2', [title, p.name]).catch(console.error); } });
     socket.on("create_guild", (guildName) => { const p = players[socket.id]; if(p && !p.guild && guildName.length < 15) { p.guild = guildName; if(isRender) pool.query('UPDATE users SET guild=$1 WHERE name=$2', [guildName, p.name]).catch(console.error); io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "GUILDA CRIADA: " + guildName }); } });
 
@@ -391,6 +402,16 @@ io.on("connection", (socket) => {
             });
             target = best;
         }
+		// ======================================
+// 🚫 BLOQUEIA SOCO NO AR (ANTI-DASH)
+// ======================================
+if (!target) {
+    p.state = "IDLE";
+    p.combo = 0;
+    p.comboTimer = 0;
+    return; // ⛔ PARA AQUI
+}
+
         if (p.comboTimer <= 0) p.combo = 0;
         const COMBO_STEPS = [ { type: "RUSH", range: 220, selfSpd: 65, targetPush: 5, stun: 15, dmg: 1.0 }, { type: "HEAVY", range: 130, selfSpd: 30, targetPush: 8, stun: 15, dmg: 1.2 }, { type: "MULTI", range: 130, selfSpd: 40, targetPush: 5, stun: 15, dmg: 0.8 }, { type: "UPPER", range: 130, selfSpd: 20, targetPush: 10, stun: 18, dmg: 1.5 }, { type: "FINISH", range: 160, selfSpd: 10, targetPush: 180, stun: 35, dmg: 2.5 } ];
         if (p.combo >= COMBO_STEPS.length) p.combo = 0;
