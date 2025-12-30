@@ -246,7 +246,27 @@ function packStateForPlayer(pid) {
     for (const pid in players) {
         const pl = players[pid];
         if (pid === p.id || filterFunc(pl)) {
-            packedPlayers[pid] = { ...pl, x: Math.round(pl.x), y: Math.round(pl.y), vx: Math.round(pl.vx), vy: Math.round(pl.vy) };
+            packedPlayers[pid] = {
+    id: pl.id,
+    name: pl.name,
+    x: Math.round(pl.x),
+    y: Math.round(pl.y),
+    vx: Math.round(pl.vx),
+    vy: Math.round(pl.vy),
+    hp: pl.hp,
+    maxHp: pl.maxHp,
+    ki: pl.ki,
+    maxKi: pl.maxKi,
+    xp: pl.xp,
+    xpToNext: pl.xpToNext,
+    level: pl.level,
+    bp: pl.bp,
+    state: pl.state,
+    form: pl.form,
+    color: pl.color,
+    stun: pl.stun
+};
+
         }
     }
     const visibleRocks = rocks.filter(filterFunc);
@@ -290,7 +310,8 @@ io.on("connection", (socket) => {
             baseMaxHp: 1000 + user.level * 200, baseMaxKi: 100 + user.level * 10,
             hp: 1000 + user.level * 200, maxHp: 1000 + user.level * 200,
             ki: 100, maxKi: 100 + user.level * 10, form: "BASE", xpToNext,
-            state: "IDLE", combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk: 0,
+            state: "IDLE", lastHit: 0,
+stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk: 0,
             isDead: false, isSpirit: false, stun: 0, color: "#ff9900", chargeStart: 0,
             pvpMode: false, lastTransform: 0, bpCapped: false, pvp_kills: 0,
             reviveTimer: 0, linkId: null // Módulos Sociais
@@ -433,7 +454,9 @@ function handleKill(killer, victim) {
     if(victim.isNPC) {
         victim.isDead = true;
         if(!killer.isNPC) {
-            killer.hp = Math.min(killer.maxHp, killer.hp + (killer.maxHp * 0.2)); const xpGain = victim.level * 100; const xpReq = killer.level * 800; killer.xp += xpGain; io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: xpGain });
+            killer.hp = Math.min(killer.maxHp, killer.hp + (killer.maxHp * 0.2)); const xpGain = victim.level * 100; const xpReq = killer.level * 800; killer.xp += xpGain;
+killer.xpToNext = killer.level * 800;
+ io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: xpGain });
             if(killer.xp >= xpReq) { killer.level++; killer.xp = 0; killer.bp += 5000; clampBP(killer); killer.baseMaxHp += 1000; killer.baseMaxKi += 100; const stats = FORM_STATS[killer.form] || FORM_STATS["BASE"]; killer.maxHp = killer.baseMaxHp * stats.hpMult; killer.maxKi = killer.baseMaxKi * stats.kiMult; killer.hp = killer.maxHp; killer.ki = killer.maxKi; killer.xpToNext = killer.level * 800; io.emit("fx", { type: "levelup", x: killer.x, y: killer.y }); if(isRender) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [killer.level, killer.xp, killer.bp, killer.name]).catch(e => console.error(e)); }
         }
         setTimeout(() => { npcs = npcs.filter(n => n.id !== victim.id); spawnMobRandomly(); }, 5000);
@@ -471,7 +494,9 @@ setInterval(() => {
         p.x += p.vx; p.y += p.vy; p.vx *= 0.82; p.vy *= 0.82; 
         if (!p.isDead && !p.isSpirit) {
             p.bp += 1 + Math.floor(p.level * 0.1); clampBP(p);
-            if (p.state === "CHARGING") { if (Math.random() > 0.85) { p.xp += 1; p.bp += 5; clampBP(p); } const xpReq = p.level * 800; if(p.xp >= xpReq) { p.level++; p.xp = 0; p.bp += 5000; clampBP(p); p.baseMaxHp += 1000; p.baseMaxKi += 100; const stats = FORM_STATS[p.form] || FORM_STATS["BASE"]; p.maxHp = p.baseMaxHp * stats.hpMult; p.maxKi = p.baseMaxKi * stats.kiMult; p.hp = p.maxHp; p.ki = p.maxKi; p.xpToNext = p.level * 800; io.emit("fx", { type: "levelup", x: p.x, y: p.y }); if(isRender) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [p.level, p.xp, p.bp, p.name]).catch(e => console.error(e)); } } 
+            if (p.state === "CHARGING") { if (Math.random() > 0.85) { p.xp += 1;
+p.xpToNext = p.level * 800;
+ p.bp += 5; clampBP(p); } const xpReq = p.level * 800; if(p.xp >= xpReq) { p.level++; p.xp = 0; p.bp += 5000; clampBP(p); p.baseMaxHp += 1000; p.baseMaxKi += 100; const stats = FORM_STATS[p.form] || FORM_STATS["BASE"]; p.maxHp = p.baseMaxHp * stats.hpMult; p.maxKi = p.baseMaxKi * stats.kiMult; p.hp = p.maxHp; p.ki = p.maxKi; p.xpToNext = p.level * 800; io.emit("fx", { type: "levelup", x: p.x, y: p.y }); if(isRender) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [p.level, p.xp, p.bp, p.name]).catch(e => console.error(e)); } } 
             else if(p.ki < p.maxKi && p.state === "IDLE") { p.ki += 0.5; }
             const distToKingKai = Math.hypot(p.x - 0, p.y + 20000); if (distToKingKai < 1500) { p.hp = Math.min(p.maxHp, p.hp + (p.maxHp * 0.05)); p.ki = Math.min(p.maxKi, p.ki + (p.maxKi * 0.05)); }
         }
@@ -625,9 +650,10 @@ else if (hpPerc <= BOSS_PHASES.PHASE_2.hp) n.phase = 2;
         n.vy -= Math.sin(ang) * 1.4;
 
     } else if (
-    Date.now() - n.lastAtk > (n.isBoss ? 650 : 650) &&
-    target.stun <= 0
+    Date.now() - n.lastAtk > 650 &&
+    (!target.lastHit || Date.now() - target.lastHit > 400)
 ) {
+
 
         n.lastAtk = Date.now();
         n.state = "ATTACKING";
@@ -635,16 +661,21 @@ else if (hpPerc <= BOSS_PHASES.PHASE_2.hp) n.phase = 2;
         let dmg = (n.level * 10) + (n.isBoss ? 100 : 30);
 
         if (target.state === "BLOCKING") {
-            dmg *= 0.3;
-            target.ki -= 14;
-            target.counterWindow = 14;
-        }
-
-        target.hp -= dmg;
-        if (!target.stunImmune || Date.now() > target.stunImmune) {
-    target.stun = n.isBoss ? 10 : 12;
-    target.stunImmune = Date.now() + 700; // 0.7s de imunidade
+    dmg *= 0.3;
+    target.ki -= 14;
+    target.counterWindow = 14;
 }
+
+target.hp -= dmg;
+if (target.hp < 0) target.hp = 0;
+
+target.lastHit = Date.now();
+
+if (!target.stunImmune || Date.now() > target.stunImmune) {
+    target.stun = n.isBoss ? 10 : 4;
+    target.stunImmune = Date.now() + 700;
+}
+
 
 
         // PUSH CONTROLADO (SEM LOCK)
@@ -693,7 +724,11 @@ else if (hpPerc <= BOSS_PHASES.PHASE_2.hp) n.phase = 2;
             if (!hit && t.id !== pr.owner && !t.isSpirit && !t.isDead) {
                 if(Math.abs(pr.x - t.x) > 150 || Math.abs(pr.y - t.y) > 150) return;
                 const dist = Math.hypot(pr.x - t.x, pr.y - t.y);
-                if (dist < (45 + pr.size)) { if(!t.isNPC && !pr.pvp) return; if(t.isNPC) t.targetId = pr.owner; let dmg = pr.dmg; if (!t.isNPC) dmg *= 0.5; t.hp -= dmg; t.stun = 8; hit = true; io.emit("fx", { type: pr.isSuper ? "heavy" : "hit", x: pr.x, y: pr.y, dmg: Math.floor(dmg) }); const owner = players[pr.owner] || npcs.find(n => n.id === pr.owner) || {}; if (t.hp <= 0) handleKill(owner, t); }
+                if (dist < (45 + pr.size)) { if(!t.isNPC && !pr.pvp) return; if(t.isNPC) t.targetId = pr.owner; let dmg = pr.dmg; if (!t.isNPC) dmg *= 0.5; if (!t.lastHit || Date.now() - t.lastHit > 300) {
+    t.hp -= dmg; if (t.hp < 0) t.hp = 0;
+    t.stun = 6;
+    t.lastHit = Date.now();
+} hit = true; io.emit("fx", { type: pr.isSuper ? "heavy" : "hit", x: pr.x, y: pr.y, dmg: Math.floor(dmg) }); const owner = players[pr.owner] || npcs.find(n => n.id === pr.owner) || {}; if (t.hp <= 0) handleKill(owner, t); }
             }
         });
         if(!hit) { for(let rIdx = rocks.length-1; rIdx >= 0; rIdx--) { let r = rocks[rIdx]; if(Math.abs(pr.x - r.x) > 150 || Math.abs(pr.y - r.y) > 150) continue; const dist = Math.hypot(pr.x - r.x, pr.y - r.y); if(dist < (r.r + pr.size)) { hit = true; r.hp -= pr.dmg; io.emit("fx", { type: "hit", x: pr.x, y: pr.y, dmg: Math.floor(pr.dmg) }); if(r.hp <= 0) { rocks.splice(rIdx, 1); io.emit("fx", { type: "heavy", x: r.x, y: r.y }); craters.push({ x: r.x, y: r.y, r: r.r, life: 1000 }); } break; } } }

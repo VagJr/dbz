@@ -343,7 +343,9 @@ function update() {
     if(me) {
         document.getElementById("hp-bar").style.width = (me.hp/me.maxHp)*100 + "%";
         document.getElementById("ki-bar").style.width = (me.ki/me.maxKi)*100 + "%";
-        document.getElementById("xp-bar").style.width = (me.xp / (me.level*800*(me.rebirth+1))) * 100 + "%";
+        document.getElementById("xp-bar").style.width =
+  (me.xp / me.xpToNext) * 100 + "%";
+
         
         let zoneName = "ESPAÇO SIDERAL";
         if (Math.hypot(me.x, me.y) < 6000) zoneName = "PLANETA TERRA";
