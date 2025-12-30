@@ -27,6 +27,13 @@ textInput.type = "text"; textInput.style.cssText = "position:absolute; bottom:20
 textInput.placeholder = "Digite...";
 document.body.appendChild(textInput);
 
+textInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+        toggleChat();
+    }
+});
+
+
 const dustParticles = [];
 for(let i=0; i<60; i++) { dustParticles.push({ x: Math.random() * 2000, y: Math.random() * 1000, size: Math.random() * 1.5, vx: (Math.random()-0.5)*0.2, vy: (Math.random()-0.5)*0.2, alpha: Math.random() * 0.5 + 0.1 }); }
 
@@ -50,6 +57,24 @@ bindBtn('btn-charge', () => keys['KeyC']=true, () => delete keys['KeyC']);
 bindBtn('btn-vanish', () => socket.emit('vanish'));
 bindBtn('btn-transform', () => socket.emit('transform'));
 bindBtn('btn-scouter', () => { scouterActive = !scouterActive; });
+bindBtn('btn-ranking', () => {
+    activeWindow = activeWindow === "ranking" ? null : "ranking";
+});
+
+bindBtn('btn-guild', () => {
+    activeWindow = "menu";
+    onMenuOption("guild");
+});
+
+bindBtn('btn-title', () => {
+    activeWindow = "menu";
+    onMenuOption("title");
+});
+
+bindBtn('btn-rebirth', () => {
+    socket.emit("rebirth");
+});
+
 
 const btnMenu = document.getElementById("btn-menu"); if(btnMenu) btnMenu.onclick = () => { activeWindow = activeWindow ? null : 'menu'; }
 const btnChat = document.getElementById("btn-chat"); if(btnChat) btnChat.onclick = () => { toggleChat(); }
@@ -61,32 +86,50 @@ window.addEventListener("contextmenu", e => e.preventDefault());
 window.addEventListener("mousemove", e => { mouse.x = (e.clientX - window.innerWidth / 2) / ZOOM_SCALE; mouse.y = (e.clientY - window.innerHeight / 2) / ZOOM_SCALE; });
 window.addEventListener("mousedown", e => { if(e.button === 0) mouseLeft = true; if(e.button === 2) mouseRight = true; if(activeWindow && mouse.x > 200 || mouse.x < -200) activeWindow = null; });
 window.addEventListener("mouseup", e => { if(e.button === 0) { mouseLeft = false; window.socket.emit("release_attack"); } if(e.button === 2) { mouseRight = false; window.socket.emit("release_blast"); } });
+canvas.addEventListener("touchstart", e => {
+    if (!activeWindow) return;
 
-function toggleChat() {
-    if(textInput.style.display === "block") {
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    handleCanvasUIInteraction(x, y);
+    e.preventDefault();
+}, { passive: false });
+
+function toggleChat(forceOpen = false) {
+    // FECHAR + ENVIAR
+    if (textInput.style.display === "block" && !forceOpen) {
         const msg = textInput.value.trim();
-        if(msg) {
-            if(msg.startsWith("/guild ")) socket.emit("create_guild", msg.replace("/guild ",""));
-            else if(msg.startsWith("/title ")) socket.emit("set_title", msg.replace("/title ",""));
-            else socket.emit("chat", msg);
+
+        if (msg) {
+            socket.emit("chat", msg);
         }
-        textInput.value = ""; textInput.style.display = "none";
-    } else { textInput.style.display = "block"; textInput.focus(); keys = {}; }
+
+        textInput.value = "";
+        textInput.style.display = "none";
+        textInput.blur();
+        return;
+    }
+
+    // ABRIR
+    textInput.style.display = "block";
+    textInput.placeholder = "Digite sua mensagem...";
+    textInput.focus();
+    Object.keys(keys).forEach(k => keys[k] = false);
+
 }
 
-window.addEventListener("keydown", e => { 
-    if(textInput.style.display === "block") { if(e.code === "Enter") toggleChat(); return; }
-    keys[e.code] = true; 
-    if(e.code === "Space") window.socket.emit("vanish"); 
-    if(e.code === "KeyG") window.socket.emit("transform"); 
-    if(e.code === "KeyT") scouterActive = !scouterActive; 
-    if(e.code === "KeyM") showMap = !showMap; 
-    if(e.code === "KeyP") window.socket.emit("toggle_pvp"); 
-    if(e.code === "KeyR") window.socket.emit("rebirth"); // Atalho Rebirth
-    if(e.code === "Enter") toggleChat();
-    if(e.key === "1") socket.emit("emote", "😁"); if(e.key === "2") socket.emit("emote", "😡"); if(e.key === "3") socket.emit("emote", "🆘"); if(e.key === "4") socket.emit("emote", "⚔️");
-    if(e.code === "Escape") activeWindow = null;
+window.addEventListener("keydown", e => {
+    // ignora quando digitando no chat
+    if (textInput.style.display === "block") return;
+
+    keys[e.code] = true;
 });
+
+
 window.addEventListener("keyup", e => keys[e.code] = false);
 
 const btnPvp = document.getElementById("btn-pvp"); if (btnPvp) { btnPvp.addEventListener("touchstart", e => { e.preventDefault(); socket.emit("toggle_pvp"); btnPvp.classList.toggle("active"); }); btnPvp.addEventListener("click", () => { socket.emit("toggle_pvp"); btnPvp.classList.toggle("active"); }); }
@@ -110,6 +153,51 @@ window.socket.on("fx", data => {
 
 let joystick = null;
 function initMobileControls() { if (!isMobile || !window.nipplejs) return; if (joystick) return; const zone = document.getElementById('joystick-container'); if (!zone) return; joystick = nipplejs.create({ zone, mode: 'static', position: { left: '50%', top: '50%' }, color: '#ff9900', size: 120 }); joystick.on('move', (evt, data) => { if (!data || !data.vector) return; joystickMove.x = data.vector.x; joystickMove.y = -data.vector.y; }); joystick.on('end', () => { joystickMove.x = 0; joystickMove.y = 0; }); }
+function handleCanvasUIInteraction(x, y) {
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    if (activeWindow === "menu") {
+        // áreas clicáveis do menu
+        const options = [
+            { name: "ranking", y: cy - 100 },
+            { name: "guild",   y: cy - 50 },
+            { name: "title",   y: cy },
+            { name: "rebirth", y: cy + 50 }
+        ];
+
+        for (const opt of options) {
+            if (Math.abs(y - opt.y) < 20 && Math.abs(x - cx) < 140) {
+                onMenuOption(opt.name);
+                return;
+            }
+        }
+    }
+
+    if (activeWindow === "ranking") {
+        activeWindow = null;
+    }
+}
+function onMenuOption(option) {
+    if (option === "ranking") {
+        activeWindow = "ranking";
+    }
+
+    if (option === "guild") {
+        textInput.placeholder = "Digite: /guild NomeDaGuilda";
+        toggleChat();
+    }
+
+    if (option === "title") {
+        textInput.placeholder = "Digite: /title MeuTitulo";
+        toggleChat();
+    }
+
+    if (option === "rebirth") {
+        socket.emit("rebirth");
+        activeWindow = null;
+    }
+}
 
 function drawBackground(camX, camY) {
     const viewW = canvas.width / ZOOM_SCALE; const viewH = canvas.height / ZOOM_SCALE; const buffer = 1000; const startX = camX - viewW / 2 - buffer; const startY = camY - viewH / 2 - buffer; const width = viewW + buffer * 2; const height = viewH + buffer * 2; const endX = startX + width; const endY = startY + height;
@@ -149,28 +237,334 @@ function drawOtherWorld(camX, camY) {
 
 function drawDominationZones() { dominationZones.forEach(z => { ctx.save(); ctx.translate(z.x, z.y); ctx.beginPath(); ctx.arc(0, 0, z.radius, 0, Math.PI*2); ctx.strokeStyle = z.owner ? "#00ff00" : "#ffaa00"; if(z.state === "WAR") ctx.strokeStyle = "#ff0000"; ctx.lineWidth = 10; ctx.setLineDash([20, 10]); ctx.stroke(); if(z.progress > 0) { ctx.globalAlpha = 0.3; ctx.fillStyle = z.owner ? "#00ff00" : "#ffff00"; ctx.beginPath(); ctx.arc(0, 0, z.radius * (z.progress/100), 0, Math.PI*2); ctx.fill(); } ctx.font = "bold 40px Orbitron"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText(z.name, 0, -z.radius - 20); ctx.font = "20px Orbitron"; if(z.owner) { ctx.fillStyle = "#00ff00"; ctx.fillText(`DOMINADO: ${z.owner} [${z.guild || "SOLO"}]`, 0, -z.radius + 10); } else { ctx.fillStyle = "#ccc"; ctx.fillText(`NEUTRO - ${z.progress}%`, 0, -z.radius + 10); } ctx.restore(); }); }
 
-function drawEntity(e) {
-    if(e.isDead && e.isNPC) return;
-    const isSpirit = e.isSpirit;
-    const sizeMult = e.isBoss ? 4.0 : 1; 
-    let auraColor = "#00ffff"; 
-    if(e.color) auraColor = e.color; if(e.form === "SSJ" || e.form === "SSJ2") auraColor = "#ffea00"; if(e.form === "SSJ3") auraColor = "#ffcc00"; if(e.form === "GOD") auraColor = "#ff0000"; if(e.form === "BLUE") auraColor = "#00bbff"; if(e.form === "UI") auraColor = "#ffffff";
-    if(e.name) { if(e.name.includes("BLACK") || e.name.includes("ROSE")) auraColor = "#ff0088"; if(e.name.includes("BROLY") || e.name.includes("KEFLA")) auraColor = "#00ff00"; if(e.name.includes("GOMAH") || e.name.includes("DEMON")) auraColor = "#9900ff"; if(e.name.includes("TOPPO") || e.name.includes("EGO")) auraColor = "#8800ff"; }
-    if(hitStop <= 0 && (Math.hypot(e.vx, e.vy) > 10)) { trails.push({ x: e.x, y: e.y, angle: e.angle, color: auraColor, alpha: 0.4, sizeMult }); }
-    if(e.linkId) { const target = players[e.linkId]; if(target) { ctx.save(); ctx.strokeStyle = auraColor; ctx.lineWidth = 4; ctx.shadowBlur = 20; ctx.shadowColor = auraColor; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(target.x, target.y); ctx.stroke(); ctx.restore(); } }
-    ctx.save(); ctx.translate(e.x, e.y); 
-    if(e.form !== "BASE" || e.state === "CHARGING") { ctx.shadowBlur = 20; ctx.shadowColor = auraColor; }
-    if (isSpirit) { ctx.save(); ctx.translate(0, -50 * sizeMult); ctx.shadowBlur = 15; ctx.shadowColor = "#fff"; ctx.strokeStyle = "rgba(255, 255, 255, 0.9)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, 0, 15 * sizeMult, 5 * sizeMult, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
-    if (e.state === "CHARGING") { ctx.save(); const pulse = Math.sin(Date.now() / 50) * 0.1 + 1; const auraSize = 50 * sizeMult * pulse; const grd = ctx.createRadialGradient(0, 0, 10, 0, 0, auraSize); grd.addColorStop(0, "rgba(255, 255, 255, 0.9)"); grd.addColorStop(0.4, auraColor); grd.addColorStop(1, "rgba(0, 0, 0, 0)"); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(0, -10, auraSize, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); for(let i=0; i<3; i++) { const angle = Math.random() * Math.PI * 2; const d = Math.random() * auraSize; ctx.moveTo(0, -10); ctx.lineTo(Math.cos(angle)*d, -10+Math.sin(angle)*d); } ctx.stroke(); ctx.restore(); }
-    if (!scouterActive && !isSpirit) { ctx.save(); ctx.translate(30 * sizeMult, -50 * sizeMult); ctx.transform(1, -0.2, 0, 1, 0, 0); ctx.strokeStyle = "rgba(0, 255, 255, 0.4)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-30, 20); ctx.lineTo(0, 0); ctx.lineTo(100, 0); ctx.stroke(); ctx.fillStyle = e.isBoss ? "#ff3333" : "#00ffff"; ctx.font = "bold 20px Orbitron"; ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle; ctx.fillText(`${e.name.substring(0,12)}`, 5, -8); if(!e.isNPC) { ctx.font = "italic 12px Arial"; ctx.fillStyle = "#ffcc00"; let titleText = `<${e.current_title || 'Novato'}>`; if(e.guild) titleText = `[${e.guild}] ` + titleText; ctx.fillText(titleText, 5, -28); } const hpPerc = Math.max(0, e.hp / e.maxHp); ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 5, 100, 6); ctx.fillStyle = e.isBoss ? "#f00" : (e.isNPC ? "#fa0" : "#0f0"); ctx.shadowBlur = 0; ctx.fillRect(0, 5, 100 * hpPerc, 6); if(!e.isNPC) { ctx.fillStyle = "#fff"; ctx.font = "12px Orbitron"; ctx.fillText(`BP: ${e.bp.toLocaleString()}`, 5, 20); if(e.pvpMode) { ctx.fillStyle = "#f00"; ctx.font = "bold 10px Arial"; ctx.fillText("PVP ON", 5, 32); } } ctx.restore(); }
-    if(isSpirit && e.reviveTimer && e.reviveTimer > 0) { ctx.fillStyle = "#0f0"; ctx.font = "bold 20px Arial"; ctx.fillText("SOS", 0, -60); }
-    ctx.rotate(e.angle); ctx.lineWidth = 2; ctx.strokeStyle = "#000";
-    ctx.fillStyle = e.color; ctx.beginPath(); ctx.rect(-15*sizeMult, -12*sizeMult, 30*sizeMult, 24*sizeMult); ctx.fill(); ctx.stroke(); 
-    ctx.fillStyle = e.isNPC ? (e.isBoss ? "#311" : "#2d2") : "#ffdbac"; if(e.name && (e.name.includes("FRIEZA"))) ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, -5*sizeMult, 12*sizeMult, 0, Math.PI*2); ctx.fill(); ctx.stroke(); 
-    if(!e.isNPC) { let hColor = "#111"; if(e.form.includes("SSJ")) hColor = "#ffea00"; if(e.form==="GOD") hColor="#f00"; if(e.form==="BLUE") hColor="#00bbff"; ctx.fillStyle = hColor; for(let i=0; i<3; i++) { ctx.beginPath(); ctx.moveTo(-10*sizeMult, -10*sizeMult); ctx.lineTo((-15+i*15)*sizeMult, -35*sizeMult); ctx.lineTo((10)*sizeMult, -10*sizeMult); ctx.fill(); ctx.stroke(); } }
-    if(e.state === "BLOCKING") { ctx.strokeStyle = "rgba(100,200,255,0.7)"; ctx.lineWidth = 4; ctx.shadowBlur = 15; ctx.shadowColor = "#00ffff"; ctx.beginPath(); ctx.arc(0,0, 40*sizeMult, -1, 1); ctx.stroke(); }
+// ============================================================================
+// NOVA RENDERIZAÇÃO: MINI WARRIORS Z (PROCEDURAL ANIMATED)
+// ============================================================================
+
+// ===============================
+// MINI DBZ WARRIOR (PROCEDURAL)
+// ===============================
+
+function drawEntityHUD(e, sizeMult) {
+    if (e.isSpirit) return;
+
+
+    ctx.save();
+
+    // ===============================
+    // POSIÇÃO + EIXO DIAGONAL (PROJEÇÃO)
+    // ===============================
+    ctx.translate(30 * sizeMult, -50 * sizeMult);
+    ctx.transform(1, -0.22, 0, 1, 0, 0); // 🔥 eixo holográfico
+
+    const mainColor = e.isBoss
+        ? "#ff3333"
+        : (e.isNPC ? "#ffaa00" : "#00ffff");
+
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = mainColor;
+
+    // ===============================
+    // LINHAS DE SUPORTE DO HOLOGRAMA
+    // ===============================
+    ctx.strokeStyle = "rgba(0,255,255,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-30, 20);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(110, 0);
+    ctx.stroke();
+
+    // ===============================
+    // NOME
+    // ===============================
+    ctx.fillStyle = mainColor;
+    ctx.font = "bold 20px Orbitron";
+    ctx.fillText(e.name?.substring(0, 12) || "???", 5, -8);
+
+    // ===============================
+    // GUILD / TÍTULO
+    // ===============================
+    if (!e.isNPC) {
+        ctx.font = "italic 12px Arial";
+        ctx.fillStyle = "#ffcc00";
+        let title = `<${e.current_title || "Novato"}>`;
+        if (e.guild) title = `[${e.guild}] ` + title;
+        ctx.fillText(title, 5, -28);
+    }
+
+    // ===============================
+    // BARRA DE VIDA (HOLOGRÁFICA)
+    // ===============================
+    const hpPerc = Math.max(0, e.hp / e.maxHp);
+
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0, 5, 100, 6);
+
+    ctx.fillStyle = e.isBoss
+        ? "#ff0000"
+        : (e.isNPC ? "#ffaa00" : "#00ff00");
+
+    ctx.shadowBlur = 0;
+    ctx.fillRect(0, 5, 100 * hpPerc, 6);
+
+    // ===============================
+    // BP
+    // ===============================
+    if (!e.isNPC) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "12px Orbitron";
+        ctx.fillText(`BP: ${e.bp.toLocaleString()}`, 5, 20);
+
+        if (e.pvpMode) {
+            ctx.fillStyle = "#ff0000";
+            ctx.font = "bold 10px Arial";
+            ctx.fillText("PVP ON", 5, 32);
+        }
+    }
+
     ctx.restore();
 }
+
+
+function drawMiniWarrior(e, sizeMult) {
+    const time = Date.now();
+    let skinColor = "#ffdbac"; 
+    let giColor = e.color || "#ff6600";
+    let beltColor = "#0000aa";
+    let hairColor = "#1a1a1a";
+    let eyeColor = "#000";
+    let auraColor = null;
+    let lightning = false;
+
+    // Definição de Cores e Formas
+    if (e.form === "SSJ" || e.form === "SSJ2") {
+        hairColor = "#ffeb3b"; eyeColor = "#00ffff";
+        auraColor = "rgba(255,235,59,0.5)";
+        if (e.form === "SSJ2") lightning = true;
+    } else if (e.form === "SSJ3") {
+        hairColor = "#ffcc00"; eyeColor = "#00ffff";
+        auraColor = "rgba(255,170,0,0.6)";
+        lightning = true;
+    } else if (e.form === "GOD") {
+        hairColor = "#ff0055"; eyeColor = "#ff0055";
+        auraColor = "rgba(255,0,80,0.5)";
+        skinColor = "#ffe0e0";
+    } else if (e.form === "BLUE") {
+        hairColor = "#00e5ff"; eyeColor = "#00e5ff";
+        auraColor = "rgba(0,229,255,0.6)";
+    } else if (e.form === "UI") {
+        hairColor = "#e0e0e0"; eyeColor = "#c0c0c0";
+        auraColor = "rgba(255,255,255,0.8)";
+        giColor = "#ff4400";
+    }
+
+    const breathe = Math.sin(time * 0.005) * 1.5;
+    const speed = Math.hypot(e.vx, e.vy);
+    const lean = Math.min(speed * 0.5, 10);
+
+    ctx.rotate(e.angle);
+
+    // 1. AURA (Sempre no fundo)
+    if ((auraColor || e.state === "CHARGING") && !e.isDead) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const pulse = 1 + Math.sin(time * 0.02) * 0.15;
+        const auraSize = 45 * sizeMult * pulse;
+        const grd = ctx.createRadialGradient(0, 0, 10, 0, 0, auraSize);
+        grd.addColorStop(0, auraColor || "rgba(255,255,255,0.8)");
+        grd.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(0, 0, auraSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // 2. CORPO E CINTO
+    ctx.fillStyle = giColor;
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-14 * sizeMult - lean, -12 * sizeMult);
+    ctx.lineTo(14 * sizeMult - lean, -12 * sizeMult);
+    ctx.lineTo(10 * sizeMult, 12 * sizeMult);
+    ctx.lineTo(-10 * sizeMult, 12 * sizeMult);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = beltColor;
+    ctx.fillRect(-10 * sizeMult, 8 * sizeMult, 20 * sizeMult, 4 * sizeMult);
+
+    // 3. CABEÇA (ROSTO) - Agora desenhado ANTES do cabelo
+    ctx.save();
+    ctx.translate(-lean, breathe);
+
+    // Pele
+    ctx.fillStyle = skinColor;
+    ctx.beginPath();
+    ctx.arc(0, 0, 11 * sizeMult, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Olhos (Estilo Z: mais sérios e angulares)
+    ctx.fillStyle = (e.form && e.form !== "Base") ? eyeColor : "#fff";
+    ctx.beginPath();
+    // Olho Direito
+    ctx.moveTo(2 * sizeMult, -4 * sizeMult);
+    ctx.lineTo(7 * sizeMult, -5 * sizeMult);
+    ctx.lineTo(6 * sizeMult, -1 * sizeMult);
+    ctx.closePath();
+    // Olho Esquerdo
+    ctx.moveTo(2 * sizeMult, 4 * sizeMult);
+    ctx.lineTo(7 * sizeMult, 5 * sizeMult);
+    ctx.lineTo(6 * sizeMult, 1 * sizeMult);
+    ctx.closePath();
+    ctx.fill();
+
+    // 4. CABELO (POR CIMA DO ROSTO)
+    ctx.fillStyle = hairColor;
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+
+    if (e.form === "SSJ3") {
+        // SSJ3: Cabelo massivo que cobre as costas
+        ctx.moveTo(-8, -5);
+        ctx.quadraticCurveTo(-25 * sizeMult, 5, -5 * sizeMult, 35 * sizeMult); // Mecha longa descendo
+        ctx.lineTo(5 * sizeMult, 35 * sizeMult);
+        ctx.quadraticCurveTo(25 * sizeMult, 5, 8 * sizeMult, -5 * sizeMult);
+        ctx.lineTo(10 * sizeMult, -12 * sizeMult);
+        ctx.lineTo(0, -20 * sizeMult);
+        ctx.lineTo(-10 * sizeMult, -12 * sizeMult);
+    } else if (e.form && e.form !== "Base") {
+        // SSJ, Blue, God: Espetos para cima (V de Vegeta/Goku)
+        ctx.moveTo(-11 * sizeMult, -2 * sizeMult); // Base orelha esq
+        ctx.lineTo(-16 * sizeMult, -15 * sizeMult); // Espeto 1
+        ctx.lineTo(-8 * sizeMult, -8 * sizeMult);
+        ctx.lineTo(-6 * sizeMult, -25 * sizeMult); // Espeto 2 (Alto)
+        ctx.lineTo(0, -12 * sizeMult);
+        ctx.lineTo(6 * sizeMult, -25 * sizeMult);  // Espeto 3 (Alto)
+        ctx.lineTo(8 * sizeMult, -8 * sizeMult);
+        ctx.lineTo(16 * sizeMult, -15 * sizeMult); // Espeto 4
+        ctx.lineTo(11 * sizeMult, -2 * sizeMult);  // Base orelha dir
+        // Franja (O segredo para ficar na frente do rosto)
+        ctx.lineTo(5 * sizeMult, -2 * sizeMult);
+        ctx.lineTo(0, 4 * sizeMult); // Mecha no meio da testa
+        ctx.lineTo(-5 * sizeMult, -2 * sizeMult);
+    } else {
+        // BASE: Cabelo espetado clássico mas com volume lateral
+        ctx.moveTo(-11 * sizeMult, 2 * sizeMult);
+        ctx.lineTo(-18 * sizeMult, -8 * sizeMult); // Ponta lateral esq
+        ctx.lineTo(-9 * sizeMult, -5 * sizeMult);
+        ctx.lineTo(-12 * sizeMult, -22 * sizeMult); // Ponta topo esq
+        ctx.lineTo(-2 * sizeMult, -10 * sizeMult);
+        ctx.lineTo(8 * sizeMult, -20 * sizeMult);  // Ponta topo dir
+        ctx.lineTo(6 * sizeMult, -5 * sizeMult);
+        ctx.lineTo(16 * sizeMult, -2 * sizeMult);  // Ponta lateral dir
+        ctx.lineTo(10 * sizeMult, 6 * sizeMult);
+        // Pequena mecha na testa
+        ctx.lineTo(3 * sizeMult, 1 * sizeMult);
+        ctx.lineTo(0, 5 * sizeMult);
+        ctx.lineTo(-3 * sizeMult, 1 * sizeMult);
+    }
+
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore(); // Fecha o translate do rosto/cabelo
+}
+function drawEntity(e) {
+    if (!e) return;
+    if (e.isDead && e.isNPC) return;
+
+    const sizeMult = e.isBoss ? 4 : 1;
+
+    ctx.save();
+    ctx.translate(e.x, e.y);
+
+    // ===============================
+    // CORPO (ROTACIONA)
+    // ===============================
+    ctx.save();
+    ctx.rotate(e.angle);
+    drawMiniWarrior(e, sizeMult);
+    ctx.restore();
+
+    // ===============================
+    // HUD (NÃO ROTACIONA)
+    // ===============================
+    ctx.save();
+    drawEntityHUD(e, sizeMult);
+    ctx.restore();
+
+    // ===============================
+    // BLOQUEIO (CORRIGIDO: GIRA 360°)
+    // ===============================
+    if (e.state === "BLOCKING") {
+    ctx.save();
+
+    let blockAngle = e.angle;
+
+    // 🖱️ PC: usa mouse
+    if (e.id === myId && !isMobile) {
+        blockAngle = Math.atan2(mouse.y, mouse.x);
+    }
+
+    // 📱 MOBILE: usa direção do joystick
+    if (e.id === myId && isMobile) {
+        if (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1) {
+            blockAngle = Math.atan2(joystickMove.y, joystickMove.x);
+        }
+    }
+
+    ctx.rotate(blockAngle);
+
+    ctx.strokeStyle = "rgba(100,200,255,0.85)";
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#00ffff";
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 30 * sizeMult, -1, 1);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
+
+    // ===============================
+    // RASTRO (CONTROLADO – NÃO TRAVA)
+    // ===============================
+    const speedTrail = Math.hypot(e.vx, e.vy);
+
+    if (
+        hitStop <= 0 &&
+        speedTrail > 8 &&
+        (!e.lastTrail || performance.now() - e.lastTrail > 80)
+    ) {
+        e.lastTrail = performance.now();
+
+        if (trails.length < 100) {
+            trails.push({
+                x: e.x,
+                y: e.y,
+                angle: e.angle,
+                color: getTrailColor(e),
+                alpha: 0.35,
+                sizeMult
+            });
+        }
+    }
+
+    ctx.restore();
+}
+
+
+
 
 function drawScouterHUD(me) {
     if (!me) return; const W = canvas.width; const H = canvas.height; const cx = W / 2; const cy = H / 2; const time = Date.now();
@@ -243,9 +637,18 @@ function drawLeaderboard() {
     ctx.fillText("TOP GUERREIROS", x + w / 2, y + 35);
 
     ctx.font = "16px Orbitron";
+
     leaderboard.forEach((p, i) => {
+        // 🔥 BP ROBUSTO (NUNCA undefined)
+        const bp =
+            p.bp ??
+            p.power ??
+            p.powerLevel ??
+            p.bpTotal ??
+            0;
+
         ctx.fillText(
-            `${i + 1}. ${p.name} - BP ${p.bp}`,
+            `${i + 1}. ${p.name || "???"} - BP ${bp.toLocaleString()}`,
             x + w / 2,
             y + 80 + i * 28
         );
@@ -253,6 +656,7 @@ function drawLeaderboard() {
 
     ctx.restore();
 }
+
 
 
 function drawChatBubbles() {
@@ -333,6 +737,14 @@ function draw() {
     drawChatBubbles(); 
     drawSchematicMap(me); if (scouterActive) { drawNavigationMarkers(me); drawScouterHUD(me); } 
     drawLeaderboard(); drawMenu(); drawAnnouncement();
+}
+function getTrailColor(e) {
+    if (e.form === "SSJ" || e.form === "SSJ2") return "#ffea00";
+    if (e.form === "SSJ3") return "#ffcc00";
+    if (e.form === "GOD") return "#ff0033";
+    if (e.form === "BLUE") return "#00bbff";
+    if (e.form === "UI") return "#ffffff";
+    return e.color || "#00ffff";
 }
 
 let lastInputSent = 0;
