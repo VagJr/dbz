@@ -294,6 +294,228 @@ function drawEntityHUD(e, sizeMult) {
     ctx.restore();
 }
 
+// ==========================================
+// NOVOS MODELOS DE MOBS (VISUAL ANIME)
+// ==========================================
+function drawMobModel(e, sizeMult) {
+    const name = e.name.toUpperCase();
+    const time = Date.now();
+    const breathe = Math.sin(time * 0.005) * 1.5;
+
+    // --- 1. SAIBAMAN (Pequeno, Verde, Cabeça Grande) ---
+    if (name.includes("SAIBAMAN")) {
+        // Corpo pequeno
+        ctx.fillStyle = "#2d2"; // Verde escuro
+        ctx.strokeStyle = "#050";
+        ctx.lineWidth = 1;
+        
+        // Braços/Pernas agachados
+        ctx.beginPath();
+        ctx.arc(-5 * sizeMult, -8 * sizeMult, 6 * sizeMult, 0, Math.PI*2);
+        ctx.arc(-5 * sizeMult, 8 * sizeMult, 6 * sizeMult, 0, Math.PI*2);
+        ctx.fill(); ctx.stroke();
+
+        // Cabeça Grande e Venosa
+        ctx.save();
+        ctx.translate(2 * sizeMult, 0);
+        ctx.fillStyle = "#3e3"; // Verde claro
+        ctx.beginPath();
+        // Formato de cabeça de vegetal
+        ctx.ellipse(0, 0, 14 * sizeMult, 11 * sizeMult, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Olhos (Grandes e Brancos/Vermelhos)
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(6 * sizeMult, -4 * sizeMult, 3 * sizeMult, 0, Math.PI*2);
+        ctx.arc(6 * sizeMult, 4 * sizeMult, 3 * sizeMult, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Veias
+        ctx.strokeStyle = "#1a1";
+        ctx.beginPath();
+        ctx.moveTo(-5 * sizeMult, -5 * sizeMult);
+        ctx.lineTo(0, -8 * sizeMult);
+        ctx.stroke();
+        ctx.restore();
+        return;
+    }
+
+    // --- 2. MAJIN BUU / GORDOS (Rosa, Redondo, Capa) ---
+    if (name.includes("BUU") || name.includes("FAT") || name.includes("DODORIA")) {
+        // Capa
+        ctx.fillStyle = "#509"; // Roxo capa
+        ctx.beginPath();
+        ctx.moveTo(-10 * sizeMult, -15 * sizeMult);
+        ctx.lineTo(-25 * sizeMult, 0);
+        ctx.lineTo(-10 * sizeMult, 15 * sizeMult);
+        ctx.fill();
+
+        // Corpo Gordo
+        ctx.fillStyle = name.includes("DODORIA") ? "#d59" : "#fba"; // Rosa Buu ou Rosa Dodoria
+        ctx.strokeStyle = "#000";
+        ctx.beginPath();
+        ctx.arc(-5 * sizeMult, 0, 18 * sizeMult, 0, Math.PI*2);
+        ctx.fill(); ctx.stroke();
+
+        // Colete Preto
+        ctx.fillStyle = "#111";
+        ctx.fillRect(-10 * sizeMult, -18 * sizeMult, 12 * sizeMult, 36 * sizeMult);
+        ctx.strokeStyle = "#fd0"; // Borda Dourada
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-10 * sizeMult, -18 * sizeMult, 12 * sizeMult, 36 * sizeMult);
+
+        // Cabeça
+        ctx.fillStyle = name.includes("DODORIA") ? "#d59" : "#fba";
+        ctx.beginPath();
+        ctx.arc(0, 0, 12 * sizeMult, 0, Math.PI*2);
+        ctx.fill(); 
+
+        // Olhos (Fenda)
+        ctx.strokeStyle = "#000";
+        ctx.beginPath();
+        ctx.moveTo(6 * sizeMult, -4 * sizeMult); ctx.lineTo(10 * sizeMult, -4 * sizeMult);
+        ctx.moveTo(6 * sizeMult, 4 * sizeMult); ctx.lineTo(10 * sizeMult, 4 * sizeMult);
+        ctx.stroke();
+        return;
+    }
+
+    // --- 3. EXÉRCITO DE FREEZA / SAIYAJINS (Armadura de Batalha) ---
+    if (name.includes("FRIEZA") || name.includes("SOLDIER") || name.includes("VEGETA") || name.includes("NAPPA") || name.includes("RADITZ")) {
+        // Roupa de baixo
+        ctx.fillStyle = "#113"; // Azul escuro
+        ctx.fillRect(-12 * sizeMult, -10 * sizeMult, 24 * sizeMult, 20 * sizeMult);
+
+        // Ombreiras (Armadura)
+        ctx.fillStyle = "#eee"; // Branco/Cinza
+        ctx.strokeStyle = "#da0"; // Borda dourada
+        ctx.lineWidth = 1;
+        
+        // Ombreira Esquerda
+        ctx.beginPath();
+        ctx.moveTo(-5 * sizeMult, -8 * sizeMult);
+        ctx.lineTo(-20 * sizeMult, -22 * sizeMult); // Ponta
+        ctx.lineTo(-20 * sizeMult, -5 * sizeMult);
+        ctx.fill(); ctx.stroke();
+
+        // Ombreira Direita
+        ctx.beginPath();
+        ctx.moveTo(-5 * sizeMult, 8 * sizeMult);
+        ctx.lineTo(-20 * sizeMult, 22 * sizeMult); // Ponta
+        ctx.lineTo(-20 * sizeMult, 5 * sizeMult);
+        ctx.fill(); ctx.stroke();
+
+        // Peitoral
+        ctx.fillStyle = "#ddcb99"; // Bege armadura
+        ctx.fillRect(-8 * sizeMult, -10 * sizeMult, 16 * sizeMult, 20 * sizeMult);
+
+        // Cabeça (Se for soldado, talvez capacete, se for saiyajin, cabelo)
+        ctx.save();
+        ctx.translate(0, breathe);
+        
+        // Rosto
+        ctx.fillStyle = "#ffdbac";
+        ctx.beginPath(); ctx.arc(2 * sizeMult, 0, 9 * sizeMult, 0, Math.PI*2); ctx.fill();
+
+        // Scouter (Visor)
+        if (!name.includes("FRIEZA_FINAL")) {
+            ctx.fillStyle = "rgba(0, 255, 100, 0.6)";
+            ctx.fillRect(6 * sizeMult, -6 * sizeMult, 6 * sizeMult, 6 * sizeMult);
+            ctx.strokeStyle = "#0f0";
+            ctx.strokeRect(6 * sizeMult, -6 * sizeMult, 6 * sizeMult, 6 * sizeMult);
+        }
+
+        // Cabelo simples (Preto)
+        if (!name.includes("SOLDIER") && !name.includes("FRIEZA")) {
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.arc(-2 * sizeMult, 0, 10 * sizeMult, 0, Math.PI*2);
+            ctx.fill();
+        }
+        ctx.restore();
+        return;
+    }
+
+    // --- 4. CELL / BIO-ANDROIDES (Verde, Manchado, Asas) ---
+    if (name.includes("CELL") || name.includes("JR")) {
+        // Asas/Casco
+        ctx.fillStyle = "#111";
+        ctx.beginPath();
+        ctx.moveTo(-15 * sizeMult, -10 * sizeMult);
+        ctx.lineTo(-30 * sizeMult, -20 * sizeMult);
+        ctx.lineTo(-30 * sizeMult, 20 * sizeMult);
+        ctx.lineTo(-15 * sizeMult, 10 * sizeMult);
+        ctx.fill();
+
+        // Corpo
+        ctx.fillStyle = "#3c3"; // Verde Cell
+        ctx.beginPath();
+        ctx.arc(0, 0, 12 * sizeMult, 0, Math.PI*2);
+        ctx.fill();
+
+        // Manchas
+        ctx.fillStyle = "#050";
+        ctx.beginPath();
+        ctx.arc(-2 * sizeMult, -5 * sizeMult, 2 * sizeMult, 0, Math.PI*2);
+        ctx.arc(2 * sizeMult, 4 * sizeMult, 3 * sizeMult, 0, Math.PI*2);
+        ctx.fill();
+
+        // Cabeça
+        ctx.save();
+        ctx.translate(0, breathe);
+        ctx.fillStyle = "#3c3";
+        ctx.beginPath(); 
+        // Formato coroa do Cell
+        ctx.moveTo(0, -8 * sizeMult);
+        ctx.lineTo(8 * sizeMult, -15 * sizeMult); // Chifre 1
+        ctx.lineTo(5 * sizeMult, 0);
+        ctx.lineTo(8 * sizeMult, 15 * sizeMult); // Chifre 2
+        ctx.lineTo(0, 8 * sizeMult);
+        ctx.fill();
+        ctx.restore();
+        return;
+    }
+
+    // --- 5. FREEZA FINAL / ALIENS (Branco e Roxo) ---
+    if (name.includes("FRIEZA") || name.includes("COOLER") || name.includes("ALIEN")) {
+        // Corpo liso branco
+        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = "#dce";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 10 * sizeMult, 14 * sizeMult, 0, 0, Math.PI*2);
+        ctx.fill(); ctx.stroke();
+
+        // Partes Roxas (Cristais)
+        ctx.fillStyle = "#a0a";
+        ctx.beginPath();
+        ctx.arc(-5 * sizeMult, -6 * sizeMult, 4 * sizeMult, 0, Math.PI*2); // Ombro
+        ctx.arc(-5 * sizeMult, 6 * sizeMult, 4 * sizeMult, 0, Math.PI*2); // Ombro
+        ctx.arc(0, 0, 5 * sizeMult, 0, Math.PI*2); // Peito
+        ctx.fill();
+
+        // Cabeça
+        ctx.save();
+        ctx.translate(2 * sizeMult, breathe);
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(0, 0, 9 * sizeMult, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#a0a"; // Topo da cabeça roxo
+        ctx.beginPath(); ctx.arc(-2 * sizeMult, 0, 7 * sizeMult, 0, Math.PI*2); ctx.fill();
+        // Olhos vermelhos
+        ctx.fillStyle = "#f00";
+        ctx.beginPath();
+        ctx.moveTo(5 * sizeMult, -2 * sizeMult); ctx.lineTo(8 * sizeMult, -3 * sizeMult); ctx.lineTo(8 * sizeMult, -1 * sizeMult);
+        ctx.moveTo(5 * sizeMult, 2 * sizeMult); ctx.lineTo(8 * sizeMult, 3 * sizeMult); ctx.lineTo(8 * sizeMult, 1 * sizeMult);
+        ctx.fill();
+        ctx.restore();
+        return;
+    }
+
+    // --- FALLBACK: Usa o modelo padrão se não reconhecer ---
+    drawMiniWarrior(e, sizeMult);
+}
+
 function drawMiniWarrior(e, sizeMult) {
     const time = Date.now();
     let skinColor = "#ffdbac"; let giColor = e.color || "#ff6600"; let beltColor = "#0000aa"; let hairColor = "#1a1a1a"; let eyeColor = "#000"; let auraColor = null; let lightning = false;
@@ -323,13 +545,73 @@ function drawMiniWarrior(e, sizeMult) {
 function drawEntity(e) {
     if (!e) return;
     if (e.isDead && e.isNPC) return;
+
     const sizeMult = e.isBoss ? 4 : 1;
-    ctx.save(); ctx.translate(e.x, e.y);
-    ctx.save(); ctx.rotate(e.angle); drawMiniWarrior(e, sizeMult); ctx.restore();
-    ctx.save(); drawEntityHUD(e, sizeMult); ctx.restore();
-    if (e.state === "BLOCKING") { ctx.save(); let blockAngle = e.angle; if (e.id === myId && !isMobile) blockAngle = Math.atan2(mouse.y, mouse.x); if (e.id === myId && isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) { blockAngle = Math.atan2(joystickMove.y, joystickMove.x); } ctx.rotate(blockAngle); ctx.strokeStyle = "rgba(100,200,255,0.85)"; ctx.lineWidth = 4; ctx.shadowBlur = 12; ctx.shadowColor = "#00ffff"; ctx.beginPath(); ctx.arc(0, 0, 30 * sizeMult, -1, 1); ctx.stroke(); ctx.restore(); }
+
+    ctx.save();
+    ctx.translate(e.x, e.y);
+
+    // ===============================
+    // CORPO (ROTACIONA)
+    // ===============================
+    ctx.save();
+    ctx.rotate(e.angle);
+    
+    // SELETOR DE MODELO:
+    if (e.isNPC) {
+        drawMobModel(e, sizeMult); // Usa os novos modelos de monstros
+    } else {
+        drawMiniWarrior(e, sizeMult); // Mantém o seu modelo de jogador intacto
+    }
+    
+    ctx.restore();
+
+    // ===============================
+    // HUD (NÃO ROTACIONA)
+    // ===============================
+    ctx.save();
+    drawEntityHUD(e, sizeMult);
+    ctx.restore();
+
+    // ===============================
+    // BLOQUEIO
+    // ===============================
+    if (e.state === "BLOCKING") {
+        ctx.save();
+        let blockAngle = e.angle;
+        if (e.id === myId && !isMobile) blockAngle = Math.atan2(mouse.y, mouse.x);
+        if (e.id === myId && isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) {
+            blockAngle = Math.atan2(joystickMove.y, joystickMove.x);
+        }
+        ctx.rotate(blockAngle);
+        ctx.strokeStyle = "rgba(100,200,255,0.85)";
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "#00ffff";
+        ctx.beginPath();
+        ctx.arc(0, 0, 30 * sizeMult, -1, 1);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // ===============================
+    // RASTRO
+    // ===============================
     const speedTrail = Math.hypot(e.vx, e.vy);
-    if (hitStop <= 0 && speedTrail > 8 && (!e.lastTrail || performance.now() - e.lastTrail > 80)) { e.lastTrail = performance.now(); if (trails.length < 100) { trails.push({ x: e.x, y: e.y, angle: e.angle, color: getTrailColor(e), alpha: 0.35, sizeMult }); } }
+    if (hitStop <= 0 && speedTrail > 8 && (!e.lastTrail || performance.now() - e.lastTrail > 80)) {
+        e.lastTrail = performance.now();
+        if (trails.length < 100) {
+            trails.push({
+                x: e.x,
+                y: e.y,
+                angle: e.angle,
+                color: getTrailColor(e),
+                alpha: 0.35,
+                sizeMult
+            });
+        }
+    }
+
     ctx.restore();
 }
 
