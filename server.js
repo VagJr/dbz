@@ -436,17 +436,66 @@ stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk
 
     socket.on("vanish", () => { const p = players[socket.id]; if (!p || p.isSpirit || p.ki < 20 || p.stun > 0) return; p.ki -= 20; p.state = "IDLE"; p.attackLock = 0; p.combo = 0; p.x += Math.cos(p.angle) * 350; p.y += Math.sin(p.angle) * 350; io.emit("fx", { type: "vanish", x: p.x, y: p.y }); });
     socket.on("transform", () => {
-        const p = players[socket.id]; if(!p || p.isSpirit) return;
-        if(p.lastTransform && Date.now() - p.lastTransform < 5000) return;
-        let nextForm = "BASE";
-        if(p.form === "BASE" && p.level >= 5) nextForm = "SSJ"; else if(p.form === "SSJ" && p.level >= 20) nextForm = "SSJ2"; else if(p.form === "SSJ2" && p.level >= 40) nextForm = "SSJ3"; else if(p.form === "SSJ3" && p.level >= 60) nextForm = "GOD"; else if(p.form === "GOD" && p.level >= 80) nextForm = "BLUE"; else if(p.form === "BLUE" && p.level >= 100) nextForm = "UI"; else if(p.form !== "BASE") nextForm = "BASE"; 
-        if(nextForm !== p.form && p.ki >= 50) {
-            p.form = nextForm; p.ki -= 50; p.lastTransform = Date.now();
-            const stats = FORM_STATS[nextForm]; p.maxHp = p.baseMaxHp * stats.hpMult; p.maxKi = p.baseMaxKi * stats.kiMult; checkAchievements(p);
-            [...Object.values(players), ...npcs].forEach(t => { if (t.id === p.id || t.isDead || t.isSpirit) return; const dist = Math.hypot(t.x - p.x, t.y - p.y); if (dist < 400) { const ang = Math.atan2(t.y - p.y, t.x - p.x); t.vx = Math.cos(ang) * 150; t.vy = Math.sin(ang) * 150; t.stun = 20; } });
-            io.emit("fx", { type: "transform", x: p.x, y: p.y, form: nextForm }); clampBP(p);
+    const p = players[socket.id];
+    if (!p || p.isSpirit || p.isDead) return;
+
+    // Cooldown
+    if (p.lastTransform && Date.now() - p.lastTransform < 5000) return;
+
+    let nextForm = p.form;
+
+    // Progressão de formas
+    if (p.form === "BASE" && p.level >= 5) nextForm = "SSJ";
+    else if (p.form === "SSJ" && p.level >= 20) nextForm = "SSJ2";
+    else if (p.form === "SSJ2" && p.level >= 40) nextForm = "SSJ3";
+    else if (p.form === "SSJ3" && p.level >= 60) nextForm = "GOD";
+    else if (p.form === "GOD" && p.level >= 80) nextForm = "BLUE";
+    else if (p.form === "BLUE" && p.level >= 100) nextForm = "UI";
+    else if (p.form !== "BASE" && p.form !== "UI") nextForm = "BASE"; 
+    // 👆 só permite voltar pra BASE se já estiver em forma alta
+
+    // Nada mudou → sai
+    if (nextForm === p.form) return;
+
+    // Ki
+    if (p.ki < 50) return;
+
+    const stats = FORM_STATS[nextForm];
+    if (!stats) return; // proteção total
+
+    // Aplica transformação
+    p.form = nextForm;
+    p.ki -= 50;
+    p.lastTransform = Date.now();
+
+    p.maxHp = Math.floor(p.baseMaxHp * stats.hpMult);
+    p.maxKi = Math.floor(p.baseMaxKi * stats.kiMult);
+
+    checkAchievements(p);
+
+    // Onda de energia DBZ
+    [...Object.values(players), ...npcs].forEach(t => {
+        if (!t || t.id === p.id || t.isDead || t.isSpirit) return;
+
+        const dist = Math.hypot(t.x - p.x, t.y - p.y);
+        if (dist < 400) {
+            const ang = Math.atan2(t.y - p.y, t.x - p.x);
+            t.vx = Math.cos(ang) * 150;
+            t.vy = Math.sin(ang) * 150;
+            t.stun = 20;
         }
     });
+
+    io.emit("fx", {
+        type: "transform",
+        x: p.x,
+        y: p.y,
+        form: nextForm
+    });
+
+    clampBP(p);
+});
+
     socket.on("disconnect", () => delete players[socket.id]);
 });
 
