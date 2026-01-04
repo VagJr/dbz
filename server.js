@@ -62,6 +62,13 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT NOW()
             );
         `);
+		
+		// ================= MIGRATIONS SEGURAS =================
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS titles TEXT DEFAULT 'Novato'`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_title TEXT DEFAULT 'Novato'`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS skills JSONB DEFAULT '[]'`);
+await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS quest_data JSONB DEFAULT '{}'`);
+
         
         // CRIA TABELA PLANETS
         await pool.query(`
