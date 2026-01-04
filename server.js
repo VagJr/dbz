@@ -23,11 +23,20 @@ try {
 }
 
 // ==========================================
-// CONFIGURAÇÕES GERAIS
+// CONFIGURAÇÕES GERAIS E LORE
 // ==========================================
 const SNAKE_WAY_START = { x: 0, y: -12000 };
 const KAIOH_PLANET    = { x: 0, y: -25000 };
 const TICK = 33; // ~30 FPS Server loop
+
+// --- FACÇÕES (Galáxia Viva) ---
+const FACTIONS = {
+    "FRIEZA_FORCE": { name: "Exército Imperial", color: "#a0a", enemies: ["EARTH", "SAIYAN", "DEMON"] },
+    "SAIYAN_REBELS": { name: "Saiyajins Puros", color: "#fa0", enemies: ["FRIEZA_FORCE", "EARTH"] },
+    "RED_RIBBON": { name: "Red Ribbon", color: "#f00", enemies: ["EARTH", "ALIEN"] },
+    "DEMONS": { name: "Reino Demoníaco", color: "#509", enemies: ["ALL"] },
+    "EARTH_DEFENSE": { name: "Defensores da Terra", color: "#0af", enemies: ["ALL_INVADERS"] }
+};
 
 const BOSS_PHASES = {
     PHASE_1: { hp: 0.65, aggression: 0.6 },
@@ -36,245 +45,109 @@ const BOSS_PHASES = {
 };
 
 // ==========================================
-// MAPA (PLANETAS)
+// MAPA (PLANETAS COM DOMÍNIO DE FACÇÃO)
 // ==========================================
 let PLANETS = [
-    { id: "EARTH_CORE", name: "Capital do Oeste", x: 2000, y: 2000, radius: 1200, owner: null, guild: null, stability: 100, taxRate: 5, treasury: 0, level: 1, biome: "EARTH" },
-    { id: "KAME_ISLAND", name: "Casa do Kame", x: 6000, y: -4000, radius: 800, owner: null, guild: null, stability: 100, taxRate: 5, treasury: 0, level: 5, biome: "EARTH" },
-    { id: "NAMEK_VILLAGE", name: "Nova Namek", x: -18000, y: 5000, radius: 1200, owner: null, guild: null, stability: 100, taxRate: 5, treasury: 0, level: 20, biome: "NAMEK" },
-    { id: "GURU_HOUSE", name: "Casa do Patriarca", x: -22000, y: 8000, radius: 900, owner: null, guild: null, stability: 100, taxRate: 5, treasury: 0, level: 25, biome: "NAMEK" },
-    { id: "FRIEZA_BASE", name: "Base Freeza 79", x: -35000, y: -10000, radius: 1500, owner: null, guild: null, stability: 100, taxRate: 10, treasury: 0, level: 40, biome: "FRIEZA" },
-    { id: "FUTURE_RUINS", name: "Ruínas do Futuro", x: 15000, y: 0, radius: 1200, owner: null, guild: null, stability: 100, taxRate: 5, treasury: 0, level: 50, biome: "FUTURE" },
-    { id: "DEMON_GATE", name: "Portão Demoníaco", x: 0, y: 25000, radius: 1200, owner: null, guild: null, stability: 100, taxRate: 5, treasury: 0, level: 60, biome: "DEMON" },
-    { id: "MAKAI_CORE", name: "Reino dos Demônios", x: 5000, y: 35000, radius: 1000, owner: null, guild: null, stability: 100, taxRate: 8, treasury: 0, level: 70, biome: "DEMON" },
-    { id: "VAMPA_WASTES", name: "Deserto de Vampa", x: -45000, y: 15000, radius: 1400, owner: null, guild: null, stability: 100, taxRate: 2, treasury: 0, level: 80, biome: "VAMPA" },
-    { id: "BEERUS_PLANET", name: "Planeta de Beerus", x: 0, y: -90000, radius: 2000, owner: null, guild: null, stability: 100, taxRate: 15, treasury: 0, level: 100, biome: "DIVINE" },
-    { id: "ZEN_PALACE", name: "Palácio Zen-Oh", x: 0, y: -120000, radius: 3000, owner: null, guild: null, stability: 100, taxRate: 20, treasury: 0, level: 150, biome: "DIVINE" },
-    
-    // Planetas Virtuais para GPS (Sem bioma, apenas para guia)
+    { id: "EARTH_CORE", name: "Capital do Oeste", x: 2000, y: 2000, radius: 1200, owner: null, guild: null, faction: "EARTH_DEFENSE", stability: 100, taxRate: 5, treasury: 0, level: 1, biome: "EARTH" },
+    { id: "KAME_ISLAND", name: "Casa do Kame", x: 6000, y: -4000, radius: 800, owner: null, guild: null, faction: "EARTH_DEFENSE", stability: 100, taxRate: 5, treasury: 0, level: 5, biome: "EARTH" },
+    { id: "NAMEK_VILLAGE", name: "Nova Namek", x: -18000, y: 5000, radius: 1200, owner: null, guild: null, faction: "FRIEZA_FORCE", stability: 40, taxRate: 5, treasury: 0, level: 20, biome: "NAMEK" },
+    { id: "GURU_HOUSE", name: "Casa do Patriarca", x: -22000, y: 8000, radius: 900, owner: null, guild: null, faction: "FRIEZA_FORCE", stability: 50, taxRate: 5, treasury: 0, level: 25, biome: "NAMEK" },
+    { id: "FRIEZA_BASE", name: "Base Freeza 79", x: -35000, y: -10000, radius: 1500, owner: null, guild: null, faction: "FRIEZA_FORCE", stability: 100, taxRate: 10, treasury: 0, level: 40, biome: "FRIEZA" },
+    { id: "FUTURE_RUINS", name: "Ruínas do Futuro", x: 15000, y: 0, radius: 1200, owner: null, guild: null, faction: "RED_RIBBON", stability: 20, taxRate: 5, treasury: 0, level: 50, biome: "FUTURE" },
+    { id: "DEMON_GATE", name: "Portão Demoníaco", x: 0, y: 25000, radius: 1200, owner: null, guild: null, faction: "DEMONS", stability: 100, taxRate: 5, treasury: 0, level: 60, biome: "DEMON" },
+    { id: "MAKAI_CORE", name: "Reino dos Demônios", x: 5000, y: 35000, radius: 1000, owner: null, guild: null, faction: "DEMONS", stability: 100, taxRate: 8, treasury: 0, level: 70, biome: "DEMON" },
+    { id: "VAMPA_WASTES", name: "Deserto de Vampa", x: -45000, y: 15000, radius: 1400, owner: null, guild: null, faction: "SAIYAN_REBELS", stability: 60, taxRate: 2, treasury: 0, level: 80, biome: "VAMPA" },
+    { id: "BEERUS_PLANET", name: "Planeta Bills", x: 0, y: -90000, radius: 2000, owner: null, guild: null, faction: "GODS", stability: 100, taxRate: 15, treasury: 0, level: 100, biome: "DIVINE" },
+    { id: "ZEN_PALACE", name: "Palácio Zen-Oh", x: 0, y: -120000, radius: 3000, owner: null, guild: null, faction: "GODS", stability: 100, taxRate: 20, treasury: 0, level: 150, biome: "DIVINE" },
     { id: "KAIOH_PLANET", name: "Planeta Kaioh", x: 0, y: -25000, radius: 500, biome: "DIVINE", level: 1 }
 ];
 
 // ==========================================
-// SAGAS (PROGRESSÃO REFINADA E GUIADA)
+// SAGAS: UNIVERSE Z (NARRATIVA GUIADA PELA A.R.I.S)
 // ==========================================
 const SAGA_STEPS = [
-    // --- TUTORIAL: BÁSICO ---
-    { id: 0, title: "A ORIGEM: O KI", objective: "Para lutar, você precisa de energia. Segure [C] (ou botão CARGA) até encher a barra amarela.", type: "BP", req: 600, targetZone: "EARTH_CORE" },
-    { id: 1, title: "A ORIGEM: FORÇA", objective: "Teste sua força bruta! Destrua 3 Rochas usando o [CLIQUE ESQUERDO] ou botão SOCAR.", type: "BP", req: 800, targetZone: "EARTH_CORE" },
-    { id: 2, title: "PRIMEIRO DESAFIO", objective: "Um Saibaman apareceu! Derrote-o para provar que está pronto para o mundo.", type: "KILL", target: "SAIBAMAN", targetZone: "EARTH_CORE" },
-    
-    // --- FASE 1: TERRA ---
-    { id: 3, title: "BUSCA PELO MESTRE", objective: "Voe para o SUDESTE (Baixo-Direita) no mar. Encontre a Ilha do Mestre Kame para treinar.", type: "VISIT", target: "KAME_ISLAND", targetZone: "KAME_ISLAND" },
-    { id: 4, title: "TREINO: KAMEHAMEHA", objective: "Kame exige poder! Fique na ilha e Carregue Ki até 2500 BP para aprender a técnica.", type: "BP", req: 2500, targetZone: "KAME_ISLAND" },
-    { id: 5, title: "INVASÃO SAIYAJIN", objective: "Raditz chegou à Terra! Volte à Capital do Oeste e encontre-o.", type: "VISIT", target: "EARTH", targetZone: "EARTH_CORE" },
-    { id: 6, title: "DEFENSOR DA TERRA", objective: "Proteja o planeta! Derrote RADITZ. (Dica: Use 'Q' ou DEF para Bloquear golpes).", type: "KILL", target: "RADITZ", targetZone: "EARTH_CORE" },
-    
-    // --- FASE 2: CAMINHO DA SERPENTE ---
-    { id: 7, title: "O OUTRO MUNDO", objective: "Você precisa ficar mais forte. Voe para o CÉU (NORTE/CIMA) até achar o Caminho da Serpente.", type: "VISIT", target: "SNAKE_WAY", targetZone: "KAIOH_PLANET" }, 
-    { id: 8, title: "PLANETA DO SR. KAIOH", objective: "Cruze a Serpente inteira até o pequeno planeta no final para encontrar o Sr. Kaioh.", type: "VISIT", target: "KAIOH", targetZone: "KAIOH_PLANET" },
-    { id: 9, title: "GRAVIDADE AUMENTADA", objective: "O treino de Kaioh é duro! Atinja o Nível 10 lutando ou carregando Ki aqui.", type: "LEVEL", req: 10, targetZone: "KAIOH_PLANET" },
-    
-    // --- FASE 3: INVASÃO ---
-    { id: 10, title: "O RETORNO DOS SAIYAJINS", objective: "Seus amigos estão em perigo! Desça tudo de volta para a Terra (Sul).", type: "VISIT", target: "EARTH", targetZone: "EARTH_CORE" },
-    { id: 11, title: "ELITE DO IMPÉRIO", objective: "Nappa ou Vegeta estão destruindo a cidade. Pare-os agora!", type: "KILL", target: "VEGETA_SCOUTER", targetZone: "EARTH_CORE" },
-    
-    // --- FASE 4: NAMEKUSEI (ESPAÇO) ---
-    { id: 12, title: "VIAGEM À NAMEKUSEI", objective: "As Esferas da Terra sumiram. Voe para o OESTE (ESQUERDA) no espaço profundo.", type: "VISIT", target: "NAMEK", targetZone: "NAMEK_VILLAGE" },
-    { id: 13, title: "FORÇAS ESPECIAIS", objective: "Proteja a vila Namek e derrote o Capitão GINYU.", type: "KILL", target: "GINYU", targetZone: "NAMEK_VILLAGE" },
-    { id: 14, title: "O IMPERADOR DO MAL", objective: "Siga mais a OESTE até encontrar a Nave de Freeza.", type: "VISIT", target: "FRIEZA", targetZone: "FRIEZA_BASE" },
-    { id: 15, title: "BATALHA FINAL", objective: "Derrote FREEZA em sua forma final para vingar sua raça.", type: "KILL", target: "FRIEZA_FINAL", targetZone: "FRIEZA_BASE" },
-    { id: 16, title: "O LENDÁRIO SUPER SAIYAJIN", objective: "A fúria desperta! Atinja Nível 20 e aperte 'G' (ou botão FORM) para se TRANSFORMAR!", type: "FORM", target: "SSJ", targetZone: "ANY" },
-    
-    // --- FASE 5: ANDROIDES (FUTURO) ---
-    { id: 17, title: "FUTURO SOMBRIO", objective: "Voe para o LESTE (DIREITA), passando da Terra, para as Ruínas do Futuro.", type: "VISIT", target: "FUTURE", targetZone: "FUTURE_RUINS" },
-    { id: 18, title: "CRIAÇÃO PERFEITA", objective: "Encontre e destrua CELL PERFEITO nas ruínas.", type: "KILL", target: "PERFECT_CELL", targetZone: "FUTURE_RUINS" },
-    { id: 19, title: "PODER ALÉM DO LIMITE", objective: "Supere o Super Saiyajin. Treine para alcançar SSJ2 ou SSJ3 (Nível 40).", type: "FORM", target: "SSJ2", targetZone: "ANY" },
-    
-    // --- FASE 6: MAGIA (SUL) ---
-    { id: 20, title: "REINO DAS TREVAS", objective: "Uma magia maligna surge. Voe para o SUL PROFUNDO (BAIXO) até o portão mágico.", type: "VISIT", target: "DEMON", targetZone: "DEMON_GATE" },
-    { id: 21, title: "AMEAÇA MAJIN", objective: "Derrote KID BUU no coração do Reino Demoníaco.", type: "KILL", target: "KID_BUU", targetZone: "MAKAI_CORE" },
-    
-    // --- FASE 7: VAMPA (EXTREMO OESTE) ---
-    { id: 22, title: "PLANETA SELVAGEM", objective: "Voe para o EXTREMO OESTE (Muito a Esquerda), no planeta Vampa.", type: "VISIT", target: "VAMPA", targetZone: "VAMPA_WASTES" },
-    { id: 23, title: "O SAIYAJIN LENDÁRIO", objective: "Sobreviva e derrote BROLY LENDÁRIO.", type: "KILL", target: "LEGENDARY_BROLY", targetZone: "VAMPA_WASTES" },
-    
-    // --- FASE 8: DEUSES (EXTREMO NORTE) ---
-    { id: 24, title: "REINO DIVINO", objective: "Voe para o EXTREMO NORTE (Muito Acima), além de Kaioh.", type: "VISIT", target: "DIVINE", targetZone: "BEERUS_PLANET" },
-    { id: 25, title: "O DEUS DA DESTRUIÇÃO", objective: "Prove seu valor contra o Deus BEERUS.", type: "KILL", target: "BEERUS", targetZone: "BEERUS_PLANET" },
-    { id: 26, title: "INSTINTO SUPERIOR", objective: "Alcance a forma final UI (Nível 100+).", type: "FORM", target: "UI", targetZone: "ANY" },
-    
-    // --- ENDGAME ---
-    { id: 27, title: "TORNEIO DO PODER", objective: "Vença JIREN no Reino Divino.", type: "KILL", target: "JIREN", targetZone: "BEERUS_PLANET" },
-    { id: 28, title: "IMPERADOR DO UNIVERSO", objective: "Conquiste um Planeta para sua Guilda (Elimine os guardas até zerar a estabilidade).", type: "DOMINATION", target: "ANY", targetZone: "ANY" },
-    { id: 29, title: "DIVINDADE", objective: "Faça um REBIRTH (Nível 150 - Menu 'R') para recomeçar mais forte.", type: "REBIRTH", target: "ANY", targetZone: "ANY" }
+    { id: 0, title: "INICIALIZAÇÃO DO SISTEMA", objective: "A.R.I.S: 'Detecto assinaturas de energia hostis. Primeiro, aprenda a controlar seu Ki. Segure [C] para carregar.'", type: "BP", req: 600, targetZone: "EARTH_CORE", hint: "Segure 'C' ou botão CARGA" },
+    { id: 1, title: "AMEAÇA BIOLÓGICA", objective: "A.R.I.S: 'Um Saibaman foi plantado perto da capital. Elimine-o antes que se multiplique.'", type: "KILL", target: "SAIBAMAN", targetZone: "EARTH_CORE", hint: "Clique para atacar" },
+    { id: 2, title: "A INVASÃO SAIYAJIN", objective: "A.R.I.S: 'Naves espaciais detectadas. Guerreiros de elite Raditz e Nappa estão atacando. Impeça-os!'", type: "KILL", target: "RADITZ", targetZone: "EARTH_CORE", hint: "Use 'Q' para Bloquear" },
+    { id: 3, title: "TREINO NO OUTRO MUNDO", objective: "A.R.I.S: 'Seu poder atual é insuficiente. Voe para o NORTE (Cima) pelo Caminho da Serpente até o Sr. Kaioh.'", type: "VISIT", target: "KAIOH_PLANET", targetZone: "KAIOH_PLANET", hint: "Voe para Cima (Norte)" },
+    { id: 4, title: "TÉCNICA PROIBIDA", objective: "A.R.I.S: 'Kaioh vai te ensinar o Kaioken e a Genki Dama. Atinja 5000 de BP para dominar as técnicas.'", type: "BP", req: 5000, targetZone: "KAIOH_PLANET", hint: "Treine no Planeta Kaioh" },
+    { id: 5, title: "O IMPERADOR GALÁCTICO", objective: "A.R.I.S: 'Sinal de socorro em Namekusei (Oeste). O tirano Freeza busca a imortalidade. Impeça-o!'", type: "VISIT", target: "NAMEK_VILLAGE", targetZone: "NAMEK_VILLAGE", hint: "Voe para Esquerda (Oeste)" },
+    { id: 6, title: "A LENDA DOURADA", objective: "A.R.I.S: 'A fúria é o gatilho. Atinja Nível 20 e transforme-se em SUPER SAIYAJIN [G] para derrotar Freeza Final.'", type: "FORM", target: "SSJ", targetZone: "FRIEZA_BASE", hint: "Aperte 'G' ao Nvl 20" },
+    { id: 7, title: "LINHA DO TEMPO ROMPIDA", objective: "A.R.I.S: 'Distorção temporal detectada. Viaje ao LESTE para o futuro e destrua os Androides.'", type: "VISIT", target: "FUTURE_RUINS", targetZone: "FUTURE_RUINS", hint: "Voe para Direita (Leste)" },
+    { id: 8, title: "A PERFEIÇÃO", objective: "A.R.I.S: 'Cell alcançou sua forma perfeita. Ele ameaça explodir o sistema solar. Elimine-o.'", type: "KILL", target: "PERFECT_CELL", targetZone: "FUTURE_RUINS", hint: "Derrote Cell Perfeito" },
+    { id: 9, title: "O DESPERTAR MÁGICO", objective: "A.R.I.S: 'Magia negra detectada no Sul Profundo. O demônio Majin Buu acordou.'", type: "VISIT", target: "DEMON_GATE", targetZone: "DEMON_GATE", hint: "Voe para Baixo (Sul)" },
+    { id: 10, title: "PURIFICAÇÃO", objective: "A.R.I.S: 'Kid Buu é pura maldade. Você precisa de SSJ3 ou superior para vencê-lo.'", type: "KILL", target: "KID_BUU", targetZone: "MAKAI_CORE", hint: "Vença Kid Buu" },
+    { id: 11, title: "O LENDÁRIO", objective: "A.R.I.S: 'Uma energia colossal vem de Vampa (Extremo Oeste). O Lendário Super Saiyajin Broly está fora de controle.'", type: "KILL", target: "LEGENDARY_BROLY", targetZone: "VAMPA_WASTES", hint: "Cuidado com Broly" },
+    { id: 12, title: "TERRITÓRIO DIVINO", objective: "A.R.I.S: 'Sua força chamou a atenção dos Deuses. Voe para o Extremo Norte e desafie Beerus.'", type: "VISIT", target: "BEERUS_PLANET", targetZone: "BEERUS_PLANET", hint: "Muito Acima (Norte)" },
+    { id: 13, title: "O INSTINTO", objective: "A.R.I.S: 'Liberte-se de pensamentos. Alcance o INSTINTO SUPERIOR (UI) no Nível 100.'", type: "FORM", target: "UI", targetZone: "ANY", hint: "Forma Final" },
+    { id: 14, title: "GUARDIÃO DA GALÁXIA", objective: "A.R.I.S: 'A Galáxia precisa de ordem. Crie uma Guilda e domine um planeta.'", type: "DOMINATION", target: "ANY", targetZone: "ANY", hint: "/guild Nome" }
 ];
 
 // ==========================================
-// BOTS (IA)
+// CLASSE DE IA: A.R.I.S. (Artificial Reconnaissance Intelligence System)
 // ==========================================
-const BOT_NAMES = ["Kakaroto_BR", "Vegeta_Prince", "xXTrunksXx", "GohanBeast", "PiccoloSensei", "BrolyRage", "FriezaLord", "HitAssassin", "JirenGray", "YamchaGod", "KrillinDestructo", "Android17MVP"];
-const BOT_CHATS = ["Alguem BR?", "X1?", "Onde upa?", "Lag", "GG", "Ez", "Bora farmar", "Aff morri", "LOL", "Server top", "Procuro Guild"];
-
-class BotPlayer {
-    constructor() {
-        this.name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-        this.id = "BOT_" + Math.random().toString(36).substr(2, 9);
-        this.isNPC = true;
-        this.isBotPlayer = true;
-        this.level = Math.floor(Math.random() * 60) + 1;
-        this.xp = 0;
-        this.bp = 1000 * this.level;
-        this.maxHp = 1000 + this.level * 300;
-        this.hp = this.maxHp;
-        this.maxKi = 100 + this.level * 20;
-        this.ki = this.maxKi;
-        
-        const randPlanet = PLANETS[Math.floor(Math.random() * PLANETS.length)];
-        this.x = randPlanet.x + (Math.random() - 0.5) * 1000;
-        this.y = randPlanet.y + (Math.random() - 0.5) * 1000;
-        
-        this.vx = 0; this.vy = 0;
-        this.angle = 0;
-        this.form = "BASE";
-        this.color = ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff"][Math.floor(Math.random() * 5)];
-        this.state = "IDLE";
-        this.targetId = null;
-        this.currentTask = "FARMING"; 
-        this.taskTimer = 0;
-        this.actionTimer = 0;
-        this.chatTimer = Math.random() * 20000 + 10000;
-        this.rebirths = Math.random() > 0.9 ? 1 : 0;
-        this.skills = ["KAMEHAMEHA"];
-
-        if(this.level > 120) this.form = "UI";
-        else if(this.level > 90) this.form = "BLUE";
-        else if(this.level > 70) this.form = "GOD";
-        else if(this.level > 50) this.form = "SSJ3";
-        else if(this.level > 20) this.form = "SSJ";
+class ArisAI {
+    constructor(player) {
+        this.player = player;
+        this.lastMessageTime = 0;
+        this.lastZone = null;
     }
 
-    update() {
-        if(this.hp <= 0) {
-            this.hp = this.maxHp;
-            this.x = SNAKE_WAY_START.x + (Math.random()-0.5)*200;
-            this.y = SNAKE_WAY_START.y;
-            this.form = "BASE";
-            this.state = "IDLE";
-            this.currentTask = "TRAINING"; 
-            return;
-        }
+    evaluate(io) {
+        if (Date.now() - this.lastMessageTime < 15000) return; // Cooldown de 15s
 
-        if(this.ki < this.maxKi && this.state !== "ATTACKING" && this.state !== "BLOCKING") this.ki += 5;
-        this.actionTimer--; this.taskTimer--;
-
-        if (this.taskTimer <= 0) {
-            const rand = Math.random();
-            if (rand < 0.6) this.currentTask = "FARMING";
-            else if (rand < 0.9) this.currentTask = "FIGHTING";
-            else this.currentTask = "TRAVELING";
-            this.taskTimer = 500 + Math.random() * 1000;
-            this.targetId = null;
-        }
-
-        if(this.actionTimer <= 0) { this.decideAction(); this.actionTimer = 20; }
+        const p = this.player;
+        const zone = getZoneInfo(p.x, p.y);
         
-        this.x += this.vx; this.y += this.vy;
-        if(this.state !== "MOVING") { this.vx *= 0.9; this.vy *= 0.9; } else { this.vx *= 0.96; this.vy *= 0.96; }
+        let msg = null;
+        let type = "INFO"; // INFO, WARN, DANGER
 
-        if(this.chatTimer-- <= 0) {
-            if(Math.random() > 0.8) chats.push({ x: this.x, y: this.y, text: BOT_CHATS[Math.floor(Math.random()*BOT_CHATS.length)], owner: this.name, life: 150 });
-            this.chatTimer = 20000 + Math.random() * 30000;
+        // 1. Dica de Vida Baixa
+        if (p.hp < p.maxHp * 0.25) {
+            msg = "ALERTA CRÍTICO: Integridade física comprometida. Recue e regenere!";
+            type = "DANGER";
+        }
+        // 2. Mudança de Zona
+        else if (this.lastZone !== zone.id) {
+            this.lastZone = zone.id;
+            const zoneName = PLANETS.find(pl => pl.biome === zone.id)?.name || "Espaço Desconhecido";
+            msg = `Entrando no setor: ${zoneName}. Análise de ameaça iniciada.`;
+        }
+        // 3. Dica de Transformação
+        else if (p.ki >= p.maxKi && p.form === "BASE" && p.level >= 5) {
+            msg = "Níveis de energia máximos. Transformação disponível para aumentar eficiência de combate.";
+            type = "WARN";
+        }
+        // 4. Dica da Saga
+        else if (Math.random() > 0.9) {
+            const currentStep = SAGA_STEPS[p.sagaStep || 0];
+            if (currentStep) {
+                msg = `Lembrete de Missão: ${currentStep.hint}`;
+            }
         }
 
-        if(this.ki > this.maxKi * 0.95 && this.form === "BASE" && this.level > 10) {
-             io.emit("fx", { type: "transform", x: this.x, y: this.y, form: "SSJ" });
-             this.form = "SSJ";
+        if (msg) {
+            this.sendMessage(io, msg, type);
         }
     }
 
-    decideAction() {
-        let target = null;
-        if (this.currentTask === "FARMING") {
-            const rock = rocks.find(r => Math.hypot(r.x - this.x, r.y - this.y) < 1000);
-            if (rock) { this.moveToAndAttack(rock, true); return; }
-            target = npcs.find(n => n.id !== this.id && !n.isBotPlayer && !n.isDead && Math.hypot(n.x - this.x, n.y - this.y) < 1500);
-        } else if (this.currentTask === "FIGHTING") {
-            target = npcs.find(n => n.id !== this.id && n.isBotPlayer && !n.isDead && Math.hypot(n.x - this.x, n.y - this.y) < 2000);
-            if (!target && Math.random() > 0.99) { target = Object.values(players).find(p => !p.isDead && !p.isSpirit && Math.hypot(p.x - this.x, p.y - this.y) < 500); }
-        } else if (this.currentTask === "TRAVELING") {
-             if (Math.random() > 0.95) this.angle = Math.random() * Math.PI * 2;
-             this.vx += Math.cos(this.angle) * 3; this.vy += Math.sin(this.angle) * 3;
-             this.state = "MOVING"; return;
-        }
-
-        if (target) { this.targetId = target.id; this.moveToAndAttack(target, false); } 
-        else { this.state = "IDLE"; }
-    }
-
-    moveToAndAttack(target, isStatic) {
-        const dx = target.x - this.x; const dy = target.y - this.y; const dist = Math.hypot(dx, dy);
-        this.angle = Math.atan2(dy, dx);
-        if (dist > 120) {
-            const speed = 4 + (this.level * 0.05);
-            this.vx += Math.cos(this.angle) * speed; this.vy += Math.sin(this.angle) * speed;
-            this.state = "MOVING";
-        } else {
-            this.state = "ATTACKING"; target.hp -= this.level * 20; 
-            io.emit("fx", { type: "hit", x: target.x, y: target.y, dmg: this.level * 20 });
-            if (!isStatic) { target.vx = Math.cos(this.angle) * 15; target.vy = Math.sin(this.angle) * 15; }
-            if (target.hp <= 0) { if(isStatic) { const rIdx = rocks.indexOf(target); if(rIdx > -1) { rocks.splice(rIdx, 1); craters.push({ x: target.x, y: target.y, r: target.r, life: 1000 }); } } else { handleKill(this, target); } }
-        }
+    sendMessage(io, text, type) {
+        io.to(this.player.id).emit("aris_msg", { text, type });
+        this.lastMessageTime = Date.now();
     }
 }
 
-// Procedural quests
-const QUEST_TEMPLATES = [
-    { type: "KILL", template: "Derrote {count} {target}", countBase: 5, rewardXpMult: 2.5 },
-    { type: "BP", template: "Treine até {count} de Poder", countBase: 5000, rewardXpMult: 1.5 },
-    { type: "VISIT", template: "Patrulhe o setor {target}", countBase: 1, rewardXpMult: 3.0 }
-];
-
-const initDB = async () => {
-    if (!pool) return;
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) UNIQUE NOT NULL,
-                pass VARCHAR(255) NOT NULL,
-                level INTEGER DEFAULT 1,
-                xp INTEGER DEFAULT 0,
-                bp INTEGER DEFAULT 500,
-                guild VARCHAR(50) DEFAULT NULL,
-                titles TEXT DEFAULT 'Novato',
-                current_title VARCHAR(50) DEFAULT 'Novato',
-                achievements TEXT DEFAULT '',
-                pvp_score INTEGER DEFAULT 0,
-                pvp_kills INTEGER DEFAULT 0,
-                rebirths INTEGER DEFAULT 0,
-                quest_data TEXT DEFAULT '{}',
-                saga_step INTEGER DEFAULT 0
-            );
-        `);
-        await pool.query(`CREATE TABLE IF NOT EXISTS planets (id VARCHAR(50) PRIMARY KEY, owner VARCHAR(255), guild VARCHAR(50), stability INTEGER, tax_rate INTEGER, treasury INTEGER);`);
-        const res = await pool.query("SELECT * FROM planets");
-        res.rows.forEach(row => {
-            const p = PLANETS.find(pl => pl.id === row.id);
-            if(p) { p.owner = row.owner; p.guild = row.guild; p.stability = row.stability; p.taxRate = row.tax_rate; p.treasury = row.treasury; }
-        });
-        console.log(">> DB Sincronizado.");
-    } catch (err) { console.error("Erro no DB Init:", err.message); }
-};
-initDB();
-
+// ==========================================
+// SISTEMAS DE DADOS E ENTIDADES
+// ==========================================
 const players = {};
+const arisInstances = {}; // Instancias da IA por player
 let projectiles = [];
 let npcs = [];
 let rocks = []; 
 let craters = [];
 let chats = []; 
-let dragonBalls = []; // Global DBs
+let dragonBalls = []; 
 
 let globalEventTimer = 0;
 let eventActive = false;
@@ -300,67 +173,6 @@ const FORM_STATS = {
     "UI":   { spd: 22, dmg: 6.0, hpMult: 5.0, kiMult: 5.0 }
 };
 
-// ==========================================
-// SISTEMA DE MOVIMENTOS AVANÇADOS
-// ==========================================
-
-const MOVESETS = {
-  BASE: [
-    {
-      id: "LIGHT_PUNCH",
-      name: "Soco Rápido",
-      input: "TAP",
-      dmg: 1.0,
-      ki: 0,
-      range: 90,
-      knock: 6,
-      fx: "hit",
-      unlockLevel: 1
-    },
-    {
-      id: "DASH_STRIKE",
-      name: "Investida",
-      input: "TAP_TAP",
-      dmg: 1.4,
-      ki: 5,
-      range: 140,
-      knock: 12,
-      fx: "heavy",
-      unlockLevel: 5
-    }
-  ],
-
-  SSJ: [
-    {
-      id: "HEAVY_PUNCH",
-      name: "Soco Pesado",
-      input: "HOLD",
-      dmg: 2.2,
-      ki: 10,
-      range: 120,
-      knock: 22,
-      fx: "heavy",
-      unlockLevel: 20
-    }
-  ],
-
-  GOD: [
-    {
-      id: "GOD_FINISH",
-      name: "Golpe da Destruição",
-      input: "TIMED",
-      dmg: 4.5,
-      ki: 25,
-      range: 160,
-      knock: 40,
-      fx: "finisher",
-      unlockLevel: 60,
-      finisher: true
-    }
-  ]
-};
-
-
 const FORM_ORDER = ["BASE", "SSJ", "SSJ2", "SSJ3", "GOD", "BLUE", "UI"];
 const FORM_REQS = { "BASE": 0, "SSJ": 5, "SSJ2": 20, "SSJ3": 40, "GOD": 60, "BLUE": 80, "UI": 100 };
 const BP_TRAIN_CAP = { BASE: 2000, SSJ: 8000, SSJ2: 20000, SSJ3: 50000, GOD: 150000, BLUE: 500000, UI: 2000000 };
@@ -374,6 +186,10 @@ const BESTIARY = {
     VAMPA: { mobs: ["GIANT_SPIDER", "VAMPA_BEAST"], bosses: ["PARAGUS", "BROLY_WRATH", "LEGENDARY_BROLY"] },
     DIVINE: { mobs: ["PRIDE_TROOPER", "ANGEL_TRAINEE"], bosses: ["TOPPO_GOD", "JIREN", "JIREN_FULL_POWER", "BEERUS"] }
 };
+
+// ==========================================
+// FUNÇÕES AUXILIARES E LÓGICA DE JOGO
+// ==========================================
 
 function getMaxBP(p) {
     const form = p.form || "BASE";
@@ -390,9 +206,6 @@ function clampBP(p) {
     checkSaga(p, "BP", null);
 }
 
-// ------------------------------------------
-// SISTEMA DE ESFERAS DO DRAGÃO
-// ------------------------------------------
 function initDragonBalls() {
     dragonBalls = [];
     for(let i=1; i<=7; i++) {
@@ -408,7 +221,7 @@ function spawnDragonBall(id) {
         x: Math.cos(angle) * dist,
         y: Math.sin(angle) * dist,
         holderId: null,
-        groundTimer: 9000 // ~5 minutos
+        groundTimer: 9000 
     });
 }
 
@@ -419,7 +232,7 @@ function checkDragonBallPickup(p) {
             if (dist < 60) {
                 db.holderId = p.id;
                 p.dbCount = (p.dbCount || 0) + 1;
-                p.pvpMode = true; // MALDIÇÃO: Força PvP
+                p.pvpMode = true; 
                 io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: `PEGOU ESFERA ${db.id}!` });
             }
         }
@@ -440,9 +253,6 @@ function dropDragonBalls(p) {
     io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "ESFERAS PERDIDAS!" });
 }
 
-// ------------------------------------------
-// COMBATE REFINADO (AUTO-AIM)
-// ------------------------------------------
 function findBestCombatTarget(p, range, inputAngle) {
     let best = null;
     let bestScore = Infinity; 
@@ -471,58 +281,6 @@ function findBestCombatTarget(p, range, inputAngle) {
     return best;
 }
 
-function executeMove(p, move) {
-  if (!move) return;
-  if (p.ki < move.ki) return;
-
-  const angle = p.angle || 0;
-  const target = findBestCombatTarget(p, move.range, angle);
-  if (!target) return;
-
-  p.ki -= move.ki;
-
-  const baseDmg = p.bp * 0.02 * move.dmg;
-  target.hp -= baseDmg;
-
-  target.vx += Math.cos(angle) * move.knock;
-  target.vy += Math.sin(angle) * move.knock;
-
-  io.emit("fx", {
-    type: move.fx,
-    x: target.x,
-    y: target.y,
-    dmg: Math.floor(baseDmg),
-    move: move.id
-  });
-
-  applyComboLock(p, target);
-
-  if (move.finisher && target.hp <= target.maxHp * 0.25) {
-    io.emit("fx", {
-      type: "finisher",
-      x: target.x,
-      y: target.y
-    });
-    target.hp = 0;
-  }
-}
-
-
-function applyComboLock(p, target) {
-    if (!target) return;
-    p.comboTargetId = target.id;
-    p.comboLockTimer = 8; 
-}
-
-function updateComboLock(p) {
-    if (p.comboLockTimer > 0) {
-        p.comboLockTimer--;
-    } else {
-        p.comboTargetId = null;
-    }
-}
-
-
 function getZoneInfo(x, y) {
     if (y < -80000) return { id: "DIVINE", level: 100 };
     if (x < -40000) return { id: "VAMPA", level: 80 };
@@ -533,24 +291,26 @@ function getZoneInfo(x, y) {
 }
 
 function assignQuest(p) {
+    // Sistema de Missão Secundária Simples
     if (p.quest && !p.quest.completed) return; 
     const zone = getZoneInfo(p.x, p.y);
-    const typeKey = Object.keys(QUEST_TEMPLATES)[Math.floor(Math.random() * Object.keys(QUEST_TEMPLATES).length)];
-    const template = QUEST_TEMPLATES[typeKey];
+    // Tipos: KILL, BP, VISIT
+    const types = ["KILL", "BP", "VISIT"];
+    const type = types[Math.floor(Math.random() * types.length)];
     
     let target = "", count = 0, desc = "";
-    if (template.type === "KILL") {
+    if (type === "KILL") {
         const list = BESTIARY[zone.id].mobs;
         target = list[Math.floor(Math.random() * list.length)];
-        count = Math.floor(template.countBase + (p.level * 0.3));
+        count = 5 + Math.floor(p.level * 0.2);
         desc = `Derrote ${count} ${target}`;
-    } else if (template.type === "BP") {
-        target = "POWER"; count = Math.floor(getMaxBP(p) * 0.95); desc = `Treine até ${count} BP`;
+    } else if (type === "BP") {
+        target = "POWER"; count = Math.floor(getMaxBP(p) * 0.9); desc = `Treine até ${count} BP`;
     } else {
         const zones = Object.keys(BESTIARY); target = zones[Math.floor(Math.random() * zones.length)];
         count = 1; desc = `Patrulhe o setor ${target}`;
     }
-    p.quest = { type: template.type, target, required: count, current: 0, desc, rewardXp: p.level * 2000 * template.rewardXpMult, completed: false };
+    p.quest = { type: type, target, required: count, current: 0, desc, rewardXp: p.level * 2000, completed: false };
     if(pool) pool.query('UPDATE users SET quest_data=$1 WHERE name=$2', [JSON.stringify(p.quest), p.name]).catch(console.error);
 }
 
@@ -578,26 +338,26 @@ function checkSaga(p, type, data) {
 
     let completed = false;
     if (type === "BP" && currentStep.type === "BP" && p.bp >= currentStep.req) completed = true;
-    if (type === "LEVEL" && currentStep.type === "LEVEL" && p.level >= currentStep.req) completed = true; 
     if (type === "KILL" && currentStep.type === "KILL" && (data.name === currentStep.target || currentStep.target === "ANY")) completed = true;
     if (type === "VISIT" && currentStep.type === "VISIT") {
-        if (currentStep.target === "SNAKE_WAY" && p.y < -12000) completed = true; 
-        else if (currentStep.target === "KAIOH" && p.y < -24000) completed = true;
+        if (currentStep.target === "KAIOH_PLANET" && p.y < -24000) completed = true;
         else if (currentStep.targetZone && Math.hypot(p.x - PLANETS.find(pl=>pl.id===currentStep.targetZone)?.x, p.y - PLANETS.find(pl=>pl.id===currentStep.targetZone)?.y) < 2000) completed = true;
         else if (getZoneInfo(p.x, p.y).id === currentStep.target) completed = true;
     }
-    if (type === "FORM" && currentStep.type === "FORM") {
-        if(currentStep.target === "SSJ2" && (p.form === "SSJ2" || p.form === "SSJ3" || p.form === "GOD")) completed = true;
-        else if(p.form === currentStep.target) completed = true;
-    }
-    if (type === "DOMINATION" && currentStep.type === "DOMINATION" && p.guild && data.owner === p.guild) completed = true;
-    if (type === "REBIRTH" && currentStep.type === "REBIRTH") completed = true;
+    if (type === "FORM" && currentStep.type === "FORM" && p.form === currentStep.target) completed = true;
+    if (type === "DOMINATION" && currentStep.type === "DOMINATION" && p.guild) completed = true;
 
     if (completed) {
         p.sagaStep = (p.sagaStep || 0) + 1;
         p.xp += p.level * 8000;
         io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "SAGA AVANÇADA!" });
-        io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y }); 
+        io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y });
+        
+        // Notificação da A.R.I.S sobre o sucesso
+        const nextStep = SAGA_STEPS[p.sagaStep];
+        const msg = nextStep ? `Objetivo concluído. Próxima fase: ${nextStep.title}` : "Campanha Concluída.";
+        io.to(p.id).emit("aris_msg", { text: msg, type: "SUCCESS" });
+
         if(pool) pool.query('UPDATE users SET saga_step=$1 WHERE name=$2', [p.sagaStep, p.name]).catch(console.error);
     }
 }
@@ -617,12 +377,9 @@ function initWorld() {
     npcs = [];
     for(let i=0; i<600; i++) spawnMobRandomly();
     PLANETS.forEach(p => { 
-        if(p.id === "KAIOH_PLANET") return; // Não spawnar boss no ponto GPS
+        if(p.id === "KAIOH_PLANET") return;
         const list = BESTIARY[p.biome]?.bosses || BESTIARY.EARTH.bosses; spawnBossAt(p.x, p.y, list[Math.floor(Math.random() * list.length)]); 
     });
-    
-    // Spawna apenas 5 Bots
-    for(let i=0; i<5; i++) { npcs.push(new BotPlayer()); } 
     initDragonBalls();
     console.log(">> Universo Gerado e Pronto.");
 }
@@ -657,6 +414,9 @@ function checkAchievements(p) {
 
 initWorld();
 
+// ==========================================
+// SERVIDOR E SOCKETS
+// ==========================================
 const server = http.createServer((req, res) => {
     let filePath = "." + req.url;
     if (filePath === "./") filePath = "./index.html";
@@ -668,7 +428,7 @@ const server = http.createServer((req, res) => {
         case ".css": contentType = "text/css"; break;
         case ".json": contentType = "application/json"; break;
         case ".png": contentType = "image/png"; break;
-        case ".mp3": contentType = "audio/mpeg"; break; // IMPORTANTE: Servir MP3
+        case ".mp3": contentType = "audio/mpeg"; break;
     }
 
     fs.readFile(filePath, (error, content) => {
@@ -687,11 +447,11 @@ const server = http.createServer((req, res) => {
 
 const io = new Server(server, { transports: ['websocket'], pingInterval: 25000, pingTimeout: 5000 });
 
+// PACKER DE ESTADO (VISIBILIDADE)
 function packStateForPlayer(pid) {
     const p = players[pid]; if (!p) return null;
     const VIEW_DIST = 2500; const filterFunc = (o) => Math.abs(o.x - p.x) < VIEW_DIST && Math.abs(o.y - p.y) < VIEW_DIST;
     
-    // Atualiza posição das Esferas com base no dono (Server-side render prep)
     const packedDragonBalls = dragonBalls.map(db => {
         if(db.holderId && players[db.holderId]) {
             return { id: db.id, x: players[db.holderId].x, y: players[db.holderId].y, held: true };
@@ -702,12 +462,13 @@ function packStateForPlayer(pid) {
     const packedPlayers = {};
     for (const pid in players) { const pl = players[pid]; if (pid === p.id || filterFunc(pl)) { packedPlayers[pid] = { id: pl.id, name: pl.name, x: Math.round(pl.x), y: Math.round(pl.y), vx: Math.round(pl.vx), vy: Math.round(pl.vy), hp: pl.hp, maxHp: pl.maxHp, ki: pl.ki, maxKi: pl.maxKi, xp: pl.xp, xpToNext: pl.xpToNext, level: pl.level, bp: pl.bp, state: pl.state, form: pl.form, color: pl.color, stun: pl.stun, isSpirit: pl.isSpirit, pvpMode: pl.pvpMode, quest: pl.quest, rebirths: pl.rebirths || 0, current_title: pl.current_title, guild: pl.guild, skills: pl.skills || [], dbCount: pl.dbCount || 0 }; } }
     
+    // IMPORTANTE: Envia a Saga específica do Player
     const currentSagaStep = SAGA_STEPS[p.sagaStep || 0] || { title: "FIM DO JOGO", objective: "Aguarde updates!", targetZone: null };
+    
     const visibleNpcs = npcs.filter(filterFunc).map(n => ({...n, x: Math.round(n.x), y: Math.round(n.y)}));
     const visibleProjs = projectiles.filter(filterFunc).map(pr => ({...pr, x: Math.round(pr.x), y: Math.round(pr.y)}));
     const visibleChats = chats.filter(c => c.life > 0 && Math.abs(c.x - p.x) < VIEW_DIST && Math.abs(c.y - p.y) < VIEW_DIST);
     
-    // Passa o objeto saga completo
     return { 
         players: packedPlayers, npcs: visibleNpcs, projectiles: visibleProjs, rocks: rocks.filter(filterFunc), craters, chats: visibleChats, domination: PLANETS, leaderboard: leaderboard.slice(0, 5), saga: currentSagaStep, dbs: packedDragonBalls
     };
@@ -722,7 +483,6 @@ io.on("connection", (socket) => {
                 const res = await pool.query('SELECT * FROM users WHERE name = $1', [data.user]);
                 user = res.rows[0];
                 if (!user) {
-                    // Start at saga_step 0 -> Tutorial
                     const insert = await pool.query('INSERT INTO users (name, pass, level, xp, bp, guild, titles, current_title, pvp_score, rebirths, quest_data, saga_step) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *', [data.user, data.pass, 1, 0, 500, null, 'Novato', 'Novato', 0, 0, '{}', 0]);
                     user = insert.rows[0];
                 } else if (user.pass !== data.pass) return;
@@ -747,6 +507,10 @@ io.on("connection", (socket) => {
                 skills: skills, dbCount: 0, isTutorialDialogActive: false
             };
             
+            // INICIALIZA A A.R.I.S PARA O JOGADOR
+            arisInstances[socket.id] = new ArisAI(players[socket.id]);
+            socket.emit("aris_msg", { text: `A.R.I.S: Sistema Online. Bem-vindo, Guerreiro ${data.user}.`, type: "INFO" });
+            
             if(!players[socket.id].quest.type) assignQuest(players[socket.id]);
             socket.emit("auth_success", players[socket.id]);
             console.log(`>> ${data.user} Entrou no jogo.`);
@@ -756,7 +520,7 @@ io.on("connection", (socket) => {
     socket.on("toggle_pvp", () => { 
         const p = players[socket.id]; 
         if (!p || p.isDead || p.isSpirit) return;
-        if (p.dbCount > 0) return; // Não pode desligar PvP se tiver esferas
+        if (p.dbCount > 0) return; 
         p.pvpMode = !p.pvpMode; 
         socket.emit("pvp_status", p.pvpMode); 
     });
@@ -788,8 +552,6 @@ io.on("connection", (socket) => {
 
     socket.on("input", (input) => {
         const p = players[socket.id]; if(!p || p.stun > 0 || p.isDead) return; 
-        
-        // Bloqueia movimento se estiver em dialogo de tutorial
         if(p.isTutorialDialogActive) return;
 
         const now = Date.now();
@@ -821,23 +583,19 @@ io.on("connection", (socket) => {
         else if(!["ATTACKING", "STUNNED"].includes(p.state)) { 
             p.state = "IDLE"; p.blockStart = 0;
         }
-        if (now % 100 === 0) { checkQuest(p, "VISIT", null); checkSaga(p, "VISIT", null); checkSaga(p, "LEVEL", null); }
+        if (now % 100 === 0) { checkQuest(p, "VISIT", null); checkSaga(p, "VISIT", null); }
     });
 
     socket.on("release_attack", () => {
         const p = players[socket.id]; if (!p || p.isSpirit || p.stun > 0) return;
-        if(p.isTutorialDialogActive) return; // Não ataca no tutorial
+        if(p.isTutorialDialogActive) return; 
 
         const now = Date.now(); const formStats = FORM_STATS[p.form] || FORM_STATS.BASE;
         
-        // ============================
-        // COMBATE INTELIGENTE (SMART SNAP)
-        // ============================
         const range = 220;
         let target = findBestCombatTarget(p, range, p.angle);
         
         if (!target) {
-             // Fallback: Procura qualquer coisa quebrável ou muito perto
             let best = null, bestDist = 200;
             [...Object.values(players), ...npcs].forEach(t => {
                 if (t.id === p.id || t.isDead || t.isSpirit) return; if (!t.isNPC && !p.pvpMode) return;
@@ -846,13 +604,11 @@ io.on("connection", (socket) => {
             target = best;
         }
 
-        // Se encontrou alvo válido, ajusta ângulo automaticamente (Snap)
         if (target) {
             const dx = target.x - p.x; const dy = target.y - p.y;
             p.angle = Math.atan2(dy, dx);
         }
 
-        // Clash Logic
         if (target && target.state === "ATTACKING" && !target.isDead) {
             const angToTarget = Math.atan2(target.y - p.y, target.x - p.x); const angToPlayer = Math.atan2(p.y - target.y, p.x - target.x);
             let diffP = Math.abs(angToTarget - p.angle); if (diffP > Math.PI) diffP = Math.PI*2 - diffP;
@@ -877,61 +633,24 @@ io.on("connection", (socket) => {
         p.state = "ATTACKING"; p.attackLock = isFinisher ? 18 : 10; p.cancelWindow = 5; p.lastAtk = now;
         let baseDmg = Math.floor((65 + p.level * 10) * formStats.dmg * step.dmg); 
         
-       // ============================
-// DANO
-// ============================
-if (target) {
-    const dist = Math.hypot(target.x - p.x, target.y - p.y); 
-    if (dist <= step.range) {
-        if (target.isNPC) target.targetId = p.id; 
+        if (target) {
+            const dist = Math.hypot(target.x - p.x, target.y - p.y); 
+            if (dist <= step.range) {
+                if (target.isNPC) target.targetId = p.id; 
+                let dmg = baseDmg; if (!target.isNPC) dmg *= 0.5;
 
-        let dmg = baseDmg;
-        if (!target.isNPC) dmg *= 0.5;
-
-        // Sempre trava o alvo no combo
-        applyComboLock(p, target);
-
-        // BLOQUEIO NORMAL
-        if (target.state === "BLOCKING" && !isFinisher) {
-            dmg *= 0.25;
-            target.ki -= 12;
-            target.counterWindow = 12;
-            io.emit("fx", { type: "block_hit", x: target.x, y: target.y });
-
-        } else {
-            // QUEBRA DE GUARDA NO FINISHER
-            if (target.state === "BLOCKING" && isFinisher) {
-                target.state = "IDLE";
-                target.stun = 30;
-                io.emit("fx", { type: "guard_break", x: target.x, y: target.y });
-            }
-
-            // DANO NORMAL
-            target.hp -= dmg;
-            target.stun = step.stun;
-            target.vx = Math.cos(p.angle) * step.targetPush;
-            target.vy = Math.sin(p.angle) * step.targetPush;
-
-            io.emit("fx", {
-                type: isFinisher ? "finisher" : "hit",
-                x: target.x,
-                y: target.y,
-                dmg
-            });
-        }
-
-        if (target.hp <= 0) handleKill(p, target);
-
-        p.combo++;
-        p.comboTimer = 35;
-
-    } else if (p.combo > 0) {
-        p.comboTimer = 15;
-    }
-} else if (p.combo > 0) {
-    p.comboTimer = 15;
-}
-});
+                if (target.state === "BLOCKING" && !isFinisher) {
+                    dmg *= 0.25; target.ki -= 12; target.counterWindow = 12; io.emit("fx", { type: "block_hit", x: target.x, y: target.y });
+                } else {
+                    if (target.state === "BLOCKING" && isFinisher) { target.state = "IDLE"; target.stun = 30; io.emit("fx", { type: "guard_break", x: target.x, y: target.y }); }
+                    target.hp -= dmg; target.stun = step.stun; target.vx = Math.cos(p.angle) * step.targetPush; target.vy = Math.sin(p.angle) * step.targetPush;
+                    io.emit("fx", { type: isFinisher ? "finisher" : "hit", x: target.x, y: target.y, dmg });
+                }
+                if (target.hp <= 0) handleKill(p, target);
+                p.combo++; p.comboTimer = 35;
+            } else if (p.combo > 0) { p.comboTimer = 15; }
+        } else if (p.combo > 0) { p.comboTimer = 15; }
+    });
 
     socket.on("release_blast", () => {
         const p = players[socket.id]; 
@@ -986,7 +705,7 @@ if (target) {
         checkAchievements(p); clampBP(p); checkSaga(p, "FORM", null);
     });
     socket.on("set_tax", (val) => { const p = players[socket.id]; if (!p || !p.guild) return; const planet = PLANETS.find(pl => Math.hypot(pl.x - p.x, pl.y - p.y) < pl.radius); if (planet && planet.owner === p.guild && val >= 0 && val <= 20) { planet.taxRate = val; if(pool) pool.query('INSERT INTO planets (id, tax_rate) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET tax_rate = $2', [planet.id, val]).catch(console.error); io.emit("fx", { type: "bp_limit", x: planet.x, y: planet.y, text: `IMPOSTO: ${val}%` }); } });
-    socket.on("disconnect", () => delete players[socket.id]);
+    socket.on("disconnect", () => { delete players[socket.id]; delete arisInstances[socket.id]; });
 });
 
 function handleKill(killer, victim) {
@@ -997,7 +716,6 @@ function handleKill(killer, victim) {
         if(pool && planet) { pool.query(`INSERT INTO planets (id, owner, guild, stability, treasury) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET owner=$2, guild=$3, stability=$4, treasury=$5`, [planet.id, planet.owner, planet.guild, planet.stability, planet.treasury]).catch(console.error); }
     }
     
-    // DROP DE ESFERAS AO MORRER
     if(!victim.isNPC) {
         dropDragonBalls(victim);
     }
@@ -1028,11 +746,7 @@ function handleKill(killer, victim) {
                 if(pool) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [killer.level, killer.xp, killer.bp, killer.name]).catch(e => console.error(e)); 
             }
         }
-        if(victim.isBotPlayer) {
-             setTimeout(() => { victim.isDead = false; victim.hp = victim.maxHp; victim.x = SNAKE_WAY_START.x + (Math.random()-0.5)*1000; victim.y = SNAKE_WAY_START.y; }, 8000);
-        } else {
-             setTimeout(() => { npcs = npcs.filter(n => n.id !== victim.id); spawnMobRandomly(); }, 5000);
-        }
+        setTimeout(() => { npcs = npcs.filter(n => n.id !== victim.id); spawnMobRandomly(); }, 5000);
     } else {
         victim.isSpirit = true; victim.hp = 1; victim.ki = 0; victim.state = "SPIRIT"; victim.vx = 0; victim.vy = 0; victim.x = SNAKE_WAY_START.x; victim.y = SNAKE_WAY_START.y; victim.angle = -Math.PI / 2;
         io.emit("fx", { type: "vanish", x: victim.x, y: victim.y });
@@ -1058,12 +772,10 @@ setInterval(() => {
     leaderboard = Object.values(players).sort((a,b) => b.pvp_score - a.pvp_score).slice(0,5).map(p => ({name: p.name, score: p.pvp_score, guild: p.guild}));
     globalEventTimer++; if(globalEventTimer > 6000) { triggerRandomEvent(); globalEventTimer = 0; }
 
-    // Atualiza esferas (respawn se ficar mto tempo no chão)
     dragonBalls.forEach(db => {
         if (!db.holderId) {
             db.groundTimer--;
             if(db.groundTimer <= 0) {
-                // Respawn em outro lugar
                 const angle = Math.random() * Math.PI * 2;
                 const dist = 5000 + Math.random() * 35000;
                 db.x = Math.cos(angle) * dist;
@@ -1074,33 +786,15 @@ setInterval(() => {
     });
 
     Object.values(players).forEach(p => {
-		// ==========================================
-// AJUSTE DE DIREÇÃO DURANTE COMBO (PLAYER)
-// ==========================================
-updateComboLock(p);
-
-if (p.comboTargetId) {
-    const t = players[p.comboTargetId] || npcs.find(n => n.id === p.comboTargetId);
-    if (t && !t.isDead) {
-        const dx = t.x - p.x;
-        const dy = t.y - p.y;
-        const dist = Math.hypot(dx, dy);
-
-        // Correção suave de posição (cola sem teleportar)
-        if (dist > 30 && dist < 180) {
-            const pull = 0.18;
-            p.vx += dx * pull * 0.01;
-            p.vy += dy * pull * 0.01;
+        if (p.comboTargetId) {
+            const t = players[p.comboTargetId] || npcs.find(n => n.id === p.comboTargetId);
+            if (t && !t.isDead) {
+                const dx = t.x - p.x; const dy = t.y - p.y; const dist = Math.hypot(dx, dy);
+                if (dist > 30 && dist < 180) { const pull = 0.18; p.vx += dx * pull * 0.01; p.vy += dy * pull * 0.01; }
+                if (p.state === "ATTACKING" && dist > 60) { const dash = 0.6; p.vx += Math.cos(Math.atan2(dy, dx)) * dash; p.vy += Math.sin(Math.atan2(dy, dx)) * dash; }
+            }
         }
-
-        // Micro-dash só enquanto ataca
-        if (p.state === "ATTACKING" && dist > 60) {
-            const dash = 0.6;
-            p.vx += Math.cos(Math.atan2(dy, dx)) * dash;
-            p.vy += Math.sin(Math.atan2(dy, dx)) * dash;
-        }
-    }
-}
+        if (p.comboTimer <= 0) p.comboTargetId = null;
 
         if(p.stun > 0) p.stun--; if(p.attackLock > 0) p.attackLock--; if(p.comboTimer > 0) p.comboTimer--; if(p.counterWindow > 0) p.counterWindow--;
         p.x += p.vx; p.y += p.vy; 
@@ -1111,12 +805,14 @@ if (p.comboTargetId) {
         if (!p.isDead && !p.isSpirit) {
             p.bp += 1 + Math.floor(p.level * 0.1); 
             clampBP(p);
-            
             checkDragonBallPickup(p);
 
-            // MISSÃO DE APRENDER SKILLS (Kamehameha / Genki Dama)
+            // AVALIAÇÃO DA A.R.I.S (IA)
+            if (arisInstances[p.id]) {
+                arisInstances[p.id].evaluate(io);
+            }
+
             if (!p.skills) p.skills = [];
-            // Kame House Check
             if (!p.skills.includes("KAMEHAMEHA")) {
                 const distKame = Math.hypot(p.x - 6000, p.y - (-4000));
                 if (distKame < 400 && p.level >= 5) {
@@ -1126,7 +822,6 @@ if (p.comboTargetId) {
                     if(pool) pool.query('UPDATE users SET quest_data=$1 WHERE name=$2', [JSON.stringify({skills: p.skills}), p.name]).catch(console.error);
                 }
             }
-            // King Kai Check
             if (!p.skills.includes("GENKI_DAMA")) {
                 const distKai = Math.hypot(p.x - KAIOH_PLANET.x, p.y - KAIOH_PLANET.y);
                 if (distKai < 400 && p.level >= 50) {
@@ -1137,7 +832,7 @@ if (p.comboTargetId) {
             }
 
             if (p.state === "CHARGING") { 
-                checkSaga(p, "BP", null); // Verifica missão de Tutorial de Carga
+                checkSaga(p, "BP", null); 
                 if (Math.random() > 0.85) { p.xp += 1; p.xpToNext = p.level * 800; p.bp += 10; clampBP(p); } 
                 const xpReq = p.level * 800; 
                 if(p.xp >= xpReq) { 
@@ -1160,12 +855,10 @@ if (p.comboTargetId) {
 
     npcs.forEach(n => {
         if (n.isDead) return;
-        if (n.isBotPlayer) { n.update(); return; }
         if (n.stun > 0) { n.stun--; n.x += n.vx; n.y += n.vy; n.vx *= 0.9; n.vy *= 0.9; n.state = "STUNNED"; return; }
         let target = null; let minDist = n.aggro || 1200;
         if (n.targetId && players[n.targetId] && !players[n.targetId].isDead && !players[n.targetId].isSpirit) { const t = players[n.targetId]; if (Math.hypot(n.x - t.x, n.y - t.y) < 3000) target = t; else n.targetId = null; }
         if (!target) { for (const p of Object.values(players)) { if (p.isDead || p.isSpirit) continue; if (Math.abs(p.x - n.x) > minDist || Math.abs(p.y - n.y) > minDist) continue; const d = Math.hypot(n.x - p.x, n.y - p.y); if (d < minDist) { minDist = d; target = p; } } }
-        if (!target) { const botTarget = npcs.find(other => other.isBotPlayer && !other.isDead && Math.hypot(n.x - other.x, n.y - other.y) < minDist); if(botTarget) target = botTarget; }
 
         if (!target) { n.state = "IDLE"; n.vx *= 0.95; n.vy *= 0.95; n.x += n.vx; n.y += n.vy; return; }
         const dx = target.x - n.x; const dy = target.y - n.y; const dist = Math.hypot(dx, dy); const ang = Math.atan2(dy, dx); n.angle = ang;
@@ -1226,14 +919,8 @@ if (p.comboTargetId) {
         }
         if (hit || pr.life <= 0) projectiles.splice(i, 1);
     });
-	
-	// ==========================================
-// AJUSTE DE DIREÇÃO DURANTE COMBO
-// ==========================================
-
-
 
     Object.keys(players).forEach(id => { const st = packStateForPlayer(id); if(st) io.to(id).emit("state", st); });
 }, TICK);
 
-server.listen(3000, () => console.log(">> SERVER ONLINE EM: http://localhost:3000"));
+server.listen(3000, () => console.log(">> UNIVERSE Z DEFINITIVE EDITION ONLINE: http://localhost:3000"));

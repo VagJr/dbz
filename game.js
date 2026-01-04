@@ -1,31 +1,16 @@
 window.onload = function() {
-    console.log(">> GAME.JS CARREGADO. SISTEMA HÍBRIDO: VISUAL CLÁSSICO + CONTROLE NOVO.");
-
+    console.log(">> GAME.JS DEFINITIVE CARREGADO. SISTEMA A.R.I.S ATIVO.");
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
     // --- CORREÇÃO DE INPUT: BLOQUEAR MENU DO BOTÃO DIREITO ---
-    // Isso garante que o clique direito funcione apenas como ataque no jogo
-    canvas.oncontextmenu = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    };
-    // Bloqueio secundário para garantir
-    window.addEventListener('contextmenu', (e) => {
-        if (e.target === canvas) {
-            e.preventDefault();
-            return false;
-        }
-    }, { passive: false });
+    canvas.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); return false; };
+    window.addEventListener('contextmenu', (e) => { if (e.target === canvas) { e.preventDefault(); return false; } }, { passive: false });
 
     // Ajusta tela
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // ==========================================
-    // 1. CONEXÃO E LOGIN
-    // ==========================================
     const socket = io({ transports: ['websocket'], upgrade: false });
     window.socket = socket;
 
@@ -42,19 +27,17 @@ window.onload = function() {
     textInput.placeholder = "Pressione ENTER para enviar...";
     document.body.appendChild(textInput);
 
-    // Lógica de Login
     if (btnLogin) {
         btnLogin.onclick = function(e) {
             e.preventDefault();
             const user = document.getElementById("username").value.trim();
             const pass = document.getElementById("password").value.trim();
-            
             if (user && pass) {
                 console.log(">> ENVIANDO LOGIN:", user);
                 btnLogin.innerText = "CARREGANDO UNIVERSO...";
                 btnLogin.disabled = true;
                 socket.emit("login", { user: user, pass: pass });
-                AudioSys.unlock(); // Tenta iniciar áudio
+                AudioSys.unlock(); 
             } else {
                 alert("Digite Guerreiro e Senha!");
             }
@@ -62,12 +45,11 @@ window.onload = function() {
     }
 
     // ==========================================
-    // 2. VARIÁVEIS E DADOS
+    // ESTADO E VARIÁVEIS
     // ==========================================
     let myId = null;
     let players = {}, npcs = [], projectiles = [], rocks = [], craters = [], chats = [];
-    let dominationZones = [], leaderboard = [], currentSaga = null; 
-    let dragonBalls = []; 
+    let dominationZones = [], leaderboard = [], currentSaga = null, dragonBalls = []; 
 
     let cam = { x: 0, y: 0 };
     let mouse = { x: 0, y: 0 };
@@ -75,11 +57,14 @@ window.onload = function() {
     let mouseLeft = false, mouseRight = false;
     let joystickMove = { x: 0, y: 0, active: false };
 
-    // Efeitos
     let particles = [], shockwaves = [], trails = [], texts = [];
     let screenShake = 0, flash = 0, hitStop = 0;
 
-    // UI & Estado
+    // A.R.I.S. STATE
+    let arisMessages = [];
+    let currentArisMsg = null;
+    let arisWave = 0;
+
     let scouterActive = false; 
     let showMap = true;
     let activeWindow = null; 
@@ -87,12 +72,10 @@ window.onload = function() {
 
     const ZOOM_SCALE = 0.6; 
     const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
-
-    // --- COORDENADAS DO MAPA (Sincronizadas com Server.js) ---
+    
+    // Configurações de Coordenadas de Planetas (Sincronizado)
     const SNAKE_WAY_START = { x: 0, y: -12000 };
     const KAIOH_PLANET    = { x: 0, y: -25000 };
-    
-    // IDs devem bater com o server para o GPS funcionar
     const PLANETS_COORDS = { 
         "EARTH_CORE": {x: 2000, y: 2000, name: "Capital do Oeste"}, 
         "KAME_ISLAND": {x: 6000, y: -4000, name: "Casa do Kame"},
@@ -106,7 +89,6 @@ window.onload = function() {
         "KAIOH": {x: 0, y: -25000, name: "Sr. Kaioh"}
     };
 
-    // Fundo Galáctico
     const stars = [];
     for(let i=0; i<350; i++) {
         stars.push({
@@ -119,39 +101,55 @@ window.onload = function() {
         });
     }
 
-    // --- SISTEMA DE ÁUDIO OTIMIZADO ---
     const AudioSys = {
-        bgm: new Audio('./bgm.mp3'),
-        sfxHit: new Audio('https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3'),
-        sfxBlast: new Audio('https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3'),
-        sfxHeavy: new Audio('https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3'),
-        sfxTeleport: new Audio('https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3'),
-        sfxCharge: new Audio('https://assets.mixkit.co/active_storage/sfx/297/297-preview.mp3'),
-        unlocked: false,
-        
-        init: function() { this.bgm.loop = true; this.bgm.volume = 0.25; },
-        unlock: function() {
-            if(this.unlocked) return;
-            this.bgm.play().then(() => { this.unlocked = true; console.log(">> Áudio Destravado"); }).catch(()=>{});
-        },
-        play: function(type) {
-            if(!this.unlocked) return;
-            let sound;
-            if(type === 'hit') sound = this.sfxHit;
-            else if(type === 'blast') sound = this.sfxBlast;
-            else if(type === 'heavy') sound = this.sfxHeavy;
-            else if(type === 'teleport') sound = this.sfxTeleport;
-            else if(type === 'charge') sound = this.sfxCharge;
-            if(sound) { const clone = sound.cloneNode(); clone.volume = 0.35; clone.play().catch(()=>{}); }
+    bgm: new Audio('./bgm.mp3'),
+    sfxHit: new Audio('https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3'),
+    sfxBlast: new Audio('https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3'),
+    sfxHeavy: new Audio('https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3'),
+    sfxTeleport: new Audio('https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3'),
+    sfxCharge: new Audio('https://assets.mixkit.co/active_storage/sfx/297/297-preview.mp3'),
+    unlocked: false,
+
+    init: function() {
+        this.bgm.loop = true;
+        this.bgm.volume = 0.125; // 🔉 volume reduzido pela metade
+    },
+
+    unlock: function() {
+        if (this.unlocked) return;
+        this.bgm.play()
+            .then(() => {
+                this.unlocked = true;
+                console.log(">> Áudio Destravado");
+            })
+            .catch(() => {});
+    },
+
+    play: function(type) {
+        if (!this.unlocked) return;
+        let sound;
+        if (type === 'hit') sound = this.sfxHit;
+        else if (type === 'blast') sound = this.sfxBlast;
+        else if (type === 'heavy') sound = this.sfxHeavy;
+        else if (type === 'teleport') sound = this.sfxTeleport;
+        else if (type === 'charge') sound = this.sfxCharge;
+
+        if (sound) {
+            const clone = sound.cloneNode();
+            clone.volume = 0.35;
+            clone.play().catch(() => {});
         }
-    };
-    AudioSys.init();
-    
-    // Listeners globais de áudio
-    ['click', 'touchstart', 'keydown'].forEach(evt => window.addEventListener(evt, () => AudioSys.unlock(), {once:true}));
+    }
+};
+
+AudioSys.init();
+
+['click', 'touchstart', 'keydown'].forEach(evt =>
+    window.addEventListener(evt, () => AudioSys.unlock(), { once: true })
+);
 
     // ==========================================
-    // 3. LISTENERS E SOCKETS
+    // LISTENERS E SOCKETS
     // ==========================================
 
     socket.on("auth_success", (data) => { 
@@ -169,6 +167,11 @@ window.onload = function() {
         dominationZones = data.domination || []; leaderboard = data.leaderboard || []; 
         currentSaga = data.saga || null;
         dragonBalls = data.dbs || [];
+    });
+
+    socket.on("aris_msg", (msg) => {
+        arisMessages.push({ text: msg.text, type: msg.type, life: 300 });
+        // Som de "beep" tech seria ideal aqui
     });
 
     socket.on("fx", (data) => {
@@ -227,7 +230,7 @@ window.onload = function() {
     });
 
     // ==========================================
-    // 4. INPUTS E INTERAÇÃO
+    // INPUTS E INTERAÇÃO
     // ==========================================
 
     function toggleChat(forceOpen = false) {
@@ -240,7 +243,6 @@ window.onload = function() {
         Object.keys(keys).forEach(k => keys[k] = false);
     }
 
-    // Input Helpers
     function bindBtn(id, onPress, onRelease) { 
         const el = document.getElementById(id); if (!el) return; 
         const press = e => { e.preventDefault(); e.stopPropagation(); onPress && onPress(); }; 
@@ -273,16 +275,24 @@ window.onload = function() {
     window.addEventListener("mousemove", e => { mouse.x = (e.clientX - window.innerWidth / 2) / ZOOM_SCALE; mouse.y = (e.clientY - window.innerHeight / 2) / ZOOM_SCALE; });
     
     canvas.addEventListener("mousedown", e => { 
+        if (currentSaga && currentSaga.type === "TUTORIAL" && players[myId]?.isTutorialDialogActive) {
+            socket.emit("tutorial_next");
+            return; 
+        }
         if(e.button === 0) mouseLeft = true; 
         if(e.button === 2) mouseRight = true; 
         if(activeWindow && (mouse.x > 200 || mouse.x < -200)) activeWindow = null; 
     });
     canvas.addEventListener("mouseup", e => { 
+        if (currentSaga && currentSaga.type === "TUTORIAL") return;
         if(e.button === 0) { mouseLeft = false; socket.emit("release_attack"); } 
         if(e.button === 2) { mouseRight = false; socket.emit("release_blast"); } 
     });
     
     canvas.addEventListener("touchstart", e => {
+        if (currentSaga && currentSaga.type === "TUTORIAL" && players[myId]?.isTutorialDialogActive) { 
+            socket.emit("tutorial_next"); e.preventDefault(); return; 
+        }
         if (!activeWindow) return; const touch = e.touches[0]; const rect = canvas.getBoundingClientRect(); const x = touch.clientX - rect.left; const y = touch.clientY - rect.top; handleCanvasUIInteraction(x, y); e.preventDefault();
     }, { passive: false });
 
@@ -291,6 +301,11 @@ window.onload = function() {
         if (textInput.style.display === "block") { if(e.key === "Enter") toggleChat(); return; }
         if (e.repeat) return; 
         
+        if (currentSaga && currentSaga.type === "TUTORIAL" && players[myId]?.isTutorialDialogActive) {
+             if(e.code === "Space" || e.code === "Enter") socket.emit("tutorial_next");
+             return;
+        }
+
         keys[e.code] = true;
         if(e.code === "Enter") toggleChat();
         if(e.code === "KeyG") socket.emit("transform");
@@ -340,7 +355,7 @@ window.onload = function() {
     }
 
     // ==========================================
-    // 5. RENDERIZAÇÃO
+    // RENDERIZAÇÃO
     // ==========================================
 
     function drawBackground(camX, camY) {
@@ -437,7 +452,7 @@ window.onload = function() {
         const time = Date.now();
         const breathe = Math.sin(time * 0.005) * 1.5;
 
-        // --- 1. SAIBAMAN ---
+        // --- MODELOS ESPECÍFICOS DE MOB ---
         if (name.includes("SAIBAMAN")) {
             ctx.fillStyle = "#2d2"; ctx.strokeStyle = "#050"; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.arc(-5 * sizeMult, -8 * sizeMult, 6 * sizeMult, 0, Math.PI*2); ctx.arc(-5 * sizeMult, 8 * sizeMult, 6 * sizeMult, 0, Math.PI*2); ctx.fill(); ctx.stroke();
@@ -447,7 +462,6 @@ window.onload = function() {
             ctx.strokeStyle = "#1a1"; ctx.beginPath(); ctx.moveTo(-5 * sizeMult, -5 * sizeMult); ctx.lineTo(0, -8 * sizeMult); ctx.stroke(); 
             ctx.restore(); return;
         }
-        // --- 2. MAJIN BUU ---
         if (name.includes("BUU") || name.includes("FAT") || name.includes("DODORIA")) {
             ctx.fillStyle = "#509"; ctx.beginPath(); ctx.moveTo(-10 * sizeMult, -15 * sizeMult); ctx.lineTo(-25 * sizeMult, 0); ctx.lineTo(-10 * sizeMult, 15 * sizeMult); ctx.fill();
             ctx.fillStyle = name.includes("DODORIA") ? "#d59" : "#fba"; ctx.strokeStyle = "#000"; 
@@ -458,7 +472,6 @@ window.onload = function() {
             ctx.strokeStyle = "#000"; ctx.beginPath(); ctx.moveTo(6 * sizeMult, -4 * sizeMult); ctx.lineTo(10 * sizeMult, -4 * sizeMult); ctx.moveTo(6 * sizeMult, 4 * sizeMult); ctx.lineTo(10 * sizeMult, 4 * sizeMult); ctx.stroke(); 
             return;
         }
-        // --- 3. ARMADURAS ---
         if (name.includes("FRIEZA") || name.includes("SOLDIER") || name.includes("VEGETA") || name.includes("NAPPA") || name.includes("RADITZ")) {
             ctx.fillStyle = "#113"; ctx.fillRect(-12 * sizeMult, -10 * sizeMult, 24 * sizeMult, 20 * sizeMult);
             ctx.fillStyle = "#eee"; ctx.strokeStyle = "#da0"; ctx.lineWidth = 1;
@@ -471,22 +484,18 @@ window.onload = function() {
             if (!name.includes("SOLDIER") && !name.includes("FRIEZA")) { ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(-2 * sizeMult, 0, 10 * sizeMult, 0, Math.PI*2); ctx.fill(); }
             ctx.restore(); return;
         }
-        // --- 4. CELL / MONSTROS ---
         if (name.includes("CELL") || name.includes("JR")) {
             ctx.fillStyle = "#111"; ctx.beginPath(); ctx.moveTo(-15 * sizeMult, -10 * sizeMult); ctx.lineTo(-30 * sizeMult, -20 * sizeMult); ctx.lineTo(-30 * sizeMult, 20 * sizeMult); ctx.lineTo(-15 * sizeMult, 10 * sizeMult); ctx.fill();
             ctx.fillStyle = "#3c3"; ctx.beginPath(); ctx.arc(0, 0, 12 * sizeMult, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = "#050"; ctx.beginPath(); ctx.arc(-2 * sizeMult, -5 * sizeMult, 2 * sizeMult, 0, Math.PI*2); ctx.arc(2 * sizeMult, 4 * sizeMult, 3 * sizeMult, 0, Math.PI*2); ctx.fill();
             ctx.save(); ctx.translate(0, breathe); ctx.fillStyle = "#3c3"; ctx.beginPath(); ctx.moveTo(0, -8 * sizeMult); ctx.lineTo(8 * sizeMult, -15 * sizeMult); ctx.lineTo(5 * sizeMult, 0); ctx.lineTo(8 * sizeMult, 15 * sizeMult); ctx.lineTo(0, 8 * sizeMult); ctx.fill(); ctx.restore(); return;
         }
-        // --- 5. ALIENÍGENAS ---
-        if (name.includes("FRIEZA") || name.includes("COOLER") || name.includes("ALIEN")) {
-            ctx.fillStyle = "#fff"; ctx.strokeStyle = "#dce"; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, 0, 10 * sizeMult, 14 * sizeMult, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = "#a0a"; ctx.beginPath(); ctx.arc(-5 * sizeMult, -6 * sizeMult, 4 * sizeMult, 0, Math.PI*2); ctx.arc(-5 * sizeMult, 6 * sizeMult, 4 * sizeMult, 0, Math.PI*2); ctx.arc(0, 0, 5 * sizeMult, 0, Math.PI*2); ctx.fill();
-            ctx.save(); ctx.translate(2 * sizeMult, breathe); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, 9 * sizeMult, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#a0a"; ctx.beginPath(); ctx.arc(-2 * sizeMult, 0, 7 * sizeMult, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#f00"; ctx.beginPath(); ctx.moveTo(5 * sizeMult, -2 * sizeMult); ctx.lineTo(8 * sizeMult, -3 * sizeMult); ctx.lineTo(8 * sizeMult, -1 * sizeMult); ctx.moveTo(5 * sizeMult, 2 * sizeMult); ctx.lineTo(8 * sizeMult, 3 * sizeMult); ctx.lineTo(8 * sizeMult, 1 * sizeMult); ctx.fill(); ctx.restore(); return;
-        }
-        drawMiniWarrior(e, sizeMult);
+        // Fallback aliens
+        ctx.fillStyle = "#fff"; ctx.strokeStyle = "#dce"; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, 0, 10 * sizeMult, 14 * sizeMult, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#a0a"; ctx.beginPath(); ctx.arc(-5 * sizeMult, -6 * sizeMult, 4 * sizeMult, 0, Math.PI*2); ctx.arc(-5 * sizeMult, 6 * sizeMult, 4 * sizeMult, 0, Math.PI*2); ctx.arc(0, 0, 5 * sizeMult, 0, Math.PI*2); ctx.fill();
+        ctx.save(); ctx.translate(2 * sizeMult, breathe); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(0, 0, 9 * sizeMult, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#a0a"; ctx.beginPath(); ctx.arc(-2 * sizeMult, 0, 7 * sizeMult, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#f00"; ctx.beginPath(); ctx.moveTo(5 * sizeMult, -2 * sizeMult); ctx.lineTo(8 * sizeMult, -3 * sizeMult); ctx.lineTo(8 * sizeMult, -1 * sizeMult); ctx.moveTo(5 * sizeMult, 2 * sizeMult); ctx.lineTo(8 * sizeMult, 3 * sizeMult); ctx.lineTo(8 * sizeMult, 1 * sizeMult); ctx.fill(); ctx.restore(); 
     }
 
     function drawMiniWarrior(e, sizeMult) {
@@ -570,16 +579,6 @@ window.onload = function() {
             if (e.form === "GOD") shieldColor = "rgba(255, 50, 50, 0.4)";
             ctx.fillStyle = shieldColor; ctx.strokeStyle = shieldColor.replace("0.4", "0.8"); ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(0, 0, 35 * sizeMult * pulse, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-            let blockAngle = e.angle;
-            if (e.id === myId && !isMobile) blockAngle = Math.atan2(mouse.y, mouse.x);
-            else if (e.id === myId && isMobile && (Math.abs(joystickMove.x) > 0.1 || Math.abs(joystickMove.y) > 0.1)) {
-                 blockAngle = Math.atan2(joystickMove.y, joystickMove.x);
-            }
-            
-            ctx.rotate(blockAngle);
-            ctx.strokeStyle = "#fff"; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = "#fff";
-            ctx.beginPath(); ctx.arc(0, 0, 35 * sizeMult * pulse, -0.6, 0.6); ctx.stroke();
             ctx.restore();
         }
         ctx.restore();
@@ -630,83 +629,10 @@ window.onload = function() {
         ctx.strokeStyle = "#00aa00"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.stroke();
     }
 
-    // ==========================================
-    // UI ESTILO SCOUTER (TUTORIAL VISUAL)
-    // ==========================================
-    function drawScouterPanel(saga) {
-        if (!saga) return;
-        const W = canvas.width;
-        // Caixa centralizada no topo com visual Tech
-        const boxW = 600, boxH = 95;
-        const x = W / 2 - boxW / 2;
-        const y = 30;
-
-        ctx.save();
-        
-        // 1. Vidro do Scouter (Fundo Translucido Verde)
-        ctx.fillStyle = "rgba(0, 40, 0, 0.75)"; 
-        ctx.beginPath();
-        // Formato octogonal tecnológico
-        ctx.moveTo(x + 20, y);
-        ctx.lineTo(x + boxW - 20, y);
-        ctx.lineTo(x + boxW, y + 20);
-        ctx.lineTo(x + boxW, y + boxH - 10);
-        ctx.lineTo(x + boxW - 20, y + boxH);
-        ctx.lineTo(x + 20, y + boxH);
-        ctx.lineTo(x, y + boxH - 10);
-        ctx.lineTo(x, y + 20);
-        ctx.closePath();
-        ctx.fill();
-
-        // 2. Bordas Brilhantes (Neon Verde)
-        ctx.shadowBlur = 15; ctx.shadowColor = "#00ff00";
-        ctx.strokeStyle = "rgba(50, 255, 50, 0.9)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // 3. Efeito de Scanline (Barra que desce escaneando o texto)
-        const time = Date.now();
-        const scanY = y + (time % 3000 / 3000) * boxH;
-        ctx.strokeStyle = "rgba(0, 255, 0, 0.4)";
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(x + 10, scanY); ctx.lineTo(x + boxW - 10, scanY); ctx.stroke();
-
-        // 4. Cabeçalho do Sistema
-        ctx.fillStyle = "#00ff00"; 
-        ctx.font = "bold 11px Orbitron"; ctx.textAlign = "left";
-        ctx.fillText("SCOUTER v.3.5 // ANALYSIS_MODE // SAIYAN_DB", x + 15, y + 18);
-        
-        // 5. Título da Saga/Missão (Piscando suavemente)
-        const blink = 0.7 + Math.sin(time * 0.005) * 0.3;
-        ctx.globalAlpha = blink;
-        ctx.font = "bold 18px Orbitron"; ctx.textAlign = "center";
-        ctx.fillStyle = "#ccffcc";
-        ctx.shadowBlur = 5; ctx.shadowColor = "#00ff00";
-        ctx.fillText(`SAGA ATUAL: ${saga.title}`, W/2, y + 45);
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
-
-        // 6. Instrução Clara (O Core do Tutorial)
-        ctx.font = "15px Arial"; ctx.fillStyle = "#ffffff";
-        ctx.fillText(`>>> ${saga.objective}`, W/2, y + 70);
-
-        // Decoração Tech (Círculo girando no canto)
-        const rot = time * 0.002;
-        ctx.translate(x + boxW - 30, y + 30);
-        ctx.rotate(rot);
-        ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*1.5); ctx.stroke();
-        
-        ctx.restore();
-    }
-
     function drawNavigationArrow(me) {
-        // Lógica de GPS para guiar o jogador
         let target = null;
         if (currentSaga && currentSaga.targetZone) target = PLANETS_COORDS[currentSaga.targetZone];
         if (!target && dragonBalls.length > 0) {
-            // Se não tem saga, aponta para esfera mais próxima
             let minDist = Infinity;
             dragonBalls.forEach(db => { if(!db.held) { const d = Math.hypot(db.x - me.x, db.y - me.y); if(d < minDist) { minDist = d; target = db; } } });
         }
@@ -732,57 +658,139 @@ window.onload = function() {
         }
     }
 
+    // ==========================================
+    // UI SCOUTER A.R.I.S (VISUAL)
+    // ==========================================
+    function drawArisHUD() {
+        // Processa Fila de Mensagens
+        if (arisMessages.length > 0 && !currentArisMsg) {
+            currentArisMsg = arisMessages.shift();
+        }
+
+        if (currentArisMsg) {
+            currentArisMsg.life--;
+            const cx = canvas.width / 2;
+            const y = 80;
+
+            ctx.save();
+            ctx.font = "bold 16px Orbitron";
+            const w = ctx.measureText(currentArisMsg.text).width + 60;
+            const h = 60;
+
+            // Caixa Tech
+            ctx.fillStyle = "rgba(0, 20, 0, 0.85)";
+            ctx.strokeStyle = currentArisMsg.type === "DANGER" ? "#f00" : (currentArisMsg.type === "WARN" ? "#ff0" : "#0f0");
+            ctx.lineWidth = 2;
+            
+            // Forma hexagonal tech
+            ctx.beginPath();
+            ctx.moveTo(cx - w/2 + 10, y);
+            ctx.lineTo(cx + w/2 - 10, y);
+            ctx.lineTo(cx + w/2, y + 10);
+            ctx.lineTo(cx + w/2, y + h - 10);
+            ctx.lineTo(cx + w/2 - 10, y + h);
+            ctx.lineTo(cx - w/2 + 10, y + h);
+            ctx.lineTo(cx - w/2, y + h - 10);
+            ctx.lineTo(cx - w/2, y + 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Onda de Voz
+            arisWave += 0.2;
+            ctx.strokeStyle = ctx.strokeStyle;
+            ctx.beginPath();
+            const startX = cx - w/2 + 15;
+            const endX = cx + w/2 - 15;
+            for(let i = startX; i < endX; i += 5) {
+                const waveY = y + h - 10 + Math.sin(i * 0.2 + arisWave) * 3;
+                if(i === startX) ctx.moveTo(i, waveY);
+                else ctx.lineTo(i, waveY);
+            }
+            ctx.stroke();
+
+            // Texto
+            ctx.fillStyle = "#fff";
+            ctx.textAlign = "center";
+            ctx.shadowColor = ctx.strokeStyle;
+            ctx.shadowBlur = 10;
+            ctx.fillText(currentArisMsg.text, cx, y + 35);
+
+            ctx.restore();
+
+            if (currentArisMsg.life <= 0) currentArisMsg = null;
+        }
+    }
+
+    function drawSagaPanel() {
+        if (!currentSaga) return;
+        const x = canvas.width - 320;
+        const y = 20;
+
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.strokeStyle = "#0ff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + 300, y);
+        ctx.lineTo(x + 300, y + 80);
+        ctx.lineTo(x + 20, y + 80);
+        ctx.lineTo(x, y + 60);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#0ff";
+        ctx.font = "bold 12px Orbitron";
+        ctx.fillText("/// MISSÃO ATUAL", x + 10, y + 20);
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px Arial";
+        ctx.fillText(currentSaga.title, x + 10, y + 40);
+
+        ctx.fillStyle = "#aaa";
+        ctx.font = "italic 11px Arial";
+        ctx.fillText(currentSaga.hint || "Siga as instruções...", x + 10, y + 65);
+        ctx.restore();
+    }
+
     function drawUI(me) {
         const W = canvas.width;
         const H = canvas.height;
 
-        // 1. Painel de Status (Canto Superior Esquerdo)
+        // 1. Painel de Status
         const barW = 300, barH = 20, x = 20, y = 20;
-        
-        // HP Bar
         ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, y, barW, barH);
         ctx.fillStyle = "#ff3333"; ctx.fillRect(x, y, barW * (me.hp / me.maxHp), barH);
         ctx.strokeStyle = "#fff"; ctx.strokeRect(x, y, barW, barH);
         ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial"; ctx.textAlign = "left";
         ctx.fillText(`HP: ${Math.floor(me.hp)} / ${me.maxHp}`, x + 10, y + 14);
 
-        // KI Bar
         ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, y + 25, barW, barH);
         ctx.fillStyle = "#ffff00"; ctx.fillRect(x, y + 25, barW * (me.ki / me.maxKi), barH);
         ctx.strokeStyle = "#fff"; ctx.strokeRect(x, y + 25, barW, barH);
         ctx.fillStyle = "#000"; ctx.fillText(`KI: ${Math.floor(me.ki)} / ${me.maxKi}`, x + 10, y + 39);
 
-        // Level & BP info
         ctx.fillStyle = "#00ffff"; ctx.font = "16px Orbitron";
         ctx.fillText(`LVL ${me.level}  |  BP: ${me.bp.toLocaleString()}`, x, y + 70);
         
-        // 2. PAINEL SCOUTER (Sistema de Guia / Tutorial)
-        if (currentSaga) {
-            drawScouterPanel(currentSaga);
-        }
-
-        // 3. Seta de Navegação GPS (Mantido do código anterior)
+        // 2. Elementos HUD
+        drawSagaPanel();
+        drawArisHUD();
         drawNavigationArrow(me);
 
-        // 4. Notificações de Skills (Tutorial de Combate em tempo real)
+        // 4. Notificações de Skills
         if (me.state === "CHARGING") {
             const cx = W / 2, cy = H / 2 + 100;
             ctx.textAlign = "center"; ctx.font = "bold 14px Orbitron";
             
-            // Dica visual para ensinar o jogador a usar skills
             if (me.ki >= 80 && (!me.skills || me.skills.includes("KAMEHAMEHA"))) {
-                ctx.fillStyle = "#00ffff"; 
-                ctx.fillText("⚡ KAMEHAMEHA PRONTO! [SOLTE 'C']", cx, cy);
+                ctx.fillStyle = "#00ffff"; ctx.fillText("⚡ KAMEHAMEHA PRONTO! [SOLTE 'C']", cx, cy);
             }
             if (me.ki >= 300 && me.skills && me.skills.includes("GENKI_DAMA")) {
-                ctx.fillStyle = "#00aaff"; 
-                ctx.fillText("⚡ GENKI DAMA PRONTA! [SOLTE 'C']", cx, cy + 25);
+                ctx.fillStyle = "#00aaff"; ctx.fillText("⚡ GENKI DAMA PRONTA! [SOLTE 'C']", cx, cy + 25);
             }
-        }
-
-        // 5. Radar / Minimapa (Mantém o desenho padrão)
-        if (showMap) {
-            drawMiniMap(me);
         }
     }
 
@@ -833,7 +841,7 @@ window.onload = function() {
         
         if (!myId || !players[myId]) {
             if(document.getElementById("login-screen").style.display !== "none") return;
-            ctx.fillStyle = "#fff"; ctx.font = "30px Orbitron"; ctx.textAlign = "center"; ctx.fillText("CONECTANDO...", canvas.width/2, canvas.height/2); return;
+            ctx.fillStyle = "#fff"; ctx.font = "30px Orbitron"; ctx.textAlign = "center"; ctx.fillText("CONECTANDO AO SCOUTER...", canvas.width/2, canvas.height/2); return;
         }
         
         const me = players[myId];
@@ -880,9 +888,11 @@ window.onload = function() {
         ctx.restore();
 
         // UI LAYER
+        drawNavigationArrow(me); 
         if (scouterActive) drawScouterHUD(me);
         drawChats(cam.x, cam.y);
         drawUI(me);
+        drawMiniMap(me);
         drawLeaderboard();
 
         if (announcement.life > 0) { announcement.life--; ctx.fillStyle = announcement.color; ctx.font = "bold 40px Orbitron"; ctx.textAlign = "center"; ctx.strokeStyle = "#000"; ctx.lineWidth = 3; ctx.strokeText(announcement.text, canvas.width/2, 150); ctx.fillText(announcement.text, canvas.width/2, 150); }
@@ -896,16 +906,13 @@ window.onload = function() {
             ctx.restore();
         }
 
-        // INPUT LOGIC (ATUALIZADO)
+        // INPUT LOGIC
         const tutorialActive = currentSaga && currentSaga.type === "TUTORIAL";
-        
-        // Sincroniza estado de dialogo com servidor
         if (me.isTutorialDialogActive !== tutorialActive) {
             socket.emit("tutorial_dialog_state", tutorialActive);
             me.isTutorialDialogActive = tutorialActive;
         }
 
-        // Só processa input de combate se NÃO estiver lendo o tutorial
         if (!tutorialActive || !me.isTutorialDialogActive) {
             const input = { 
                 x: 0, y: 0, angle: 0, 
@@ -928,7 +935,6 @@ window.onload = function() {
                 input.angle = Math.atan2(mouse.y, mouse.x);
             }
             
-            // Audio Attack
             if(input.holdAtk && !me.isSpirit) AudioSys.play('hit');
 
             if(input.x !== 0 || input.y !== 0 || input.block || input.charge || input.holdAtk || input.angle !== me.angle) { 
