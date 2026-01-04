@@ -13,12 +13,11 @@ try {
     ({ Pool } = require("pg"));
 } catch (e) {
     console.log(">> MÓDULO 'pg' NÃO ENCONTRADO. Rodando 100% em memória (RAM).");
-    console.log(">> Para corrigir: npm install pg");
 }
 
 async function initDB() {
     if (!Pool || !process.env.DATABASE_URL) {
-        console.log(">> AVISO: DATABASE_URL ausente ou 'pg' não instalado. Usando RAM.");
+        console.log(">> AVISO: DATABASE_URL ausente. Usando RAM.");
         pool = null;
         return;
     }
@@ -33,18 +32,58 @@ async function initDB() {
 
         await pool.query("SELECT 1"); // Teste de conexão
 
-        // 1. CRIA TABELA USERS BÁSICA (SE NÃO EXISTIR)
+        // ==========================================================
+        // CORREÇÃO CRÍTICA: GARANTE QUE A TABELA TENHA TUDO
+        // ==========================================================
+        
+        // Verifica se a coluna 'titles' existe. Se não existir, a tabela está velha.
+        let tableCheck;
+        try {
+            tableCheck = await pool.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name='titles';
+            `);
+        } catch (e) { tableCheck = { rowCount: 0 }; }
+
+        // Se a coluna 'titles' não existir, vamos RECRIAR a tabela do jeito certo.
+        if (tableCheck.rowCount === 0) {
+            console.log(">> TABELA ANTIGA DETECTADA. RECRIANDO TABELA 'USERS' CORRETAMENTE...");
+            // Apaga a tabela antiga quebrada
+            await pool.query("DROP TABLE IF EXISTS users CASCADE");
+        }
+
+        // CRIA A TABELA COMPLETA COM TODAS AS COLUNAS
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
                 name TEXT,
                 password TEXT NOT NULL,
+                x INT DEFAULT 0,
+                y INT DEFAULT 0,
+                level INT DEFAULT 1,
+                xp INT DEFAULT 0,
+                bp BIGINT DEFAULT 500,
+                saga_step INT DEFAULT 0,
+                form TEXT DEFAULT 'BASE',
+                hp INT DEFAULT 1000,
+                max_hp INT DEFAULT 1000,
+                ki INT DEFAULT 300,
+                max_ki INT DEFAULT 300,
+                pvp_score INT DEFAULT 0,
+                pvp_kills INT DEFAULT 0,
+                rebirths INT DEFAULT 0,
+                quest_data JSONB DEFAULT '{}',
+                guild TEXT,
+                titles TEXT DEFAULT 'Novato',
+                current_title TEXT DEFAULT 'Novato',
+                skills JSONB DEFAULT '[]',
                 created_at TIMESTAMP DEFAULT NOW()
             );
         `);
         
-        // 2. CRIA TABELA PLANETS (SE NÃO EXISTIR)
+        // CRIA TABELA PLANETS
         await pool.query(`
             CREATE TABLE IF NOT EXISTS planets (
                 id TEXT PRIMARY KEY,
@@ -56,40 +95,7 @@ async function initDB() {
             );
         `);
 
-        // 3. MIGRATION AUTOMÁTICA (Adiciona colunas que faltam no DB antigo)
-        // Isso corrige o erro "column titles does not exist"
-        const columns = [
-            "ADD COLUMN IF NOT EXISTS x INT DEFAULT 0",
-            "ADD COLUMN IF NOT EXISTS y INT DEFAULT 0",
-            "ADD COLUMN IF NOT EXISTS level INT DEFAULT 1",
-            "ADD COLUMN IF NOT EXISTS xp INT DEFAULT 0",
-            "ADD COLUMN IF NOT EXISTS bp BIGINT DEFAULT 500",
-            "ADD COLUMN IF NOT EXISTS saga_step INT DEFAULT 0",
-            "ADD COLUMN IF NOT EXISTS form TEXT DEFAULT 'BASE'",
-            "ADD COLUMN IF NOT EXISTS hp INT DEFAULT 1000",
-            "ADD COLUMN IF NOT EXISTS max_hp INT DEFAULT 1000",
-            "ADD COLUMN IF NOT EXISTS ki INT DEFAULT 300",
-            "ADD COLUMN IF NOT EXISTS max_ki INT DEFAULT 300",
-            "ADD COLUMN IF NOT EXISTS pvp_score INT DEFAULT 0",
-            "ADD COLUMN IF NOT EXISTS pvp_kills INT DEFAULT 0",
-            "ADD COLUMN IF NOT EXISTS rebirths INT DEFAULT 0",
-            "ADD COLUMN IF NOT EXISTS quest_data JSONB DEFAULT '{}'",
-            "ADD COLUMN IF NOT EXISTS guild TEXT",
-            "ADD COLUMN IF NOT EXISTS titles TEXT DEFAULT 'Novato'",
-            "ADD COLUMN IF NOT EXISTS current_title TEXT DEFAULT 'Novato'",
-            "ADD COLUMN IF NOT EXISTS skills JSONB DEFAULT '[]'"
-        ];
-
-        for (const col of columns) {
-            try {
-                await pool.query(`ALTER TABLE users ${col}`);
-            } catch (err) {
-                // Ignora erro se coluna já existir ou outro conflito menor
-                // console.log(">> Migration info:", err.message);
-            }
-        }
-
-        console.log(">> MODO ONLINE REAL: Postgres conectado, tabelas e colunas verificadas.");
+        console.log(">> MODO ONLINE REAL: Postgres conectado e tabelas verificadas.");
 
     } catch (err) {
         console.error(">> ERRO FATAL NO DB:", err.message);
@@ -102,67 +108,51 @@ async function initDB() {
 // ==========================================
 async function saveAccount(p) {
     if (!pool || !p) return;
-
     try {
+        // Prepara dados complexos para JSON
+        const questJson = JSON.stringify(p.quest || {});
+        const skillsJson = JSON.stringify(p.skills || []);
+        
+        // Query blindada contra campos nulos
         await pool.query(`
             INSERT INTO users (
                 username, name, password,
                 x, y, level, xp, bp,
-                hp, max_hp, ki, max_ki,
-                form, saga_step,
-                quest_data, titles, current_title,
+                hp, ki, max_hp, max_ki,
+                form, saga_step, quest_data,
+                titles, current_title,
                 pvp_score, pvp_kills, rebirths,
                 guild, skills
             ) VALUES (
-                $1,$2,$3,
-                $4,$5,$6,$7,$8,
-                $9,$10,$11,$12,
-                $13,$14,
-                $15,$16,$17,
-                $18,$19,$20,
-                $21,$22
+                $1, $2, $3,
+                $4, $5, $6, $7, $8,
+                $9, $10, $11, $12,
+                $13, $14, $15,
+                $16, $17,
+                $18, $19, $20,
+                $21, $22
             )
             ON CONFLICT (username) DO UPDATE SET
-                x=EXCLUDED.x,
-                y=EXCLUDED.y,
-                level=EXCLUDED.level,
-                xp=EXCLUDED.xp,
-                bp=EXCLUDED.bp,
-                hp=EXCLUDED.hp,
-                max_hp=EXCLUDED.max_hp,
-                ki=EXCLUDED.ki,
-                max_ki=EXCLUDED.max_ki,
-                form=EXCLUDED.form,
-                saga_step=EXCLUDED.saga_step,
-                quest_data=EXCLUDED.quest_data,
-                titles=EXCLUDED.titles,
-                current_title=EXCLUDED.current_title,
-                pvp_score=EXCLUDED.pvp_score,
-                pvp_kills=EXCLUDED.pvp_kills,
-                rebirths=EXCLUDED.rebirths,
-                guild=EXCLUDED.guild,
-                skills=EXCLUDED.skills
+                x=$4, y=$5, level=$6, xp=$7, bp=$8,
+                hp=$9, ki=$10, max_hp=$11, max_ki=$12,
+                form=$13, saga_step=$14, quest_data=$15,
+                titles=$16, current_title=$17,
+                pvp_score=$18, pvp_kills=$19, rebirths=$20,
+                guild=$21, skills=$22
         `, [
-            p.name, p.name, p.password || "",
-            Math.round(p.x), Math.round(p.y),
-            p.level, p.xp, p.bp,
-            Math.floor(p.hp), p.maxHp,
-            Math.floor(p.ki), p.maxKi,
-            p.form, p.sagaStep,
-            JSON.stringify(p.quest || {}),
-            p.titles || "Novato",
-            p.current_title || "Novato",
-            p.pvp_score || 0,
-            p.pvp_kills || 0,
-            p.rebirths || 0,
-            p.guild,
-            JSON.stringify(p.skills || [])
+            p.username || p.name, p.name, p.password || "123",
+            Math.round(p.x), Math.round(p.y), p.level, p.xp, p.bp,
+            Math.floor(p.hp), Math.floor(p.ki), p.maxHp, p.maxKi,
+            p.form, p.sagaStep, questJson,
+            p.titles || "Novato", p.current_title || "Novato",
+            p.pvp_score || 0, p.pvp_kills || 0, p.rebirths || 0,
+            p.guild || null, skillsJson
         ]);
+        // console.log(`>> Salvo: ${p.name}`);
     } catch (err) {
-        console.error("❌ SAVE FAILED:", err.message);
+        console.error(`>> ERRO AO SALVAR ${p.name}:`, err.message);
     }
 }
-
 
 // ==========================================
 // CONFIGURAÇÕES GERAIS E LORE
@@ -366,60 +356,25 @@ io.on("connection", (socket) => {
         try {
             let user;
             if (pool) {
-    // ===== LOGIN VIA POSTGRES =====
-    try {
-        const res = await pool.query(
-            'SELECT * FROM users WHERE username = $1',
-            [data.user]
-        );
-        user = res.rows[0];
-
-        if (!user) {
-            const insert = await pool.query(
-                'INSERT INTO users (username, name, password) VALUES ($1,$1,$2) RETURNING *',
-                [data.user, data.pass]
-            );
-            user = insert.rows[0];
-        } else if (user.password !== data.pass) {
-            return;
-        }
-
-    } catch (dbErr) {
-        console.error("❌ LOGIN DB FALHOU:", dbErr.message);
-        socket.emit("auth_error", "Erro ao conectar no banco. Tente novamente.");
-        return;
-    }
-
-} else {
-    // ===== MODO RAM (SEM POSTGRES) =====
-    user = localUsers[data.user];
-    if (!user) {
-        user = {
-            username: data.user,
-            name: data.user,
-            password: data.pass,
-            level: 1,
-            xp: 0,
-            bp: 500,
-            guild: null,
-            titles: 'Novato',
-            current_title: 'Novato',
-            pvp_score: 0,
-            pvp_kills: 0,
-            rebirths: 0,
-            quest_data: '{}',
-            saga_step: 0,
-            skills: '[]'
-        };
-        localUsers[data.user] = user;
-    } else if (user.password !== data.pass) {
-        return;
-    }
-}
-
+                // TENTA DB
+                try {
+                    const res = await pool.query('SELECT * FROM users WHERE username = $1', [data.user]);
+                    user = res.rows[0];
+                    if (!user) {
+                        const insert = await pool.query('INSERT INTO users (username, name, password) VALUES ($1,$1,$2) RETURNING *', [data.user, data.pass]);
+                        user = insert.rows[0];
+                    } else if (user.password !== data.pass) return; // Senha errada
+                } catch(dbErr) {
+                     console.error("ERRO LOGIN DB, usando RAM temp:", dbErr);
+                     // Fallback imediato se query falhar
+                     user = localUsers[data.user];
+                     if (!user) { user = { username: data.user, name: data.user, password: data.pass, level: 1, xp: 0, bp: 500, guild: null, titles: 'Novato', current_title: 'Novato', pvp_score: 0, pvp_kills: 0, rebirths: 0, quest_data: '{}', saga_step: 0, skills: '[]' }; localUsers[data.user] = user; } else if (user.password !== data.pass) return;
+                }
+            } else {
                 // MODO RAM
                 user = localUsers[data.user];
                 if (!user) { user = { username: data.user, name: data.user, password: data.pass, level: 1, xp: 0, bp: 500, guild: null, titles: 'Novato', current_title: 'Novato', pvp_score: 0, pvp_kills: 0, rebirths: 0, quest_data: '{}', saga_step: 0, skills: '[]' }; localUsers[data.user] = user; } else if (user.password !== data.pass) return;
+            }
             
             const xpToNext = user.level * 800;
             const rebirthMult = 1 + (user.rebirths || 0) * 0.2; 
