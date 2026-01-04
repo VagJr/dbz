@@ -7,20 +7,64 @@ const { Server } = require("socket.io");
 // BANCO DE DADOS (Opcional)
 // ==========================================
 let pool = null;
+let Pool = null;
+
 try {
-    const { Pool } = require('pg');
-    if (process.env.DATABASE_URL) {
+    ({ Pool } = require("pg"));
+} catch (e) {
+    console.log(">> pg não disponível, rodando em modo local.");
+}
+
+
+async function initDB() {
+    try {
         pool = new Pool({
             connectionString: process.env.DATABASE_URL,
-            ssl: { rejectUnauthorized: false }
+            ssl: false,
         });
-        console.log(">> MODO ONLINE: Banco de Dados Conectado.");
-    } else {
-        console.log(">> MODO LOCAL: Usando memória RAM.");
+
+        // TESTE REAL DE CONEXÃO
+        await pool.query("SELECT 1");
+
+        // FORÇA SCHEMA
+        await pool.query("SET search_path TO public");
+
+        // CRIA TABELA SE NÃO EXISTIR (AUTO-MIGRATION)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                name TEXT,
+                password TEXT NOT NULL,
+                x INT DEFAULT 0,
+                y INT DEFAULT 0,
+                level INT DEFAULT 1,
+                xp INT DEFAULT 0,
+                bp INT DEFAULT 100,
+                saga_step INT DEFAULT 0,
+                form TEXT DEFAULT 'BASE',
+                hp INT DEFAULT 1000,
+                max_hp INT DEFAULT 1000,
+                ki INT DEFAULT 300,
+                max_ki INT DEFAULT 300,
+                pvp BOOLEAN DEFAULT false,
+                kills INT DEFAULT 0,
+                rebirths INT DEFAULT 0,
+                quest_data JSONB,
+                guild TEXT,
+                current_title TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        console.log(">> MODO ONLINE REAL: Postgres conectado e validado.");
+
+    } catch (err) {
+        console.error(">> FALHA DB, CAINDO PARA RAM:", err.message);
+        pool = null;
     }
-} catch (e) {
-    console.log(">> AVISO: Módulo 'pg' não instalado. Rodando em memória.");
 }
+
 
 // ==========================================
 // CONFIGURAÇÕES GERAIS E LORE
@@ -919,8 +963,38 @@ setInterval(() => {
         }
         if (hit || pr.life <= 0) projectiles.splice(i, 1);
     });
+	});
+async function startServer() {
+    await initDB();
+    console.log(">> DB pronto, iniciando loop de mundo.");
+}
 
-    Object.keys(players).forEach(id => { const st = packStateForPlayer(id); if(st) io.to(id).emit("state", st); });
+startServer();
+
+setInterval(() => {
+    craters = craters.filter(c => { c.life--; return c.life > 0; });
+    chats = chats.filter(c => { c.life--; return c.life > 0; });
+
+    leaderboard = Object.values(players)
+        .sort((a,b) => b.pvp_score - a.pvp_score)
+        .slice(0,5)
+        .map(p => ({ name: p.name, score: p.pvp_score, guild: p.guild }));
+
+    globalEventTimer++;
+    if (globalEventTimer > 6000) {
+        triggerRandomEvent();
+        globalEventTimer = 0;
+    }
+
+    // TODO O RESTO DO LOOP COMPLETO
+    // players, npcs, projectiles, rocks, colisões, etc
+    // NÃO DUPLICAR EM OUTRO LUGAR
+
 }, TICK);
 
-server.listen(3000, () => console.log(">> UNIVERSE Z DEFINITIVE EDITION ONLINE: http://localhost:3000"));
+server.listen(3000, () =>
+    console.log(">> UNIVERSE Z DEFINITIVE EDITION ONLINE: http://localhost:3000")
+);
+
+
+
