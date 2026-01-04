@@ -1139,12 +1139,3 @@ if (p.comboTargetId) {
 }, TICK);
 
 server.listen(3000, () => console.log(">> SERVER ONLINE EM: http://localhost:3000"));
-
-// ================= CLIENT-SIDE PREDICTION SUPPORT =================
-// Server now sends lightweight authoritative snapshots with tick id.
-// Does NOT change core logic.
-let SERVER_TICK = 0;
-
-setInterval(() => {
-  SERVER_TICK++;
-}, 33);
