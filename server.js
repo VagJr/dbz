@@ -102,34 +102,67 @@ async function initDB() {
 // ==========================================
 async function saveAccount(p) {
     if (!pool || !p) return;
+
     try {
-        // Prepara dados complexos para JSON
-        const questJson = JSON.stringify(p.quest || {});
-        const skillsJson = JSON.stringify(p.skills || []);
-        
         await pool.query(`
-            UPDATE users SET
-                x=$1, y=$2, level=$3, xp=$4, bp=$5,
-                hp=$6, ki=$7, max_hp=$8, max_ki=$9,
-                form=$10, saga_step=$11, quest_data=$12,
-                titles=$13, current_title=$14,
-                pvp_score=$15, pvp_kills=$16, rebirths=$17,
-                guild=$18, skills=$19
-            WHERE username=$20
+            INSERT INTO users (
+                username, name, password,
+                x, y, level, xp, bp,
+                hp, max_hp, ki, max_ki,
+                form, saga_step,
+                quest_data, titles, current_title,
+                pvp_score, pvp_kills, rebirths,
+                guild, skills
+            ) VALUES (
+                $1,$2,$3,
+                $4,$5,$6,$7,$8,
+                $9,$10,$11,$12,
+                $13,$14,
+                $15,$16,$17,
+                $18,$19,$20,
+                $21,$22
+            )
+            ON CONFLICT (username) DO UPDATE SET
+                x=EXCLUDED.x,
+                y=EXCLUDED.y,
+                level=EXCLUDED.level,
+                xp=EXCLUDED.xp,
+                bp=EXCLUDED.bp,
+                hp=EXCLUDED.hp,
+                max_hp=EXCLUDED.max_hp,
+                ki=EXCLUDED.ki,
+                max_ki=EXCLUDED.max_ki,
+                form=EXCLUDED.form,
+                saga_step=EXCLUDED.saga_step,
+                quest_data=EXCLUDED.quest_data,
+                titles=EXCLUDED.titles,
+                current_title=EXCLUDED.current_title,
+                pvp_score=EXCLUDED.pvp_score,
+                pvp_kills=EXCLUDED.pvp_kills,
+                rebirths=EXCLUDED.rebirths,
+                guild=EXCLUDED.guild,
+                skills=EXCLUDED.skills
         `, [
-            Math.round(p.x), Math.round(p.y), p.level, p.xp, p.bp,
-            Math.floor(p.hp), Math.floor(p.ki), p.maxHp, p.maxKi,
-            p.form, p.sagaStep, questJson,
-            p.titles, p.current_title,
-            p.pvp_score, p.pvp_kills, p.rebirths,
-            p.guild, skillsJson,
-            p.name
+            p.name, p.name, p.password || "",
+            Math.round(p.x), Math.round(p.y),
+            p.level, p.xp, p.bp,
+            Math.floor(p.hp), p.maxHp,
+            Math.floor(p.ki), p.maxKi,
+            p.form, p.sagaStep,
+            JSON.stringify(p.quest || {}),
+            p.titles || "Novato",
+            p.current_title || "Novato",
+            p.pvp_score || 0,
+            p.pvp_kills || 0,
+            p.rebirths || 0,
+            p.guild,
+            JSON.stringify(p.skills || [])
         ]);
-        // console.log(`>> Progresso salvo para: ${p.name}`);
     } catch (err) {
-        console.error(`>> ERRO AO SALVAR ${p.name}:`, err.message);
+        console.error("❌ SAVE FAILED:", err.message);
     }
 }
+
 
 // ==========================================
 // CONFIGURAÇÕES GERAIS E LORE
@@ -333,25 +366,60 @@ io.on("connection", (socket) => {
         try {
             let user;
             if (pool) {
-                // TENTA DB
-                try {
-                    const res = await pool.query('SELECT * FROM users WHERE username = $1', [data.user]);
-                    user = res.rows[0];
-                    if (!user) {
-                        const insert = await pool.query('INSERT INTO users (username, name, password) VALUES ($1,$1,$2) RETURNING *', [data.user, data.pass]);
-                        user = insert.rows[0];
-                    } else if (user.password !== data.pass) return; // Senha errada
-                } catch(dbErr) {
-                     console.error("ERRO LOGIN DB, usando RAM temp:", dbErr);
-                     // Fallback imediato se query falhar
-                     user = localUsers[data.user];
-                     if (!user) { user = { username: data.user, name: data.user, password: data.pass, level: 1, xp: 0, bp: 500, guild: null, titles: 'Novato', current_title: 'Novato', pvp_score: 0, pvp_kills: 0, rebirths: 0, quest_data: '{}', saga_step: 0, skills: '[]' }; localUsers[data.user] = user; } else if (user.password !== data.pass) return;
-                }
-            } else {
+    // ===== LOGIN VIA POSTGRES =====
+    try {
+        const res = await pool.query(
+            'SELECT * FROM users WHERE username = $1',
+            [data.user]
+        );
+        user = res.rows[0];
+
+        if (!user) {
+            const insert = await pool.query(
+                'INSERT INTO users (username, name, password) VALUES ($1,$1,$2) RETURNING *',
+                [data.user, data.pass]
+            );
+            user = insert.rows[0];
+        } else if (user.password !== data.pass) {
+            return;
+        }
+
+    } catch (dbErr) {
+        console.error("❌ LOGIN DB FALHOU:", dbErr.message);
+        socket.emit("auth_error", "Erro ao conectar no banco. Tente novamente.");
+        return;
+    }
+
+} else {
+    // ===== MODO RAM (SEM POSTGRES) =====
+    user = localUsers[data.user];
+    if (!user) {
+        user = {
+            username: data.user,
+            name: data.user,
+            password: data.pass,
+            level: 1,
+            xp: 0,
+            bp: 500,
+            guild: null,
+            titles: 'Novato',
+            current_title: 'Novato',
+            pvp_score: 0,
+            pvp_kills: 0,
+            rebirths: 0,
+            quest_data: '{}',
+            saga_step: 0,
+            skills: '[]'
+        };
+        localUsers[data.user] = user;
+    } else if (user.password !== data.pass) {
+        return;
+    }
+}
+
                 // MODO RAM
                 user = localUsers[data.user];
                 if (!user) { user = { username: data.user, name: data.user, password: data.pass, level: 1, xp: 0, bp: 500, guild: null, titles: 'Novato', current_title: 'Novato', pvp_score: 0, pvp_kills: 0, rebirths: 0, quest_data: '{}', saga_step: 0, skills: '[]' }; localUsers[data.user] = user; } else if (user.password !== data.pass) return;
-            }
             
             const xpToNext = user.level * 800;
             const rebirthMult = 1 + (user.rebirths || 0) * 0.2; 
