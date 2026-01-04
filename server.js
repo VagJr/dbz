@@ -33,44 +33,18 @@ async function initDB() {
 
         await pool.query("SELECT 1"); // Teste de conexão
 
-        // CRIA TABELA USERS (SE NÃO EXISTIR)
+        // 1. CRIA TABELA USERS BÁSICA (SE NÃO EXISTIR)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
                 name TEXT,
                 password TEXT NOT NULL,
-                x INT DEFAULT 0,
-                y INT DEFAULT 0,
-                level INT DEFAULT 1,
-                xp INT DEFAULT 0,
-                bp BIGINT DEFAULT 500,
-                saga_step INT DEFAULT 0,
-                form TEXT DEFAULT 'BASE',
-                hp INT DEFAULT 1000,
-                max_hp INT DEFAULT 1000,
-                ki INT DEFAULT 300,
-                max_ki INT DEFAULT 300,
-                pvp_score INT DEFAULT 0,
-                pvp_kills INT DEFAULT 0,
-                rebirths INT DEFAULT 0,
-                quest_data JSONB DEFAULT '{}',
-                guild TEXT,
-                titles TEXT DEFAULT 'Novato',
-                current_title TEXT DEFAULT 'Novato',
-                skills JSONB DEFAULT '[]',
                 created_at TIMESTAMP DEFAULT NOW()
             );
         `);
-		
-		// ================= MIGRATIONS SEGURAS =================
-await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS titles TEXT DEFAULT 'Novato'`);
-await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_title TEXT DEFAULT 'Novato'`);
-await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS skills JSONB DEFAULT '[]'`);
-await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS quest_data JSONB DEFAULT '{}'`);
-
         
-        // CRIA TABELA PLANETS
+        // 2. CRIA TABELA PLANETS (SE NÃO EXISTIR)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS planets (
                 id TEXT PRIMARY KEY,
@@ -82,12 +56,40 @@ await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS quest_data JSONB DE
             );
         `);
 
-        // MIGRATION DE EMERGÊNCIA: Adiciona coluna skills se o banco já existir sem ela
-        try {
-            await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS skills JSONB DEFAULT '[]'`);
-        } catch (e) { /* Coluna ja existe ou erro ignoravel */ }
+        // 3. MIGRATION AUTOMÁTICA (Adiciona colunas que faltam no DB antigo)
+        // Isso corrige o erro "column titles does not exist"
+        const columns = [
+            "ADD COLUMN IF NOT EXISTS x INT DEFAULT 0",
+            "ADD COLUMN IF NOT EXISTS y INT DEFAULT 0",
+            "ADD COLUMN IF NOT EXISTS level INT DEFAULT 1",
+            "ADD COLUMN IF NOT EXISTS xp INT DEFAULT 0",
+            "ADD COLUMN IF NOT EXISTS bp BIGINT DEFAULT 500",
+            "ADD COLUMN IF NOT EXISTS saga_step INT DEFAULT 0",
+            "ADD COLUMN IF NOT EXISTS form TEXT DEFAULT 'BASE'",
+            "ADD COLUMN IF NOT EXISTS hp INT DEFAULT 1000",
+            "ADD COLUMN IF NOT EXISTS max_hp INT DEFAULT 1000",
+            "ADD COLUMN IF NOT EXISTS ki INT DEFAULT 300",
+            "ADD COLUMN IF NOT EXISTS max_ki INT DEFAULT 300",
+            "ADD COLUMN IF NOT EXISTS pvp_score INT DEFAULT 0",
+            "ADD COLUMN IF NOT EXISTS pvp_kills INT DEFAULT 0",
+            "ADD COLUMN IF NOT EXISTS rebirths INT DEFAULT 0",
+            "ADD COLUMN IF NOT EXISTS quest_data JSONB DEFAULT '{}'",
+            "ADD COLUMN IF NOT EXISTS guild TEXT",
+            "ADD COLUMN IF NOT EXISTS titles TEXT DEFAULT 'Novato'",
+            "ADD COLUMN IF NOT EXISTS current_title TEXT DEFAULT 'Novato'",
+            "ADD COLUMN IF NOT EXISTS skills JSONB DEFAULT '[]'"
+        ];
 
-        console.log(">> MODO ONLINE REAL: Postgres conectado e tabelas verificadas.");
+        for (const col of columns) {
+            try {
+                await pool.query(`ALTER TABLE users ${col}`);
+            } catch (err) {
+                // Ignora erro se coluna já existir ou outro conflito menor
+                // console.log(">> Migration info:", err.message);
+            }
+        }
+
+        console.log(">> MODO ONLINE REAL: Postgres conectado, tabelas e colunas verificadas.");
 
     } catch (err) {
         console.error(">> ERRO FATAL NO DB:", err.message);
