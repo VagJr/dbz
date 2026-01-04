@@ -3,258 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UNIVERSE Z: DESTROY THE GALAXY!</title>
+    <title>UNIVERSE Z: EVOLUTION</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Bangers&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <style>
-        /* ============================
-           BASE DO JOGO
-           ============================ */
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
             background: #000; overflow: hidden; 
             font-family: 'Orbitron', sans-serif; 
-            color: #fff;
-            user-select: none;
-            touch-action: none; /* Impede zoom/scroll no mobile */
+            color: #fff; user-select: none; touch-action: none;
         }
 
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* ============================
-           TELA DE LOGIN (ESTILO ANIME)
-           ============================ */
+        /* TELA DE LOGIN */
         #login-screen { 
             position: fixed; width: 100%; height: 100%; 
-            background: radial-gradient(circle at center, #2a1000 0%, #000000 90%);
-            z-index: 1000; display: flex; align-items: center; 
+            background: radial-gradient(circle at center, #1a0500 0%, #000000 90%);
+            z-index: 2000; display: flex; align-items: center; 
             justify-content: center; flex-direction: column;
-            overflow: hidden;
         }
-
-        #login-screen::before {
-            content: ''; position: absolute; inset: -50%;
-            background: repeating-conic-gradient(from 0deg, transparent 0deg 20deg, rgba(255, 140, 0, 0.05) 20deg 40deg);
-            animation: spinBg 60s linear infinite;
-        }
-        @keyframes spinBg { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
         .login-box { 
-            position: relative; width: 90%; max-width: 380px;
-            padding: 40px 20px; text-align: center; 
-            background: rgba(0, 0, 0, 0.8); 
-            border: 3px solid #ff6600; 
-            box-shadow: 0 0 0 4px #000, 0 0 40px #ff4400;
-            border-radius: 15px; backdrop-filter: blur(8px);
-            display: flex; flex-direction: column; align-items: center;
+            background: rgba(0, 0, 0, 0.85); border: 2px solid #ffaa00; 
+            box-shadow: 0 0 30px rgba(255, 100, 0, 0.3); padding: 40px; 
+            border-radius: 12px; text-align: center; width: 90%; max-width: 350px;
         }
-
-        .dragon-ball {
-            width: 70px; height: 70px;
-            background: radial-gradient(circle at 30% 30%, #ffcc00, #ff8800, #cc4400);
-            border-radius: 50%; border: 2px solid #552200;
-            box-shadow: 0 0 25px #ffaa00; margin-bottom: 15px;
-            position: relative; display: flex; justify-content: center; align-items: center;
-        }
-        .star { color: #aa0000; font-size: 20px; position: absolute; }
-        .s1 { top: 12px; left: 12px; } .s2 { top: 12px; right: 12px; }
-        .s3 { bottom: 12px; left: 12px; } .s4 { bottom: 12px; right: 12px; }
-
-        h1 { 
-            font-family: 'Bangers', cursive; color: #ffcc00; font-size: 50px; 
-            margin: 5px 0 20px 0; line-height: 0.9;
-            text-shadow: 3px 3px 0 #cc3300, 5px 5px 0 #000; 
-            letter-spacing: 2px; transform: skewX(-5deg);
-        }
-        h1 span { display: block; font-size: 20px; color: #00ccff; text-shadow: 2px 2px 0 #000; letter-spacing: 6px; margin-top: 5px; }
-
+        h1 { font-family: 'Bangers', cursive; color: #ffcc00; font-size: 48px; margin: 0 0 20px 0; letter-spacing: 2px; text-shadow: 4px 4px 0 #882200; }
         input { 
-            display: block; margin: 10px auto; padding: 12px; 
-            background: #fff; color: #000; border: 3px solid #0050B5; 
-            font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 16px; 
-            width: 85%; outline: none; text-align: center; border-radius: 30px; 
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
-            text-transform: uppercase;
+            width: 100%; padding: 12px; margin: 10px 0; background: #fff; 
+            border: none; border-radius: 4px; font-family: 'Orbitron', sans-serif; 
+            font-weight: bold; text-align: center; box-sizing: border-box; font-size: 18px;
         }
-        
         #btn-login { 
-            width: 90%; padding: 12px; margin-top: 20px;
-            background: linear-gradient(180deg, #ff6600 0%, #cc2200 100%); 
-            color: #fff; border: 2px solid #fff; cursor: pointer; 
-            font-family: 'Bangers', cursive; font-size: 26px; 
-            text-transform: uppercase; box-shadow: 0 4px 0 #882200, 0 10px 20px rgba(0,0,0,0.5);
-            border-radius: 8px; transition: transform 0.1s; text-shadow: 2px 2px 0 #000;
+            width: 100%; padding: 15px; margin-top: 15px;
+            background: linear-gradient(to bottom, #ff6600, #cc2200); 
+            color: #fff; border: none; cursor: pointer; font-family: 'Bangers', cursive; 
+            font-size: 24px; text-transform: uppercase; border-radius: 4px;
+            box-shadow: 0 4px 0 #882200;
         }
-        #btn-login:active { transform: translateY(4px); box-shadow: 0 0 0 #882200; }
+        #btn-login:active { transform: translateY(4px); box-shadow: none; }
 
-        /* ============================
-           INTERFACE HUD
-           ============================ */
-        #ui { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            z-index: 100; pointer-events: none; 
-            display: none; /* Só aparece após login */
-        }
+        /* UI DO JOGO */
+        #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; display: none; }
 
-        #bars { 
-            position: absolute; top: 15px; left: 15px; width: 280px; 
-            transform: skewX(-10deg); pointer-events: auto;
-        }
-        #stat-bp { 
-            color: #ffcc00; font-size: 16px; font-weight: 900; 
-            text-shadow: 2px 2px 0 #000; margin-bottom: 2px;
-        }
-        
-        .bar-container { 
-            width: 100%; height: 16px; background: rgba(0,0,0,0.6); 
-            border: 2px solid #fff; margin-bottom: 4px; position: relative;
-        }
-        .bar { height: 100%; width: 100%; transition: width 0.2s ease-out; }
-        #hp-bar { background: linear-gradient(90deg, #ff4444, #aa0000); box-shadow: 0 0 8px #f00; }
-        #ki-bar { background: linear-gradient(90deg, #00ffff, #0066ff); box-shadow: 0 0 8px #0ff; }
-        #xp-bar { background: #ffff00; height: 100%; width: 0%; } 
-
-        /* ============================
-           CONTROLES MOBILE
-           ============================ */
-        #mobile-ui { display: none; pointer-events: auto; } 
-        
-        #joystick-container { 
-            position: absolute; bottom: 40px; left: 40px; 
-            width: 140px; height: 140px; z-index: 300;
-        }
-
+        /* CONTROLES MOBILE */
+        #mobile-ui { display: none; pointer-events: auto; width: 100%; height: 100%; }
+        #joystick-container { position: absolute; bottom: 50px; left: 50px; width: 120px; height: 120px; z-index: 300; }
         .m-btn {
             position: absolute; display: flex; align-items: center; justify-content: center;
-            background: rgba(0, 0, 0, 0.4); border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%; color: #fff; font-weight: bold; font-size: 12px;
-            user-select: none; backdrop-filter: blur(4px); 
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            transition: transform 0.1s;
+            border-radius: 50%; color: #fff; font-weight: bold; font-family: 'Bangers', cursive;
+            user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255,255,255,0.4);
+            backdrop-filter: blur(4px);
         }
-        .m-btn:active { background: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
+        .m-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.3); }
 
-        /* --- CLUSTER DE COMBATE (DIREITA) --- */
-        #btn-atk { 
-            bottom: 30px; right: 20px; width: 90px; height: 90px; 
-            background: rgba(255, 50, 50, 0.2); border-color: #ff3333; font-size: 18px;
-        }
-        #btn-blast { 
-            bottom: 130px; right: 30px; width: 65px; height: 65px; 
-            border-color: #00ffff; color: #00ffff; font-size: 10px;
-        }
-        #btn-block { 
-            bottom: 30px; right: 130px; width: 60px; height: 60px; 
-            border-color: #5555ff; color: #aaaaff; font-size: 10px;
-        }
-        #btn-charge { 
-            bottom: 110px; right: 110px; width: 60px; height: 60px; 
-            border-color: #ffff00; color: #ffff00; font-size: 10px;
-        }
-        #btn-vanish { 
-            bottom: 180px; right: 180px; width: 50px; height: 50px; 
-            border-style: dashed; font-size: 9px; opacity: 0.8;
-        }
-        /* Movi o btn-transform para perto do combate */
-        #btn-transform { 
-            bottom: 230px; right: 40px; width: 50px; height: 50px; 
-            font-size: 9px; border-color: #ffaa00;
-        }
+        #btn-atk { width: 85px; height: 85px; bottom: 40px; right: 30px; background: rgba(255, 50, 50, 0.3); border-color: #ff4444; font-size: 22px; }
+        #btn-block { width: 55px; height: 55px; bottom: 40px; right: 130px; font-size: 14px; background: rgba(50, 50, 255, 0.3); border-color: #4444ff; }
+        #btn-blast { width: 60px; height: 60px; bottom: 140px; right: 40px; font-size: 14px; background: rgba(0, 255, 255, 0.3); border-color: #00ffff; }
+        #btn-charge { width: 55px; height: 55px; bottom: 120px; right: 115px; font-size: 14px; background: rgba(255, 255, 0, 0.3); border-color: #ffff00; color: #ffff00; }
+        #btn-vanish { width: 45px; height: 45px; bottom: 190px; right: 110px; font-size: 12px; border-style: dashed; }
+        #btn-transform { width: 45px; height: 45px; bottom: 210px; right: 40px; font-size: 10px; border-color: #ffaa00; color: #ffaa00; }
 
-        /* --- BOTÕES DE SISTEMA (TOPO DIREITA) --- */
-        #btn-scouter { 
-            top: 20px; right: 20px; width: 50px; height: 50px; 
-            font-size: 9px; border-color: #00ff00; color: #00ff00;
+        .sys-btn {
+            position: absolute; width: 40px; height: 40px; right: 10px;
+            background: rgba(0,0,0,0.6); border: 1px solid #555; color: #fff; 
+            font-size: 18px; border-radius: 8px; display: flex; align-items: center; justify-content: center; pointer-events: auto;
         }
-        #btn-pvp { 
-            top: 80px; right: 20px; width: 50px; height: 50px; 
-            font-size: 9px; border-color: #ff00ff; color: #ff00ff;
-        }
-        #btn-pvp.active { background: rgba(255,0,255,0.3); box-shadow: 0 0 10px #f0f; }
+        #btn-scouter { top: 10px; color: #0f0; border-color: #0f0; }
+        #btn-pvp { top: 60px; color: #f0f; border-color: #f0f; }
+        #btn-pvp.active { background: #f0f; color: #fff; }
 
-        /* --- BOTÕES SOCIAIS (ESQUERDA - ABAIXO DA BARRA DE VIDA) --- */
-        #btn-menu {
-            position: absolute; top: 110px; left: 20px; 
-            width: 60px; height: 60px; 
-            background: rgba(50, 50, 50, 0.6); border: 2px solid #ccc;
-            font-size: 12px; z-index: 400;
+        .menu-btn {
+            position: absolute; left: 10px; width: 40px; height: 40px;
+            background: rgba(0,0,0,0.5); border: 1px solid #aaa;
+            border-radius: 4px; color: #fff; pointer-events: auto;
         }
-        #btn-chat {
-            position: absolute; top: 180px; left: 20px; 
-            width: 60px; height: 60px; 
-            background: rgba(0, 100, 200, 0.5); border: 2px solid #0af;
-            font-size: 24px; z-index: 400;
-        }
+        #btn-menu { top: 120px; font-size: 10px; }
+        #btn-chat { top: 170px; font-size: 20px; }
+        #btn-ranking { top: 220px; font-size: 20px; color: #fe0; }
+        #btn-guild { top: 270px; font-size: 20px; color: #0ff; }
+        #btn-rebirth { top: 320px; font-size: 20px; color: #f00; }
 
-        /* --- AJUSTES PARA PORTRAIT (CELULAR EM PÉ) --- */
-        @media (orientation: portrait) {
-            #btn-atk { width: 80px; height: 80px; bottom: 20px; right: 10px; }
-            #btn-blast { right: 100px; bottom: 30px; }
-            #btn-block { right: 20px; bottom: 120px; }
-            #btn-charge { right: 100px; bottom: 110px; }
-            #btn-vanish { right: 10px; bottom: 220px; }
-            #btn-transform { right: 80px; bottom: 200px; } /* Ajuste Form em pé */
-			
-        }
     </style>
 </head>
 <body>
 
-<div id="login-screen">
-    <div class="login-box">
-        <div class="dragon-ball">
-            <div class="star s1">★</div> <div class="star s2">★</div>
-            <div class="star s3">★</div> <div class="star s4">★</div>
+    <div id="login-screen">
+        <div class="login-box">
+            <h1>UNIVERSE Z</h1>
+            <input id="username" type="text" placeholder="GUERREIRO" maxlength="12" autocomplete="off">
+            <input id="password" type="password" placeholder="SENHA">
+            <button id="btn-login">ENTRAR</button>
         </div>
-        <h1>UNIVERSE Z<br><span>DESTROY THE GALAXY</span></h1>
-        <input id="username" placeholder="NOME DO GUERREIRO" autocomplete="off" maxlength="12">
-        <input id="password" type="password" placeholder="SENHA SECRETA">
-        <button id="btn-login">ENTRAR NO UNIVERSO</button>
     </div>
-</div>
 
-<canvas id="gameCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
-<div id="ui">
-    <div id="bars">
-        <div id="stat-bp">BP: 0 | TERRA</div>
-        <div class="bar-container"><div id="hp-bar" class="bar"></div></div>
-        <div class="bar-container"><div id="ki-bar" class="bar"></div></div>
-        <div class="bar-container" style="border:none; height:6px; background:#333;"><div id="xp-bar" class="bar"></div></div>
+    <div id="ui">
+        <div id="mobile-ui">
+            <div id="joystick-container"></div>
+            <div id="btn-atk" class="m-btn">SOCAR</div>
+            <div id="btn-blast" class="m-btn">KI</div>
+            <div id="btn-block" class="m-btn">DEF</div>
+            <div id="btn-charge" class="m-btn">CARGA</div>
+            <div id="btn-vanish" class="m-btn">TP</div>
+            <div id="btn-transform" class="m-btn">FORM</div>
+
+            <div id="btn-scouter" class="sys-btn">👁️</div>
+            <div id="btn-pvp" class="sys-btn">⚔️</div>
+
+            <button id="btn-menu" class="menu-btn">MENU</button>
+            <button id="btn-chat" class="menu-btn">💬</button>
+            <button id="btn-ranking" class="menu-btn">🏆</button>
+            <button id="btn-guild" class="menu-btn">👥</button>
+            <button id="btn-rebirth" class="menu-btn">♻️</button>
+        </div>
     </div>
-    
-    <div id="mobile-ui">
-        <div id="joystick-container"></div>
-        
-        <div id="btn-atk" class="m-btn">ATK</div>
-        <div id="btn-blast" class="m-btn">KI</div>
-        <div id="btn-block" class="m-btn">DEF</div>
-        <div id="btn-charge" class="m-btn">PWR</div>
-        <div id="btn-vanish" class="m-btn">TP</div>
-        <div id="btn-transform" class="m-btn">FORM</div>
-		<button id="btn-ranking">🏆</button>
-<button id="btn-guild">👥</button>
-<button id="btn-title">🏷️</button>
-<button id="btn-rebirth">♻️</button>
 
-		
-        
-        <div id="btn-scouter" class="m-btn">SCAN</div>
-        <div id="btn-pvp" class="m-btn">PVP</div>
-        
-        <div id="btn-menu" class="m-btn">MENU</div>
-        <div id="btn-chat" class="m-btn">💬</div>
-    </div>
-</div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Detecção Mobile
+        if (navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent)) {
+            document.getElementById('mobile-ui').style.display = 'block';
+        }
+    </script>
+    <script type="module" src="./game.js"></script>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="game.js"></script>
-<script>
-    // Detecta Mobile e Ativa UI
-    if (navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent)) {
-        document.getElementById('mobile-ui').style.display = 'block';
-    }
-</script>
 </body>
 </html>
