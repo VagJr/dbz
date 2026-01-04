@@ -60,54 +60,54 @@ let PLANETS = [
 // ==========================================
 const SAGA_STEPS = [
     // --- TUTORIAL: BÁSICO ---
-    { id: 0, title: "TUTORIAL: ENERGIA", objective: "Segure [TECLA C] para carregar KI até 100%.", type: "BP", req: 600, targetZone: "EARTH_CORE" },
-    { id: 1, title: "TUTORIAL: COMBATE", objective: "Use [CLIQUE ESQUERDO] para destruir 3 Rochas.", type: "BP", req: 800, targetZone: "EARTH_CORE" }, // BP aumenta ao destruir rocha
-    { id: 2, title: "PRIMEIRA LUTA", objective: "Derrote um SAIBAMAN fraco (Verde).", type: "KILL", target: "SAIBAMAN", targetZone: "EARTH_CORE" },
+    { id: 0, title: "A ORIGEM: O KI", objective: "Para lutar, você precisa de energia. Segure [C] (ou botão CARGA) até encher a barra amarela.", type: "BP", req: 600, targetZone: "EARTH_CORE" },
+    { id: 1, title: "A ORIGEM: FORÇA", objective: "Teste sua força bruta! Destrua 3 Rochas usando o [CLIQUE ESQUERDO] ou botão SOCAR.", type: "BP", req: 800, targetZone: "EARTH_CORE" },
+    { id: 2, title: "PRIMEIRO DESAFIO", objective: "Um Saibaman apareceu! Derrote-o para provar que está pronto para o mundo.", type: "KILL", target: "SAIBAMAN", targetZone: "EARTH_CORE" },
     
     // --- FASE 1: TERRA ---
-    { id: 3, title: "MESTRE KAME", objective: "Voe para o SUDESTE (Baixo-Direita) até a Casa do Kame.", type: "VISIT", target: "KAME_ISLAND", targetZone: "KAME_ISLAND" },
-    { id: 4, title: "TREINO DE KAME", objective: "Aprenda o KAMEHAMEHA (Fique na ilha).", type: "BP", req: 2500, targetZone: "KAME_ISLAND" },
-    { id: 5, title: "AMEAÇA SAIYAJIN", objective: "Volte à Terra e encontre RADITZ.", type: "VISIT", target: "EARTH", targetZone: "EARTH_CORE" },
-    { id: 6, title: "GUERREIRO Z", objective: "Derrote RADITZ (Use 'Q' para Bloquear!).", type: "KILL", target: "RADITZ", targetZone: "EARTH_CORE" },
+    { id: 3, title: "BUSCA PELO MESTRE", objective: "Voe para o SUDESTE (Baixo-Direita) no mar. Encontre a Ilha do Mestre Kame para treinar.", type: "VISIT", target: "KAME_ISLAND", targetZone: "KAME_ISLAND" },
+    { id: 4, title: "TREINO: KAMEHAMEHA", objective: "Kame exige poder! Fique na ilha e Carregue Ki até 2500 BP para aprender a técnica.", type: "BP", req: 2500, targetZone: "KAME_ISLAND" },
+    { id: 5, title: "INVASÃO SAIYAJIN", objective: "Raditz chegou à Terra! Volte à Capital do Oeste e encontre-o.", type: "VISIT", target: "EARTH", targetZone: "EARTH_CORE" },
+    { id: 6, title: "DEFENSOR DA TERRA", objective: "Proteja o planeta! Derrote RADITZ. (Dica: Use 'Q' ou DEF para Bloquear golpes).", type: "KILL", target: "RADITZ", targetZone: "EARTH_CORE" },
     
     // --- FASE 2: CAMINHO DA SERPENTE ---
-    { id: 7, title: "O OUTRO MUNDO", objective: "Voe para o CÉU (Cima/Norte) até achar o Caminho da Serpente.", type: "VISIT", target: "SNAKE_WAY", targetZone: "KAIOH_PLANET" }, 
-    { id: 8, title: "PLANETA KAIOH", objective: "Continue subindo até o final da Serpente.", type: "VISIT", target: "KAIOH", targetZone: "KAIOH_PLANET" },
-    { id: 9, title: "TREINO PESADO", objective: "Alcance Nível 10 treinando com a gravidade.", type: "LEVEL", req: 10, targetZone: "KAIOH_PLANET" },
+    { id: 7, title: "O OUTRO MUNDO", objective: "Você precisa ficar mais forte. Voe para o CÉU (NORTE/CIMA) até achar o Caminho da Serpente.", type: "VISIT", target: "SNAKE_WAY", targetZone: "KAIOH_PLANET" }, 
+    { id: 8, title: "PLANETA DO SR. KAIOH", objective: "Cruze a Serpente inteira até o pequeno planeta no final para encontrar o Sr. Kaioh.", type: "VISIT", target: "KAIOH", targetZone: "KAIOH_PLANET" },
+    { id: 9, title: "GRAVIDADE AUMENTADA", objective: "O treino de Kaioh é duro! Atinja o Nível 10 lutando ou carregando Ki aqui.", type: "LEVEL", req: 10, targetZone: "KAIOH_PLANET" },
     
     // --- FASE 3: INVASÃO ---
-    { id: 10, title: "O RETORNO", objective: "Desça de volta para a Terra (Sul).", type: "VISIT", target: "EARTH", targetZone: "EARTH_CORE" },
-    { id: 11, title: "ELITE SAIYAJIN", objective: "Derrote NAPPA ou VEGETA na Terra.", type: "KILL", target: "VEGETA_SCOUTER", targetZone: "EARTH_CORE" },
+    { id: 10, title: "O RETORNO DOS SAIYAJINS", objective: "Seus amigos estão em perigo! Desça tudo de volta para a Terra (Sul).", type: "VISIT", target: "EARTH", targetZone: "EARTH_CORE" },
+    { id: 11, title: "ELITE DO IMPÉRIO", objective: "Nappa ou Vegeta estão destruindo a cidade. Pare-os agora!", type: "KILL", target: "VEGETA_SCOUTER", targetZone: "EARTH_CORE" },
     
     // --- FASE 4: NAMEKUSEI (ESPAÇO) ---
-    { id: 12, title: "VIAGEM ESPACIAL", objective: "Voe para o OESTE (Esquerda) até o Espaço Profundo.", type: "VISIT", target: "NAMEK", targetZone: "NAMEK_VILLAGE" },
-    { id: 13, title: "FORÇAS ESPECIAIS", objective: "Encontre a Aldeia Namek e vença GINYU.", type: "KILL", target: "GINYU", targetZone: "NAMEK_VILLAGE" },
-    { id: 14, title: "O TIRANO", objective: "Voe mais a OESTE para a Base de Freeza.", type: "VISIT", target: "FRIEZA", targetZone: "FRIEZA_BASE" },
-    { id: 15, title: "LENDA DOURADA", objective: "Derrote FREEZA FINAL. (Dica: Transforme-se com 'G')", type: "KILL", target: "FRIEZA_FINAL", targetZone: "FRIEZA_BASE" },
-    { id: 16, title: "SUPER SAIYAJIN", objective: "Atinja a forma SSJ (Precisa Nível 20+).", type: "FORM", target: "SSJ", targetZone: "ANY" },
+    { id: 12, title: "VIAGEM À NAMEKUSEI", objective: "As Esferas da Terra sumiram. Voe para o OESTE (ESQUERDA) no espaço profundo.", type: "VISIT", target: "NAMEK", targetZone: "NAMEK_VILLAGE" },
+    { id: 13, title: "FORÇAS ESPECIAIS", objective: "Proteja a vila Namek e derrote o Capitão GINYU.", type: "KILL", target: "GINYU", targetZone: "NAMEK_VILLAGE" },
+    { id: 14, title: "O IMPERADOR DO MAL", objective: "Siga mais a OESTE até encontrar a Nave de Freeza.", type: "VISIT", target: "FRIEZA", targetZone: "FRIEZA_BASE" },
+    { id: 15, title: "BATALHA FINAL", objective: "Derrote FREEZA em sua forma final para vingar sua raça.", type: "KILL", target: "FRIEZA_FINAL", targetZone: "FRIEZA_BASE" },
+    { id: 16, title: "O LENDÁRIO SUPER SAIYAJIN", objective: "A fúria desperta! Atinja Nível 20 e aperte 'G' (ou botão FORM) para se TRANSFORMAR!", type: "FORM", target: "SSJ", targetZone: "ANY" },
     
     // --- FASE 5: ANDROIDES (FUTURO) ---
-    { id: 17, title: "LINHA DO TEMPO", objective: "Voe para o LESTE (Direita) passando da Terra.", type: "VISIT", target: "FUTURE", targetZone: "FUTURE_RUINS" },
-    { id: 18, title: "AMEAÇA BIOLÓGICA", objective: "Derrote PERFECT CELL nas Ruínas.", type: "KILL", target: "PERFECT_CELL", targetZone: "FUTURE_RUINS" },
-    { id: 19, title: "PODER ALÉM", objective: "Alcance a forma SSJ2 ou SSJ3.", type: "FORM", target: "SSJ2", targetZone: "ANY" },
+    { id: 17, title: "FUTURO SOMBRIO", objective: "Voe para o LESTE (DIREITA), passando da Terra, para as Ruínas do Futuro.", type: "VISIT", target: "FUTURE", targetZone: "FUTURE_RUINS" },
+    { id: 18, title: "CRIAÇÃO PERFEITA", objective: "Encontre e destrua CELL PERFEITO nas ruínas.", type: "KILL", target: "PERFECT_CELL", targetZone: "FUTURE_RUINS" },
+    { id: 19, title: "PODER ALÉM DO LIMITE", objective: "Supere o Super Saiyajin. Treine para alcançar SSJ2 ou SSJ3 (Nível 40).", type: "FORM", target: "SSJ2", targetZone: "ANY" },
     
     // --- FASE 6: MAGIA (SUL) ---
-    { id: 20, title: "REINO DAS TREVAS", objective: "Voe para o SUL PROFUNDO (Baixo).", type: "VISIT", target: "DEMON", targetZone: "DEMON_GATE" },
-    { id: 21, title: "MAGIA NEGRA", objective: "Derrote KID BUU no Reino Demoníaco.", type: "KILL", target: "KID_BUU", targetZone: "MAKAI_CORE" },
+    { id: 20, title: "REINO DAS TREVAS", objective: "Uma magia maligna surge. Voe para o SUL PROFUNDO (BAIXO) até o portão mágico.", type: "VISIT", target: "DEMON", targetZone: "DEMON_GATE" },
+    { id: 21, title: "AMEAÇA MAJIN", objective: "Derrote KID BUU no coração do Reino Demoníaco.", type: "KILL", target: "KID_BUU", targetZone: "MAKAI_CORE" },
     
     // --- FASE 7: VAMPA (EXTREMO OESTE) ---
-    { id: 22, title: "PLANETA SELVAGEM", objective: "Voe para o EXTREMO OESTE (Muito a Esquerda).", type: "VISIT", target: "VAMPA", targetZone: "VAMPA_WASTES" },
-    { id: 23, title: "O LENDÁRIO", objective: "Sobreviva e derrote BROLY LENDÁRIO.", type: "KILL", target: "LEGENDARY_BROLY", targetZone: "VAMPA_WASTES" },
+    { id: 22, title: "PLANETA SELVAGEM", objective: "Voe para o EXTREMO OESTE (Muito a Esquerda), no planeta Vampa.", type: "VISIT", target: "VAMPA", targetZone: "VAMPA_WASTES" },
+    { id: 23, title: "O SAIYAJIN LENDÁRIO", objective: "Sobreviva e derrote BROLY LENDÁRIO.", type: "KILL", target: "LEGENDARY_BROLY", targetZone: "VAMPA_WASTES" },
     
     // --- FASE 8: DEUSES (EXTREMO NORTE) ---
-    { id: 24, title: "REINO DIVINO", objective: "Voe para o EXTREMO NORTE (Muito Acima).", type: "VISIT", target: "DIVINE", targetZone: "BEERUS_PLANET" },
-    { id: 25, title: "DESTRUIÇÃO", objective: "Derrote o Deus BEERUS.", type: "KILL", target: "BEERUS", targetZone: "BEERUS_PLANET" },
-    { id: 26, title: "INSTINTO SUPERIOR", objective: "Alcance a forma UI (Nível 100+).", type: "FORM", target: "UI", targetZone: "ANY" },
+    { id: 24, title: "REINO DIVINO", objective: "Voe para o EXTREMO NORTE (Muito Acima), além de Kaioh.", type: "VISIT", target: "DIVINE", targetZone: "BEERUS_PLANET" },
+    { id: 25, title: "O DEUS DA DESTRUIÇÃO", objective: "Prove seu valor contra o Deus BEERUS.", type: "KILL", target: "BEERUS", targetZone: "BEERUS_PLANET" },
+    { id: 26, title: "INSTINTO SUPERIOR", objective: "Alcance a forma final UI (Nível 100+).", type: "FORM", target: "UI", targetZone: "ANY" },
     
     // --- ENDGAME ---
     { id: 27, title: "TORNEIO DO PODER", objective: "Vença JIREN no Reino Divino.", type: "KILL", target: "JIREN", targetZone: "BEERUS_PLANET" },
-    { id: 28, title: "IMPERADOR", objective: "Conquiste um Planeta para sua Guilda.", type: "DOMINATION", target: "ANY", targetZone: "ANY" },
-    { id: 29, title: "DIVINDADE", objective: "Faça um REBIRTH (Nível 150 - Menu 'R').", type: "REBIRTH", target: "ANY", targetZone: "ANY" }
+    { id: 28, title: "IMPERADOR DO UNIVERSO", objective: "Conquiste um Planeta para sua Guilda (Elimine os guardas até zerar a estabilidade).", type: "DOMINATION", target: "ANY", targetZone: "ANY" },
+    { id: 29, title: "DIVINDADE", objective: "Faça um REBIRTH (Nível 150 - Menu 'R') para recomeçar mais forte.", type: "REBIRTH", target: "ANY", targetZone: "ANY" }
 ];
 
 // ==========================================
@@ -1139,3 +1139,49 @@ if (p.comboTargetId) {
 }, TICK);
 
 server.listen(3000, () => console.log(">> SERVER ONLINE EM: http://localhost:3000"));
+
+/* ===============================
+   PATCH TOTAL: COMBAT SYSTEM V2
+   =============================== */
+
+const COMBAT_STATE = {
+  PERFECT: "PERFECT",
+  BAD: "BAD",
+  NORMAL: "NORMAL"
+};
+
+function evaluateTiming(p){
+  if(p.perfectTiming) return COMBAT_STATE.PERFECT;
+  if(p.badTiming) return COMBAT_STATE.BAD;
+  return COMBAT_STATE.NORMAL;
+}
+
+function launchAirCombo(p,target){
+  target.vy -= 25;
+  target.airborne = true;
+  io.emit("fx",{type:"launch",x:target.x,y:target.y});
+}
+
+function bossReact(boss,state){
+  if(!boss.isBoss) return;
+  if(state===COMBAT_STATE.PERFECT){
+    boss.stagger = 40;
+    io.emit("fx",{type:"guard_break",x:boss.x,y:boss.y});
+  }
+  if(state===COMBAT_STATE.BAD){
+    boss.enrage = 60;
+    io.emit("fx",{type:"heavy",x:boss.x,y:boss.y});
+  }
+}
+
+function handleAdvancedCombat(p,input){
+  const move = detectCombatMove(p,input);
+  if(!move) return;
+  const target = findBestCombatTarget(p,move.range,p.angle||0);
+  if(!target) return;
+
+  const timing = evaluateTiming(p);
+  if(timing===COMBAT_STATE.PERFECT && move.id==="DASH_STRIKE") launchAirCombo(p,target);
+  bossReact(target,timing);
+  executeMove(p,move);
+}

@@ -951,3 +951,41 @@ function drawScouterPanel(saga) {
 
     loop();
 };
+
+/* ===============================
+   PATCH TOTAL: HUD + PARRY + AIR
+   =============================== */
+
+let perfectWindow = false;
+
+window.addEventListener("keydown",e=>{
+  if(e.code==="KeyQ"){
+    perfectWindow = true;
+    setTimeout(()=>perfectWindow=false,120);
+    socket.emit("combat_input","PARRY");
+  }
+});
+
+socket.on("fx",data=>{
+  if(data.type==="launch"){
+    texts.push({x:data.x,y:data.y-100,text:"LAUNCH!",color:"#0ff",life:60,vy:-1});
+  }
+});
+
+function drawSkillTree(){
+  const skills=["LIGHT","DASH","HEAVY","LAUNCH","FINISH"];
+  ctx.save();
+  ctx.translate(canvas.width-260,120);
+  ctx.font="14px Orbitron";
+  skills.forEach((s,i)=>{
+    ctx.fillStyle="#ffaa00";
+    ctx.fillText(s,0,i*24);
+  });
+  ctx.restore();
+}
+
+const oldDraw = draw;
+draw = function(){
+  oldDraw();
+  drawSkillTree();
+};
