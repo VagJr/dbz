@@ -776,6 +776,8 @@ io.on("connection", (socket) => {
     delete players[socket.id];
 });
 
+});
+
 
 function handleKill(killer, victim) {
     const planet = PLANETS.find(pl => Math.hypot(pl.x - victim.x, pl.y - victim.y) < pl.radius);
