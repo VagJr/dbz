@@ -27,7 +27,7 @@ try {
 // ==========================================
 const SNAKE_WAY_START = { x: 0, y: -12000 };
 const KAIOH_PLANET    = { x: 0, y: -25000 };
-const TICK = 33; // ~30 FPS Server loop
+const TICK = 120; // ~30 FPS Server loop
 
 const BOSS_PHASES = {
     PHASE_1: { hp: 0.65, aggression: 0.6 },
