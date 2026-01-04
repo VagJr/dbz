@@ -951,3 +951,34 @@ function drawScouterPanel(saga) {
 
     loop();
 };
+
+
+/* =========================
+   CLIENT PREDICTION + RECONCILIATION
+   ========================= */
+let inputSeq = 0;
+let pendingInputs = [];
+
+function sendInputPredicted(input){
+  inputSeq++;
+  input.seq = inputSeq;
+  input.clientTime = performance.now();
+  pendingInputs.push(input);
+  socket.emit("input", input);
+}
+
+socket.on("state", data => {
+  if(!myId || !players[myId]) return;
+  const me = players[myId];
+  if(!data.tick) return;
+
+  // Reconciliation: drop confirmed inputs
+  pendingInputs = pendingInputs.filter(i => i.seq > (me.lastAck || 0));
+
+  // Re-apply pending inputs locally
+  pendingInputs.forEach(i => {
+    me.x += (i.x||0) * 6;
+    me.y += (i.y||0) * 6;
+    if(i.angle!==undefined) me.angle = i.angle;
+  });
+});

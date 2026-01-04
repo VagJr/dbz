@@ -1139,3 +1139,22 @@ if (p.comboTargetId) {
 }, TICK);
 
 server.listen(3000, () => console.log(">> SERVER ONLINE EM: http://localhost:3000"));
+
+
+/* =========================
+   LATENCY COMPENSATION CORE
+   - Server Tick Timestamp
+   - Input ACK with reconciliation
+   ========================= */
+let SERVER_TICK = 0;
+
+function emitState(io){
+  SERVER_TICK++;
+  const payload = {
+    t: Date.now(),
+    tick: SERVER_TICK,
+    players, npcs, projectiles, rocks, craters, chats,
+    domination: PLANETS, leaderboard, saga: null, dbs: dragonBalls
+  };
+  io.emit("state", payload);
+}
