@@ -476,46 +476,91 @@ function packStateForPlayer(pid) {
 const localUsers = {};
 
 io.on("connection", (socket) => {
-    socket.on("login", async (data) => {
-        try {
-            let user;
-            if (pool) {
-                const res = await pool.query('SELECT * FROM users WHERE name = $1', [data.user]);
-                user = res.rows[0];
-                if (!user) {
-                    const insert = await pool.query('INSERT INTO users (name, pass, level, xp, bp, guild, titles, current_title, pvp_score, rebirths, quest_data, saga_step) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *', [data.user, data.pass, 1, 0, 500, null, 'Novato', 'Novato', 0, 0, '{}', 0]);
-                    user = insert.rows[0];
-                } else if (user.pass !== data.pass) return;
-            } else {
-                user = localUsers[data.user];
-                if (!user) { user = { name: data.user, pass: data.pass, level: 1, xp: 0, bp: 500, guild: null, titles: 'Novato', current_title: 'Novato', pvp_score: 0, pvp_kills: 0, rebirths: 0, quest_data: '{}', saga_step: 0 }; localUsers[data.user] = user; } else if (user.pass !== data.pass) return;
-            }
-            
-            const xpToNext = user.level * 800;
-            const rebirthMult = 1 + (user.rebirths || 0) * 0.2; 
-            const quest = user.quest_data ? (typeof user.quest_data === 'string' ? JSON.parse(user.quest_data) : user.quest_data) : {};
-            let skills = quest.skills || [];
-
-            players[socket.id] = {
-                ...user, id: socket.id, r: 20, x: 0, y: 0, vx: 0, vy: 0, angle: 0,
-                baseMaxHp: (1000 + user.level * 200) * rebirthMult, baseMaxKi: (100 + user.level * 10) * rebirthMult,
-                hp: (1000 + user.level * 200) * rebirthMult, maxHp: (1000 + user.level * 200) * rebirthMult,
-                ki: 100, maxKi: (100 + user.level * 10) * rebirthMult, form: "BASE", xpToNext,
-                state: "IDLE", lastHit: 0, stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk: 0,
-                isDead: false, isSpirit: false, stun: 0, color: "#ff9900", chargeStart: 0, pvpMode: false, lastTransform: 0, bpCapped: false,
-                reviveTimer: 0, linkId: null, quest: quest || {}, rebirths: user.rebirths || 0, sagaStep: user.saga_step || 0,
-                skills: skills, dbCount: 0, isTutorialDialogActive: false
+    socket.on("login", async ({ user, pass }) => {
+    try {
+        if (!pool) {
+            // modo local fallback
+            const id = socket.id;
+            players[id] = {
+                id,
+                name: user,
+                x: 0,
+                y: 0,
+                level: 1,
+                xp: 0,
+                bp: 100,
+                sagaStep: 0,
+                form: "BASE",
+                hp: 1000,
+                maxHp: 1000,
+                ki: 300,
+                maxKi: 300,
+                pvpMode: false
             };
-            
-            // INICIALIZA A A.R.I.S PARA O JOGADOR
-            arisInstances[socket.id] = new ArisAI(players[socket.id]);
-            socket.emit("aris_msg", { text: `A.R.I.S: Sistema Online. Bem-vindo, Guerreiro ${data.user}.`, type: "INFO" });
-            
-            if(!players[socket.id].quest.type) assignQuest(players[socket.id]);
-            socket.emit("auth_success", players[socket.id]);
-            console.log(`>> ${data.user} Entrou no jogo.`);
-        } catch (err) { console.error("Erro no Login:", err); }
-    });
+            socket.emit("auth_success", players[id]);
+            return;
+        }
+
+        // buscar usuário
+        const res = await pool.query(
+            "SELECT * FROM users WHERE name = $1",
+            [user]
+        );
+
+        let row;
+
+        if (res.rows.length === 0) {
+            // criar usuário
+            const insert = await pool.query(
+                `INSERT INTO users 
+                (username, name, password) 
+                VALUES ($1, $2, $3) 
+                RETURNING *`,
+                [user, user, pass]
+            );
+            row = insert.rows[0];
+        } else {
+            row = res.rows[0];
+            if (row.password !== pass) {
+                socket.emit("login_error", "Senha incorreta");
+                return;
+            }
+        }
+
+        // montar player em memória
+        const id = socket.id;
+        players[id] = {
+            id,
+            name: row.name,
+            x: row.x || 0,
+            y: row.y || 0,
+            level: row.level,
+            xp: row.xp,
+            bp: row.bp,
+            sagaStep: row.saga_step,
+            form: row.form,
+            hp: row.hp,
+            maxHp: row.max_hp,
+            ki: row.ki,
+            maxKi: row.max_ki,
+            pvpMode: row.pvp,
+            kills: row.kills || 0,
+            rebirths: row.rebirths || 0,
+            quest: row.quest_data || null,
+            current_title: row.current_title || null
+        };
+
+        arisInstances[id] = new ArisAI(players[id]);
+
+        socket.emit("auth_success", players[id]);
+        console.log(`>> ${row.name} logou com sucesso`);
+
+    } catch (err) {
+        console.error("Erro no Login:", err);
+        socket.emit("login_error", "Erro interno");
+    }
+});
+
 
     socket.on("toggle_pvp", () => { 
         const p = players[socket.id]; 
@@ -705,8 +750,32 @@ io.on("connection", (socket) => {
         checkAchievements(p); clampBP(p); checkSaga(p, "FORM", null);
     });
     socket.on("set_tax", (val) => { const p = players[socket.id]; if (!p || !p.guild) return; const planet = PLANETS.find(pl => Math.hypot(pl.x - p.x, pl.y - p.y) < pl.radius); if (planet && planet.owner === p.guild && val >= 0 && val <= 20) { planet.taxRate = val; if(pool) pool.query('INSERT INTO planets (id, tax_rate) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET tax_rate = $2', [planet.id, val]).catch(console.error); io.emit("fx", { type: "bp_limit", x: planet.x, y: planet.y, text: `IMPOSTO: ${val}%` }); } });
-    socket.on("disconnect", () => { delete players[socket.id]; delete arisInstances[socket.id]; });
+    socket.on("disconnect", async () => {
+    const p = players[socket.id];
+    if (!p) return;
+
+    if (pool) {
+        await pool.query(
+            `UPDATE users SET
+                x=$1, y=$2, level=$3, xp=$4, bp=$5,
+                saga_step=$6, form=$7, hp=$8, ki=$9,
+                quest_data=$10, kills=$11, rebirths=$12,
+                pvp=$13, current_title=$14
+             WHERE name=$15`,
+            [
+                p.x, p.y, p.level, p.xp, p.bp,
+                p.sagaStep, p.form, p.hp, p.ki,
+                JSON.stringify(p.quest),
+                p.kills, p.rebirths,
+                p.pvpMode, p.current_title,
+                p.name
+            ]
+        );
+    }
+
+    delete players[socket.id];
 });
+
 
 function handleKill(killer, victim) {
     const planet = PLANETS.find(pl => Math.hypot(pl.x - victim.x, pl.y - victim.y) < pl.radius);
