@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UNIVERSE Z: EVOLUTION</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Bangers&display=swap" rel="stylesheet">
+    <title>UNIVERSE Z: DESTROY THE GALAXY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Bangers&family=Russo+One&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
     <style>
@@ -15,34 +15,102 @@
             color: #fff; user-select: none; touch-action: none;
         }
 
-        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+        /* CAMADAS */
+        #bg-animation { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        canvas#gameCanvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* TELA DE LOGIN */
+        /* TELA DE LOGIN ANIMADA */
         #login-screen { 
             position: fixed; width: 100%; height: 100%; 
-            background: radial-gradient(circle at center, #1a0500 0%, #000000 90%);
             z-index: 2000; display: flex; align-items: center; 
             justify-content: center; flex-direction: column;
+            background: rgba(0, 0, 0, 0.4); /* Leve tint para não esconder o fundo animado */
+            backdrop-filter: blur(2px);
         }
+
+        /* LOGOTIPO ESTILIZADO DBZ STYLE */
+        .logo-container {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: floatLogo 3s ease-in-out infinite;
+        }
+        .logo-main {
+            font-family: 'Russo One', sans-serif;
+            font-size: 60px;
+            color: #ffcc00;
+            background: linear-gradient(to bottom, #ffee00 0%, #ffaa00 50%, #ff6600 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 
+                0px 0px 0px rgba(0,0,0,0.5), /* trick for stroke */
+                4px 4px 0px #000,
+                6px 6px 0px #aa0000;
+            letter-spacing: 2px;
+            transform: skewX(-10deg);
+            display: inline-block;
+            filter: drop-shadow(0 0 10px rgba(255, 200, 0, 0.6));
+        }
+        .logo-sub {
+            font-family: 'Bangers', cursive;
+            font-size: 32px;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000, 0 0 10px #00ccff;
+            margin-top: -10px;
+            letter-spacing: 4px;
+        }
+        .logo-z {
+            font-family: 'Russo One', sans-serif;
+            font-size: 100px;
+            color: #f00;
+            position: absolute;
+            top: -20px;
+            right: -60px;
+            background: linear-gradient(to bottom, #ff3333 0%, #cc0000 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 4px 4px 0 #000, 0 0 20px #ff0000;
+            transform: skewX(-15deg) rotate(-5deg);
+            z-index: 10;
+        }
+
+        @keyframes floatLogo {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
         .login-box { 
-            background: rgba(0, 0, 0, 0.85); border: 2px solid #ffaa00; 
-            box-shadow: 0 0 30px rgba(255, 100, 0, 0.3); padding: 40px; 
-            border-radius: 12px; text-align: center; width: 90%; max-width: 350px;
+            background: rgba(10, 10, 20, 0.9); 
+            border: 2px solid #00aaff; 
+            box-shadow: 0 0 30px rgba(0, 170, 255, 0.4), inset 0 0 20px rgba(0,0,0,0.8); 
+            padding: 40px; 
+            border-radius: 12px; 
+            text-align: center; 
+            width: 90%; max-width: 380px;
+            position: relative;
         }
-        h1 { font-family: 'Bangers', cursive; color: #ffcc00; font-size: 48px; margin: 0 0 20px 0; letter-spacing: 2px; text-shadow: 4px 4px 0 #882200; }
+        /* Detalhes Tech nos cantos */
+        .login-box::before { content: ''; position: absolute; top: -2px; left: -2px; width: 20px; height: 20px; border-top: 4px solid #fff; border-left: 4px solid #fff; }
+        .login-box::after { content: ''; position: absolute; bottom: -2px; right: -2px; width: 20px; height: 20px; border-bottom: 4px solid #fff; border-right: 4px solid #fff; }
+
         input { 
-            width: 100%; padding: 12px; margin: 10px 0; background: #fff; 
-            border: none; border-radius: 4px; font-family: 'Orbitron', sans-serif; 
+            width: 100%; padding: 15px; margin: 10px 0; background: #fff; 
+            border: 3px solid #555; border-radius: 4px; font-family: 'Orbitron', sans-serif; 
             font-weight: bold; text-align: center; box-sizing: border-box; font-size: 18px;
+            transition: 0.3s;
         }
+        input:focus { border-color: #ffaa00; outline: none; box-shadow: 0 0 10px #ffaa00; }
+
         #btn-login { 
             width: 100%; padding: 15px; margin-top: 15px;
-            background: linear-gradient(to bottom, #ff6600, #cc2200); 
-            color: #fff; border: none; cursor: pointer; font-family: 'Bangers', cursive; 
-            font-size: 24px; text-transform: uppercase; border-radius: 4px;
-            box-shadow: 0 4px 0 #882200;
+            background: linear-gradient(to bottom, #0088ff, #0044aa); 
+            color: #fff; border: 2px solid #fff; cursor: pointer; font-family: 'Bangers', cursive; 
+            font-size: 28px; text-transform: uppercase; border-radius: 8px;
+            box-shadow: 0 4px 0 #002266;
+            transition: 0.2s;
         }
+        #btn-login:hover { filter: brightness(1.2); }
         #btn-login:active { transform: translateY(4px); box-shadow: none; }
+        #btn-login:disabled { background: #555; border-color: #333; cursor: not-allowed; }
 
         /* UI DO JOGO */
         #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; display: none; }
@@ -55,48 +123,58 @@
             border-radius: 50%; color: #fff; font-weight: bold; font-family: 'Bangers', cursive;
             user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
             background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255,255,255,0.4);
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px); text-shadow: 1px 1px 0 #000;
         }
         .m-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.3); }
 
-        #btn-atk { width: 85px; height: 85px; bottom: 40px; right: 30px; background: rgba(255, 50, 50, 0.3); border-color: #ff4444; font-size: 22px; }
-        #btn-block { width: 55px; height: 55px; bottom: 40px; right: 130px; font-size: 14px; background: rgba(50, 50, 255, 0.3); border-color: #4444ff; }
-        #btn-blast { width: 60px; height: 60px; bottom: 140px; right: 40px; font-size: 14px; background: rgba(0, 255, 255, 0.3); border-color: #00ffff; }
-        #btn-charge { width: 55px; height: 55px; bottom: 120px; right: 115px; font-size: 14px; background: rgba(255, 255, 0, 0.3); border-color: #ffff00; color: #ffff00; }
-        #btn-vanish { width: 45px; height: 45px; bottom: 190px; right: 110px; font-size: 12px; border-style: dashed; }
-        #btn-transform { width: 45px; height: 45px; bottom: 210px; right: 40px; font-size: 10px; border-color: #ffaa00; color: #ffaa00; }
+        #btn-atk { width: 90px; height: 90px; bottom: 50px; right: 30px; background: rgba(255, 50, 50, 0.25); border-color: #ff4444; font-size: 24px; color: #ffcccc; }
+        #btn-block { width: 60px; height: 60px; bottom: 40px; right: 140px; font-size: 16px; background: rgba(50, 50, 255, 0.25); border-color: #4444ff; }
+        #btn-blast { width: 65px; height: 65px; bottom: 150px; right: 40px; font-size: 16px; background: rgba(0, 255, 255, 0.25); border-color: #00ffff; }
+        #btn-charge { width: 60px; height: 60px; bottom: 130px; right: 120px; font-size: 14px; background: rgba(255, 255, 0, 0.25); border-color: #ffff00; color: #ffff00; }
+        #btn-vanish { width: 50px; height: 50px; bottom: 210px; right: 110px; font-size: 12px; border-style: dashed; }
+        #btn-transform { width: 50px; height: 50px; bottom: 230px; right: 40px; font-size: 10px; border-color: #ffaa00; color: #ffaa00; }
 
         .sys-btn {
-            position: absolute; width: 40px; height: 40px; right: 10px;
-            background: rgba(0,0,0,0.6); border: 1px solid #555; color: #fff; 
-            font-size: 18px; border-radius: 8px; display: flex; align-items: center; justify-content: center; pointer-events: auto;
+            position: absolute; width: 45px; height: 45px; right: 15px;
+            background: rgba(0,0,0,0.7); border: 1px solid #777; color: #fff; 
+            font-size: 20px; border-radius: 8px; display: flex; align-items: center; justify-content: center; pointer-events: auto;
         }
-        #btn-scouter { top: 10px; color: #0f0; border-color: #0f0; }
-        #btn-pvp { top: 60px; color: #f0f; border-color: #f0f; }
+        #btn-scouter { top: 15px; color: #0f0; border-color: #0f0; box-shadow: 0 0 5px #0f0; }
+        #btn-pvp { top: 70px; color: #f0f; border-color: #f0f; box-shadow: 0 0 5px #f0f; }
         #btn-pvp.active { background: #f0f; color: #fff; }
 
         .menu-btn {
-            position: absolute; left: 10px; width: 40px; height: 40px;
-            background: rgba(0,0,0,0.5); border: 1px solid #aaa;
-            border-radius: 4px; color: #fff; pointer-events: auto;
+            position: absolute; left: 15px; width: 45px; height: 45px;
+            background: rgba(0,0,0,0.6); border: 1px solid #aaa;
+            border-radius: 4px; color: #fff; pointer-events: auto; display: flex; align-items: center; justify-content: center;
         }
-        #btn-menu { top: 120px; font-size: 10px; }
-        #btn-chat { top: 170px; font-size: 20px; }
-        #btn-ranking { top: 220px; font-size: 20px; color: #fe0; }
-        #btn-guild { top: 270px; font-size: 20px; color: #0ff; }
-        #btn-rebirth { top: 320px; font-size: 20px; color: #f00; }
+        #btn-menu { top: 120px; font-size: 10px; font-weight: bold; }
+        #btn-chat { top: 175px; font-size: 22px; }
+        #btn-ranking { top: 230px; font-size: 22px; color: #fe0; }
+        #btn-guild { top: 285px; font-size: 22px; color: #0ff; }
+        #btn-rebirth { top: 340px; font-size: 22px; color: #f00; }
 
     </style>
 </head>
 <body>
 
+    <canvas id="bg-animation"></canvas>
+
     <div id="login-screen">
-        <div class="login-box">
-            <h1>UNIVERSE Z</h1>
-            <input id="username" type="text" placeholder="GUERREIRO" maxlength="12" autocomplete="off">
-            <input id="password" type="password" placeholder="SENHA">
-            <button id="btn-login">ENTRAR</button>
+        <div class="logo-container">
+            <div style="position:relative; display: inline-block;">
+                <span class="logo-main">UNIVERSE</span>
+                <span class="logo-z">Z</span>
+            </div>
+            <div class="logo-sub">DESTROY THE GALAXY</div>
         </div>
+
+        <div class="login-box">
+            <input id="username" type="text" placeholder="NOME DO GUERREIRO" maxlength="12" autocomplete="off">
+            <input id="password" type="password" placeholder="SENHA SECRETA">
+            <button id="btn-login">INICIAR JORNADA</button>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa; text-shadow: 1px 1px 0 #000;">v 2.0 EVOLUTION</div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -104,12 +182,12 @@
     <div id="ui">
         <div id="mobile-ui">
             <div id="joystick-container"></div>
-            <div id="btn-atk" class="m-btn">SOCAR</div>
+            <div id="btn-atk" class="m-btn">ATK</div>
             <div id="btn-blast" class="m-btn">KI</div>
             <div id="btn-block" class="m-btn">DEF</div>
-            <div id="btn-charge" class="m-btn">CARGA</div>
+            <div id="btn-charge" class="m-btn">PW</div>
             <div id="btn-vanish" class="m-btn">TP</div>
-            <div id="btn-transform" class="m-btn">FORM</div>
+            <div id="btn-transform" class="m-btn">G</div>
 
             <div id="btn-scouter" class="sys-btn">👁️</div>
             <div id="btn-pvp" class="sys-btn">⚔️</div>
@@ -124,7 +202,52 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Detecção Mobile
+        // --- SCRIPT DO FUNDO ANIMADO (LOGIN) ---
+        const bgCanvas = document.getElementById('bg-animation');
+        const bgCtx = bgCanvas.getContext('2d');
+        
+        function resizeBg() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeBg);
+        resizeBg();
+
+        const bgStars = [];
+        for(let i=0; i<150; i++) {
+            bgStars.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                size: Math.random() * 2,
+                speed: Math.random() * 0.5 + 0.1
+            });
+        }
+
+        function animateBg() {
+            bgCtx.fillStyle = "#000000";
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            
+            // Nebulosa fake
+            const grd = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/2, 100, bgCanvas.width/2, bgCanvas.height/2, bgCanvas.width);
+            grd.addColorStop(0, "#1a0033");
+            grd.addColorStop(1, "#000000");
+            bgCtx.fillStyle = grd;
+            bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
+
+            bgCtx.fillStyle = "#fff";
+            bgStars.forEach(s => {
+                s.x -= s.speed;
+                if(s.x < 0) s.x = bgCanvas.width;
+                bgCtx.globalAlpha = Math.random() * 0.5 + 0.5;
+                bgCtx.beginPath();
+                bgCtx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+                bgCtx.fill();
+            });
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+        // --- LÓGICA MOBILE ---
         if (navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent)) {
             document.getElementById('mobile-ui').style.display = 'block';
         }
