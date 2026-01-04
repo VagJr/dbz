@@ -102,32 +102,51 @@ window.onload = function() {
     }
 
     const AudioSys = {
-        bgm: new Audio('./bgm.mp3'),
-        sfxHit: new Audio('https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3'),
-        sfxBlast: new Audio('https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3'),
-        sfxHeavy: new Audio('https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3'),
-        sfxTeleport: new Audio('https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3'),
-        sfxCharge: new Audio('https://assets.mixkit.co/active_storage/sfx/297/297-preview.mp3'),
-        unlocked: false,
-        init: function() { this.bgm.loop = true; this.bgm.volume = 0.25; },
-        unlock: function() {
-            if(this.unlocked) return;
-            this.bgm.play().then(() => { this.unlocked = true; console.log(">> Áudio Destravado"); }).catch(()=>{});
-        },
-        play: function(type) {
-            if(!this.unlocked) return;
-            let sound;
-            if(type === 'hit') sound = this.sfxHit;
-            else if(type === 'blast') sound = this.sfxBlast;
-            else if(type === 'heavy') sound = this.sfxHeavy;
-            else if(type === 'teleport') sound = this.sfxTeleport;
-            else if(type === 'charge') sound = this.sfxCharge;
-            if(sound) { const clone = sound.cloneNode(); clone.volume = 0.35; clone.play().catch(()=>{}); }
+    bgm: new Audio('./bgm.mp3'),
+    sfxHit: new Audio('https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3'),
+    sfxBlast: new Audio('https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3'),
+    sfxHeavy: new Audio('https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3'),
+    sfxTeleport: new Audio('https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3'),
+    sfxCharge: new Audio('https://assets.mixkit.co/active_storage/sfx/297/297-preview.mp3'),
+    unlocked: false,
+
+    init: function() {
+        this.bgm.loop = true;
+        this.bgm.volume = 0.125; // 🔉 volume reduzido pela metade
+    },
+
+    unlock: function() {
+        if (this.unlocked) return;
+        this.bgm.play()
+            .then(() => {
+                this.unlocked = true;
+                console.log(">> Áudio Destravado");
+            })
+            .catch(() => {});
+    },
+
+    play: function(type) {
+        if (!this.unlocked) return;
+        let sound;
+        if (type === 'hit') sound = this.sfxHit;
+        else if (type === 'blast') sound = this.sfxBlast;
+        else if (type === 'heavy') sound = this.sfxHeavy;
+        else if (type === 'teleport') sound = this.sfxTeleport;
+        else if (type === 'charge') sound = this.sfxCharge;
+
+        if (sound) {
+            const clone = sound.cloneNode();
+            clone.volume = 0.35;
+            clone.play().catch(() => {});
         }
-    };
-    AudioSys.init();
-    
-    ['click', 'touchstart', 'keydown'].forEach(evt => window.addEventListener(evt, () => AudioSys.unlock(), {once:true}));
+    }
+};
+
+AudioSys.init();
+
+['click', 'touchstart', 'keydown'].forEach(evt =>
+    window.addEventListener(evt, () => AudioSys.unlock(), { once: true })
+);
 
     // ==========================================
     // LISTENERS E SOCKETS
