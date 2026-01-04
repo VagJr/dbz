@@ -19,101 +19,84 @@
         #bg-animation { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
         canvas#gameCanvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
 
-        /* TELA DE LOGIN ANIMADA */
+        /* TELA DE LOGIN */
         #login-screen { 
             position: fixed; width: 100%; height: 100%; 
             z-index: 2000; display: flex; align-items: center; 
             justify-content: center; flex-direction: column;
-            background: rgba(0, 0, 0, 0.4); /* Leve tint para não esconder o fundo animado */
+            background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(2px);
         }
 
-        /* LOGOTIPO ESTILIZADO DBZ STYLE */
-        .logo-container {
-            text-align: center;
-            margin-bottom: 30px;
-            animation: floatLogo 3s ease-in-out infinite;
-        }
+        .logo-container { text-align: center; margin-bottom: 30px; animation: floatLogo 3s ease-in-out infinite; }
         .logo-main {
-            font-family: 'Russo One', sans-serif;
-            font-size: 60px;
-            color: #ffcc00;
+            font-family: 'Russo One', sans-serif; font-size: 60px; color: #ffcc00;
             background: linear-gradient(to bottom, #ffee00 0%, #ffaa00 50%, #ff6600 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 
-                0px 0px 0px rgba(0,0,0,0.5), /* trick for stroke */
-                4px 4px 0px #000,
-                6px 6px 0px #aa0000;
-            letter-spacing: 2px;
-            transform: skewX(-10deg);
-            display: inline-block;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 0 10px rgba(255, 200, 0, 0.6));
-        }
-        .logo-sub {
-            font-family: 'Bangers', cursive;
-            font-size: 32px;
-            color: #fff;
-            text-shadow: 2px 2px 0 #000, 0 0 10px #00ccff;
-            margin-top: -10px;
-            letter-spacing: 4px;
+            transform: skewX(-10deg); display: inline-block;
         }
         .logo-z {
-            font-family: 'Russo One', sans-serif;
-            font-size: 100px;
-            color: #f00;
-            position: absolute;
-            top: -20px;
-            right: -60px;
+            font-family: 'Russo One', sans-serif; font-size: 100px; color: #f00;
+            position: absolute; top: -20px; right: -60px;
             background: linear-gradient(to bottom, #ff3333 0%, #cc0000 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 4px 4px 0 #000, 0 0 20px #ff0000;
-            transform: skewX(-15deg) rotate(-5deg);
-            z-index: 10;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            transform: skewX(-15deg) rotate(-5deg); z-index: 10;
         }
-
-        @keyframes floatLogo {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
+        .logo-sub { font-family: 'Bangers', cursive; font-size: 32px; color: #fff; text-shadow: 0 0 10px #00ccff; margin-top: -10px; letter-spacing: 4px; }
+        @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
         .login-box { 
-            background: rgba(10, 10, 20, 0.9); 
-            border: 2px solid #00aaff; 
-            box-shadow: 0 0 30px rgba(0, 170, 255, 0.4), inset 0 0 20px rgba(0,0,0,0.8); 
-            padding: 40px; 
-            border-radius: 12px; 
-            text-align: center; 
-            width: 90%; max-width: 380px;
-            position: relative;
+            background: rgba(10, 10, 20, 0.9); border: 2px solid #00aaff; 
+            box-shadow: 0 0 30px rgba(0, 170, 255, 0.4); padding: 40px; 
+            border-radius: 12px; text-align: center; width: 90%; max-width: 380px; position: relative;
         }
-        /* Detalhes Tech nos cantos */
-        .login-box::before { content: ''; position: absolute; top: -2px; left: -2px; width: 20px; height: 20px; border-top: 4px solid #fff; border-left: 4px solid #fff; }
-        .login-box::after { content: ''; position: absolute; bottom: -2px; right: -2px; width: 20px; height: 20px; border-bottom: 4px solid #fff; border-right: 4px solid #fff; }
-
         input { 
             width: 100%; padding: 15px; margin: 10px 0; background: #fff; 
             border: 3px solid #555; border-radius: 4px; font-family: 'Orbitron', sans-serif; 
             font-weight: bold; text-align: center; box-sizing: border-box; font-size: 18px;
-            transition: 0.3s;
         }
-        input:focus { border-color: #ffaa00; outline: none; box-shadow: 0 0 10px #ffaa00; }
-
         #btn-login { 
             width: 100%; padding: 15px; margin-top: 15px;
             background: linear-gradient(to bottom, #0088ff, #0044aa); 
             color: #fff; border: 2px solid #fff; cursor: pointer; font-family: 'Bangers', cursive; 
             font-size: 28px; text-transform: uppercase; border-radius: 8px;
-            box-shadow: 0 4px 0 #002266;
-            transition: 0.2s;
         }
-        #btn-login:hover { filter: brightness(1.2); }
-        #btn-login:active { transform: translateY(4px); box-shadow: none; }
-        #btn-login:disabled { background: #555; border-color: #333; cursor: not-allowed; }
 
-        /* UI DO JOGO */
+        /* --- UI OVERLAYS (NOVO LAYOUT) --- */
         #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; display: none; }
+
+        /* PAINEL SAGA (TOPO CENTRO) */
+        #hud-saga {
+            position: absolute;
+            top: 75px; /* Abaixo da barra de HP (que fica ~20px + altura) */
+            left: 50%; transform: translateX(-50%);
+            width: 60%; max-width: 500px;
+            background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,20,40,0.8) 20%, rgba(0,20,40,0.8) 80%, rgba(0,0,0,0) 100%);
+            border-top: 2px solid #00ffff; border-bottom: 2px solid #00ffff;
+            padding: 10px; text-align: center;
+            display: none; /* Só aparece quando tem saga */
+            pointer-events: none;
+        }
+        .saga-label { font-size: 10px; color: #00ffff; letter-spacing: 2px; margin-bottom: 4px; }
+        .saga-title { font-size: 14px; color: #fff; font-weight: bold; text-shadow: 0 0 5px #0ff; }
+        .saga-hint { font-size: 12px; color: #aaa; font-style: italic; margin-top: 2px; }
+
+        /* PAINEL LUMIA (MEIO DA TELA, LEVEMENTE ACIMA) */
+        #hud-lumia {
+            position: absolute;
+            top: 35%; left: 50%; transform: translate(-50%, -50%);
+            width: auto; max-width: 80%; min-width: 300px;
+            background: rgba(0, 10, 0, 0.85);
+            border: 1px solid #00ff00; border-radius: 4px 12px 4px 12px;
+            padding: 15px; text-align: center;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+            display: none; opacity: 0; transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        #hud-lumia.active { display: block; opacity: 1; }
+        .lumia-icon { font-size: 20px; color: #0f0; margin-bottom: 5px; display: block; }
+        .lumia-text { font-size: 14px; color: #fff; line-height: 1.4; }
 
         /* CONTROLES MOBILE */
         #mobile-ui { display: none; pointer-events: auto; width: 100%; height: 100%; }
@@ -154,6 +137,20 @@
         #btn-guild { top: 285px; font-size: 22px; color: #0ff; }
         #btn-rebirth { top: 340px; font-size: 22px; color: #f00; }
 
+        /* AJUSTES MOBILE PORTRAIT (Celular em pé) */
+        @media (orientation: portrait) {
+            #hud-saga { width: 90%; top: 90px; } /* Desce um pouco mais para não bater no HP */
+            #hud-lumia { width: 90%; top: 40%; }
+            .logo-main { font-size: 40px; }
+            .logo-z { font-size: 70px; right: -40px; }
+            
+            /* Reajuste de Botões para não cobrir a tela */
+            #joystick-container { bottom: 30px; left: 30px; width: 100px; height: 100px; }
+            #btn-atk { width: 80px; height: 80px; right: 20px; bottom: 30px; }
+            /* Esconde botões menos vitais da HUD direta para limpar visão */
+            #btn-guild, #btn-ranking { display: none; } 
+        }
+
     </style>
 </head>
 <body>
@@ -180,6 +177,17 @@
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui">
+        <div id="hud-saga">
+            <div class="saga-label">/// MISSÃO ATUAL</div>
+            <div class="saga-title" id="saga-title">Carregando...</div>
+            <div class="saga-hint" id="saga-hint">Aguarde...</div>
+        </div>
+
+        <div id="hud-lumia">
+            <span class="lumia-icon">⚡ SISTEMA LUMIA</span>
+            <span class="lumia-text" id="lumia-text">Analisando ambiente...</span>
+        </div>
+
         <div id="mobile-ui">
             <div id="joystick-container"></div>
             <div id="btn-atk" class="m-btn">ATK</div>
@@ -206,51 +214,58 @@
         const bgCanvas = document.getElementById('bg-animation');
         const bgCtx = bgCanvas.getContext('2d');
         
-        function resizeBg() {
-            bgCanvas.width = window.innerWidth;
-            bgCanvas.height = window.innerHeight;
-        }
+        function resizeBg() { bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeBg);
         resizeBg();
 
         const bgStars = [];
         for(let i=0; i<150; i++) {
-            bgStars.push({
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
-                size: Math.random() * 2,
-                speed: Math.random() * 0.5 + 0.1
-            });
+            bgStars.push({ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight, size: Math.random() * 2, speed: Math.random() * 0.5 + 0.1 });
         }
 
         function animateBg() {
-            bgCtx.fillStyle = "#000000";
-            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-            
-            // Nebulosa fake
+            bgCtx.fillStyle = "#000000"; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
             const grd = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/2, 100, bgCanvas.width/2, bgCanvas.height/2, bgCanvas.width);
-            grd.addColorStop(0, "#1a0033");
-            grd.addColorStop(1, "#000000");
-            bgCtx.fillStyle = grd;
-            bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
-
+            grd.addColorStop(0, "#1a0033"); grd.addColorStop(1, "#000000");
+            bgCtx.fillStyle = grd; bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
             bgCtx.fillStyle = "#fff";
-            bgStars.forEach(s => {
-                s.x -= s.speed;
-                if(s.x < 0) s.x = bgCanvas.width;
-                bgCtx.globalAlpha = Math.random() * 0.5 + 0.5;
-                bgCtx.beginPath();
-                bgCtx.arc(s.x, s.y, s.size, 0, Math.PI*2);
-                bgCtx.fill();
-            });
+            bgStars.forEach(s => { s.x -= s.speed; if(s.x < 0) s.x = bgCanvas.width; bgCtx.globalAlpha = Math.random() * 0.5 + 0.5; bgCtx.beginPath(); bgCtx.arc(s.x, s.y, s.size, 0, Math.PI*2); bgCtx.fill(); });
             requestAnimationFrame(animateBg);
         }
         animateBg();
 
-        // --- LÓGICA MOBILE ---
+        // --- LÓGICA MOBILE & BRIDGE UI ---
         if (navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent)) {
             document.getElementById('mobile-ui').style.display = 'block';
         }
+
+        // --- BRIDGE: ATUALIZAR HTML COM DADOS DO SOCKET (Sem mexer no game.js) ---
+        // Espera o socket ser criado pelo game.js
+        const checkSocket = setInterval(() => {
+            if (window.socket) {
+                clearInterval(checkSocket);
+                
+                // Ouve SAGA
+                window.socket.on("state", (data) => {
+                    if (data.saga) {
+                        document.getElementById("hud-saga").style.display = "block";
+                        document.getElementById("saga-title").innerText = data.saga.title;
+                        document.getElementById("saga-hint").innerText = data.saga.hint;
+                    }
+                });
+
+                // Ouve LUMIA
+                window.socket.on("aris_msg", (msg) => {
+                    const el = document.getElementById("hud-lumia");
+                    const txt = document.getElementById("lumia-text");
+                    el.classList.add("active");
+                    el.style.borderColor = msg.type === "DANGER" ? "#f00" : (msg.type === "WARN" ? "#ff0" : "#0f0");
+                    txt.innerText = msg.text;
+                    // Auto-hide
+                    setTimeout(() => { el.classList.remove("active"); }, 5000);
+                });
+            }
+        }, 500);
     </script>
     <script type="module" src="./game.js"></script>
 

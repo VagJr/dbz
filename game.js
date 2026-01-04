@@ -1,9 +1,9 @@
 window.onload = function() {
-    console.log(">> GAME.JS DEFINITIVE CARREGADO. SISTEMA A.R.I.S ATIVO.");
+    console.log(">> GAME.JS FASE 1 (60HZ + HTML UI) CARREGADO. LUMIA LINKED.");
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // --- CORREÇÃO DE INPUT: BLOQUEAR MENU DO BOTÃO DIREITO ---
+    // --- BLOQUEIO DE MENU DE CONTEXTO ---
     canvas.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); return false; };
     window.addEventListener('contextmenu', (e) => { if (e.target === canvas) { e.preventDefault(); return false; } }, { passive: false });
 
@@ -12,7 +12,7 @@ window.onload = function() {
     canvas.height = window.innerHeight;
 
     const socket = io({ transports: ['websocket'], upgrade: false });
-    window.socket = socket;
+    window.socket = socket; // Expondo para o index.html usar
 
     // Referências HTML
     const loginScreen = document.getElementById("login-screen");
@@ -20,7 +20,7 @@ window.onload = function() {
     const btnLogin = document.getElementById("btn-login");
     const btnPvp = document.getElementById("btn-pvp");
 
-    // Elemento de Input de Chat
+    // Input de Chat
     const textInput = document.createElement("input");
     textInput.type = "text"; 
     textInput.style.cssText = "position:absolute; bottom:80px; left:50%; transform:translateX(-50%); width:400px; padding:12px; background:rgba(0,0,0,0.85); color:#00ff00; border:2px solid #00ff00; border-radius: 8px; display:none; font-family:'Orbitron',sans-serif; z-index: 2000; font-size: 16px;";
@@ -34,7 +34,7 @@ window.onload = function() {
             const pass = document.getElementById("password").value.trim();
             if (user && pass) {
                 console.log(">> ENVIANDO LOGIN:", user);
-                btnLogin.innerText = "CARREGANDO UNIVERSO...";
+                btnLogin.innerText = "SINTONIZANDO LUMIA...";
                 btnLogin.disabled = true;
                 socket.emit("login", { user: user, pass: pass });
                 AudioSys.unlock(); 
@@ -57,13 +57,12 @@ window.onload = function() {
     let mouseLeft = false, mouseRight = false;
     let joystickMove = { x: 0, y: 0, active: false };
 
+    // --- CONTROLE DE INPUT (60Hz / 16ms) ---
+    let lastInputTime = 0;
+    const INPUT_RATE = 16; 
+
     let particles = [], shockwaves = [], trails = [], texts = [];
     let screenShake = 0, flash = 0, hitStop = 0;
-
-    // A.R.I.S. STATE
-    let arisMessages = [];
-    let currentArisMsg = null;
-    let arisWave = 0;
 
     let scouterActive = false; 
     let showMap = true;
@@ -73,9 +72,6 @@ window.onload = function() {
     const ZOOM_SCALE = 0.6; 
     const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent);
     
-    // Configurações de Coordenadas de Planetas (Sincronizado)
-    const SNAKE_WAY_START = { x: 0, y: -12000 };
-    const KAIOH_PLANET    = { x: 0, y: -25000 };
     const PLANETS_COORDS = { 
         "EARTH_CORE": {x: 2000, y: 2000, name: "Capital do Oeste"}, 
         "KAME_ISLAND": {x: 6000, y: -4000, name: "Casa do Kame"},
@@ -88,6 +84,9 @@ window.onload = function() {
         "BEERUS_PLANET": {x: 0, y: -90000, name: "Planeta Bills"}, 
         "KAIOH": {x: 0, y: -25000, name: "Sr. Kaioh"}
     };
+
+    const SNAKE_WAY_START = { x: 0, y: -12000 };
+    const KAIOH_PLANET    = { x: 0, y: -25000 };
 
     const stars = [];
     for(let i=0; i<350; i++) {
@@ -102,54 +101,51 @@ window.onload = function() {
     }
 
     const AudioSys = {
-    bgm: new Audio('./bgm.mp3'),
-    sfxHit: new Audio('https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3'),
-    sfxBlast: new Audio('https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3'),
-    sfxHeavy: new Audio('https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3'),
-    sfxTeleport: new Audio('https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3'),
-    sfxCharge: new Audio('https://assets.mixkit.co/active_storage/sfx/297/297-preview.mp3'),
-    unlocked: false,
+        bgm: new Audio('./bgm.mp3'),
+        sfxHit: new Audio('https://assets.mixkit.co/active_storage/sfx/209/209-preview.mp3'),
+        sfxBlast: new Audio('https://assets.mixkit.co/active_storage/sfx/272/272-preview.mp3'),
+        sfxHeavy: new Audio('https://assets.mixkit.co/active_storage/sfx/257/257-preview.mp3'),
+        sfxTeleport: new Audio('https://assets.mixkit.co/active_storage/sfx/250/250-preview.mp3'),
+        sfxCharge: new Audio('https://assets.mixkit.co/active_storage/sfx/297/297-preview.mp3'),
+        unlocked: false,
 
-    init: function() {
-        this.bgm.loop = true;
-        this.bgm.volume = 0.125; // 🔉 volume reduzido pela metade
-    },
+        init: function() {
+            this.bgm.loop = true;
+            this.bgm.volume = 0.125; 
+        },
 
-    unlock: function() {
-        if (this.unlocked) return;
-        this.bgm.play()
-            .then(() => {
+        unlock: function() {
+            if (this.unlocked) return;
+            this.bgm.play().then(() => {
                 this.unlocked = true;
-                console.log(">> Áudio Destravado");
-            })
-            .catch(() => {});
-    },
+            }).catch(() => {});
+        },
 
-    play: function(type) {
-        if (!this.unlocked) return;
-        let sound;
-        if (type === 'hit') sound = this.sfxHit;
-        else if (type === 'blast') sound = this.sfxBlast;
-        else if (type === 'heavy') sound = this.sfxHeavy;
-        else if (type === 'teleport') sound = this.sfxTeleport;
-        else if (type === 'charge') sound = this.sfxCharge;
+        play: function(type) {
+            if (!this.unlocked) return;
+            let sound;
+            if (type === 'hit') sound = this.sfxHit;
+            else if (type === 'blast') sound = this.sfxBlast;
+            else if (type === 'heavy') sound = this.sfxHeavy;
+            else if (type === 'teleport') sound = this.sfxTeleport;
+            else if (type === 'charge') sound = this.sfxCharge;
 
-        if (sound) {
-            const clone = sound.cloneNode();
-            clone.volume = 0.35;
-            clone.play().catch(() => {});
+            if (sound) {
+                const clone = sound.cloneNode();
+                clone.volume = 0.35;
+                clone.play().catch(() => {});
+            }
         }
-    }
-};
+    };
 
-AudioSys.init();
+    AudioSys.init();
 
-['click', 'touchstart', 'keydown'].forEach(evt =>
-    window.addEventListener(evt, () => AudioSys.unlock(), { once: true })
-);
+    ['click', 'touchstart', 'keydown'].forEach(evt =>
+        window.addEventListener(evt, () => AudioSys.unlock(), { once: true })
+    );
 
     // ==========================================
-    // LISTENERS E SOCKETS
+    // SOCKETS
     // ==========================================
 
     socket.on("auth_success", (data) => { 
@@ -169,10 +165,8 @@ AudioSys.init();
         dragonBalls = data.dbs || [];
     });
 
-    socket.on("aris_msg", (msg) => {
-        arisMessages.push({ text: msg.text, type: msg.type, life: 300 });
-        // Som de "beep" tech seria ideal aqui
-    });
+    // OBS: Mensagens da LUMIA e SAGA agora são tratadas apenas pelo index.html
+    // para evitar duplicação no Canvas.
 
     socket.on("fx", (data) => {
         const me = players[myId];
@@ -192,11 +186,6 @@ AudioSys.init();
             }
             shockwaves.push({ x: data.x, y: data.y, r: 5, maxR: 40, a: 0.8, color: "#fff" });
             if(data.dmg) texts.push({ x: data.x, y: data.y - 40, text: data.dmg.toString(), color: "#ffff00", life: 60, vy: -2, isDmg: true }); 
-        }
-        
-        if (data.type === "block_perfect") {
-             shockwaves.push({ x: data.x, y: data.y, r: 10, maxR: 150, a: 1, color: "#00ffff" });
-             texts.push({ x: data.x, y: data.y - 60, text: "PERFECT!", color: "#00ffff", life: 50, vy: -2, isDmg: true }); 
         }
         
         if (data.type === "guard_break") {
@@ -264,7 +253,14 @@ AudioSys.init();
     };
 
     simpleClick('btn-vanish', () => socket.emit('vanish'));
-    simpleClick('btn-transform', () => socket.emit('transform'));
+    bindBtn(
+    'btn-transform',
+    () => {
+        socket.emit("transform");
+    },
+    null
+);
+
     simpleClick('btn-scouter', () => { scouterActive = !scouterActive; });
     simpleClick('btn-ranking', () => { activeWindow = activeWindow === "ranking" ? null : "ranking"; });
     simpleClick('btn-menu', () => { activeWindow = activeWindow === "menu" ? null : "menu"; });
@@ -581,6 +577,21 @@ AudioSys.init();
             ctx.beginPath(); ctx.arc(0, 0, 35 * sizeMult * pulse, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             ctx.restore();
         }
+
+        // --- STUN VISUAL ---
+        if (e.stun > 0) {
+            ctx.save();
+            const t = Date.now() * 0.01;
+            ctx.strokeStyle = "#ffff00"; ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(0, -30 * sizeMult, 15 * sizeMult, 5 * sizeMult, 0, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(Math.cos(t)*15*sizeMult, -30*sizeMult + Math.sin(t)*5*sizeMult, 2, 0, Math.PI*2);
+            ctx.fillStyle="#fff"; ctx.fill();
+            ctx.restore();
+        }
+
         ctx.restore();
 
         if (Math.hypot(e.vx, e.vy) > 10 && Math.random() > 0.6) {
@@ -658,108 +669,11 @@ AudioSys.init();
         }
     }
 
-    // ==========================================
-    // UI SCOUTER A.R.I.S (VISUAL)
-    // ==========================================
-    function drawArisHUD() {
-        // Processa Fila de Mensagens
-        if (arisMessages.length > 0 && !currentArisMsg) {
-            currentArisMsg = arisMessages.shift();
-        }
-
-        if (currentArisMsg) {
-            currentArisMsg.life--;
-            const cx = canvas.width / 2;
-            const y = 80;
-
-            ctx.save();
-            ctx.font = "bold 16px Orbitron";
-            const w = ctx.measureText(currentArisMsg.text).width + 60;
-            const h = 60;
-
-            // Caixa Tech
-            ctx.fillStyle = "rgba(0, 20, 0, 0.85)";
-            ctx.strokeStyle = currentArisMsg.type === "DANGER" ? "#f00" : (currentArisMsg.type === "WARN" ? "#ff0" : "#0f0");
-            ctx.lineWidth = 2;
-            
-            // Forma hexagonal tech
-            ctx.beginPath();
-            ctx.moveTo(cx - w/2 + 10, y);
-            ctx.lineTo(cx + w/2 - 10, y);
-            ctx.lineTo(cx + w/2, y + 10);
-            ctx.lineTo(cx + w/2, y + h - 10);
-            ctx.lineTo(cx + w/2 - 10, y + h);
-            ctx.lineTo(cx - w/2 + 10, y + h);
-            ctx.lineTo(cx - w/2, y + h - 10);
-            ctx.lineTo(cx - w/2, y + 10);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Onda de Voz
-            arisWave += 0.2;
-            ctx.strokeStyle = ctx.strokeStyle;
-            ctx.beginPath();
-            const startX = cx - w/2 + 15;
-            const endX = cx + w/2 - 15;
-            for(let i = startX; i < endX; i += 5) {
-                const waveY = y + h - 10 + Math.sin(i * 0.2 + arisWave) * 3;
-                if(i === startX) ctx.moveTo(i, waveY);
-                else ctx.lineTo(i, waveY);
-            }
-            ctx.stroke();
-
-            // Texto
-            ctx.fillStyle = "#fff";
-            ctx.textAlign = "center";
-            ctx.shadowColor = ctx.strokeStyle;
-            ctx.shadowBlur = 10;
-            ctx.fillText(currentArisMsg.text, cx, y + 35);
-
-            ctx.restore();
-
-            if (currentArisMsg.life <= 0) currentArisMsg = null;
-        }
-    }
-
-    function drawSagaPanel() {
-        if (!currentSaga) return;
-        const x = canvas.width - 320;
-        const y = 20;
-
-        ctx.save();
-        ctx.fillStyle = "rgba(0,0,0,0.6)";
-        ctx.strokeStyle = "#0ff";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + 300, y);
-        ctx.lineTo(x + 300, y + 80);
-        ctx.lineTo(x + 20, y + 80);
-        ctx.lineTo(x, y + 60);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = "#0ff";
-        ctx.font = "bold 12px Orbitron";
-        ctx.fillText("/// MISSÃO ATUAL", x + 10, y + 20);
-
-        ctx.fillStyle = "#fff";
-        ctx.font = "14px Arial";
-        ctx.fillText(currentSaga.title, x + 10, y + 40);
-
-        ctx.fillStyle = "#aaa";
-        ctx.font = "italic 11px Arial";
-        ctx.fillText(currentSaga.hint || "Siga as instruções...", x + 10, y + 65);
-        ctx.restore();
-    }
-
     function drawUI(me) {
         const W = canvas.width;
         const H = canvas.height;
 
-        // 1. Painel de Status
+        // 1. Painel de Status (Fixado no topo)
         const barW = 300, barH = 20, x = 20, y = 20;
         ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, y, barW, barH);
         ctx.fillStyle = "#ff3333"; ctx.fillRect(x, y, barW * (me.hp / me.maxHp), barH);
@@ -776,11 +690,11 @@ AudioSys.init();
         ctx.fillText(`LVL ${me.level}  |  BP: ${me.bp.toLocaleString()}`, x, y + 70);
         
         // 2. Elementos HUD
-        drawSagaPanel();
-        drawArisHUD();
+        // OBS: Removi a chamada de drawSagaPanel() e drawLumiaHUD() aqui
+        // pois agora eles são elementos HTML, gerenciados no index.html
         drawNavigationArrow(me);
 
-        // 4. Notificações de Skills
+        // 3. Notificações de Skills
         if (me.state === "CHARGING") {
             const cx = W / 2, cy = H / 2 + 100;
             ctx.textAlign = "center"; ctx.font = "bold 14px Orbitron";
@@ -885,6 +799,38 @@ AudioSys.init();
         texts = texts.filter(t => t.life > 0);
         texts.forEach(t => { t.x += t.vx || 0; t.y += t.vy; t.life--; ctx.fillStyle = t.color; ctx.font = t.isDmg ? "bold 24px Arial" : (t.isEmote ? "40px Arial" : "16px Orbitron"); ctx.lineWidth = 2; ctx.strokeStyle = "#000"; ctx.strokeText(t.text, t.x, t.y); ctx.fillText(t.text, t.x, t.y); });
 
+        // --- AUXÍLIO DE MIRA VISUAL (SETA NO CHÃO) ---
+        if(!me.isSpirit && !me.isDead) {
+            let bestTarget = null;
+            let bestScore = Infinity;
+            // Replica a lógica do servidor para mostrar quem será focado
+            entities.forEach(t => {
+                if (t.id === me.id || t.isDead || t.isSpirit) return;
+                const dist = Math.hypot(t.x - me.x, t.y - me.y);
+                if (dist < 300) { // Range visual
+                    const angleToEnemy = Math.atan2(t.y - me.y, t.x - me.x);
+                    let angleDiff = Math.abs(angleToEnemy - me.angle);
+                    if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+                    // Tolerância angular
+                    if (angleDiff < 1.5) { 
+                        const score = dist + (angleDiff * 100);
+                        if (score < bestScore) { bestScore = score; bestTarget = t; }
+                    }
+                }
+            });
+            if(bestTarget) {
+                ctx.save();
+                ctx.translate(bestTarget.x, bestTarget.y); // No pé do inimigo
+                ctx.rotate(Date.now() * 0.005);
+                ctx.strokeStyle = "#ffff00";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 40, 0, Math.PI * 2); // Círculo de lock-on
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
         ctx.restore();
 
         // UI LAYER
@@ -906,7 +852,7 @@ AudioSys.init();
             ctx.restore();
         }
 
-        // INPUT LOGIC
+        // INPUT LOGIC (16ms = 60Hz)
         const tutorialActive = currentSaga && currentSaga.type === "TUTORIAL";
         if (me.isTutorialDialogActive !== tutorialActive) {
             socket.emit("tutorial_dialog_state", tutorialActive);
@@ -914,31 +860,37 @@ AudioSys.init();
         }
 
         if (!tutorialActive || !me.isTutorialDialogActive) {
-            const input = { 
-                x: 0, y: 0, angle: 0, 
-                block: !!keys["KeyQ"], 
-                charge: !!keys["KeyC"], 
-                holdAtk: mouseLeft 
-            };
-            
-            if (isMobile) { 
-                input.x = joystickMove.x; input.y = joystickMove.y; 
-                if (joystickMove.active && (input.x !== 0 || input.y !== 0)) {
-                    input.angle = Math.atan2(joystickMove.y, joystickMove.x);
-                } else {
-                    input.angle = me.angle; 
+            const now = Date.now();
+            // THROTTLE DE 16ms: Garante envio suave de input
+            if (now - lastInputTime > INPUT_RATE) {
+                const input = { 
+                    x: 0, y: 0, angle: 0, 
+                    block: !!keys["KeyQ"], 
+                    charge: !!keys["KeyC"], 
+                    holdAtk: mouseLeft 
+                };
+                
+                if (isMobile) { 
+                    input.x = joystickMove.x; input.y = joystickMove.y; 
+                    if (joystickMove.active && (input.x !== 0 || input.y !== 0)) {
+                        input.angle = Math.atan2(joystickMove.y, joystickMove.x);
+                    } else {
+                        input.angle = me.angle; 
+                    }
+                } 
+                else { 
+                    if (keys["KeyW"]) input.y = -1; if (keys["KeyS"]) input.y = 1; 
+                    if (keys["KeyA"]) input.x = -1; if (keys["KeyD"]) input.x = 1; 
+                    input.angle = Math.atan2(mouse.y, mouse.x);
                 }
-            } 
-            else { 
-                if (keys["KeyW"]) input.y = -1; if (keys["KeyS"]) input.y = 1; 
-                if (keys["KeyA"]) input.x = -1; if (keys["KeyD"]) input.x = 1; 
-                input.angle = Math.atan2(mouse.y, mouse.x);
-            }
-            
-            if(input.holdAtk && !me.isSpirit) AudioSys.play('hit');
+                
+                if(input.holdAtk && !me.isSpirit) AudioSys.play('hit');
 
-            if(input.x !== 0 || input.y !== 0 || input.block || input.charge || input.holdAtk || input.angle !== me.angle) { 
-                socket.emit("input", input); 
+                // Envia input se houver mudança ou ação
+                if(input.x !== 0 || input.y !== 0 || input.block || input.charge || input.holdAtk || input.angle !== me.angle) { 
+                    socket.emit("input", input); 
+                    lastInputTime = now; 
+                }
             }
         }
     }
