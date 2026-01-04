@@ -1,8 +1,22 @@
 window.onload = function() {
     console.log(">> GAME.JS CARREGADO. SISTEMA HÍBRIDO: VISUAL CLÁSSICO + CONTROLE NOVO.");
-
-    const canvas = document.getElementById("gameCanvas");
+const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+
+    // --- CORREÇÃO DE INPUT: BLOQUEAR MENU DO BOTÃO DIREITO ---
+    // Isso garante que o clique direito funcione apenas como ataque no jogo
+    canvas.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    };
+    // Bloqueio secundário para garantir
+    window.addEventListener('contextmenu', (e) => {
+        if (e.target === canvas) {
+            e.preventDefault();
+            return false;
+        }
+    }, { passive: false });
 
     // Ajusta tela
     canvas.width = window.innerWidth;
@@ -662,54 +676,124 @@ window.onload = function() {
         }
     }
 
+    // ==========================================
+// UI ESTILO SCOUTER (TUTORIAL VISUAL MELHORADO)
+// ==========================================
+function drawScouterPanel(saga) {
+    if (!saga) return;
+    const W = canvas.width;
+
+    const boxW = 600, boxH = 95;
+    const x = W / 2 - boxW / 2;
+    const y = 30;
+
+    ctx.save();
+
+    // Fundo do Scouter
+    ctx.fillStyle = "rgba(0, 40, 0, 0.75)";
+    ctx.beginPath();
+    ctx.moveTo(x + 20, y);
+    ctx.lineTo(x + boxW - 20, y);
+    ctx.lineTo(x + boxW, y + 20);
+    ctx.lineTo(x + boxW, y + boxH - 10);
+    ctx.lineTo(x + boxW - 20, y + boxH);
+    ctx.lineTo(x + 20, y + boxH);
+    ctx.lineTo(x, y + boxH - 10);
+    ctx.lineTo(x, y + 20);
+    ctx.closePath();
+    ctx.fill();
+
+    // Borda Neon
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#00ff00";
+    ctx.strokeStyle = "rgba(50,255,50,0.9)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Scanline
+    const time = Date.now();
+    const scanY = y + ((time % 3000) / 3000) * boxH;
+    ctx.strokeStyle = "rgba(0,255,0,0.4)";
+    ctx.beginPath();
+    ctx.moveTo(x + 10, scanY);
+    ctx.lineTo(x + boxW - 10, scanY);
+    ctx.stroke();
+
+    // Header
+    ctx.fillStyle = "#00ff00";
+    ctx.font = "bold 11px Orbitron";
+    ctx.textAlign = "left";
+    ctx.fillText("SCOUTER v3.5 // ANALYSIS MODE", x + 15, y + 18);
+
+    // Título da Saga
+    ctx.font = "bold 18px Orbitron";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ccffcc";
+    ctx.fillText(`MISSÃO ATUAL: ${saga.title}`, W / 2, y + 45);
+
+    // Objetivo
+    ctx.font = "15px Arial";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(`>>> ${saga.objective}`, W / 2, y + 70);
+
+    ctx.restore();
+}
+
+
     function drawUI(me) {
-        // --- 1. OVERLAY DE TUTORIAL (DIÁLOGO) ---
-        if (currentSaga && currentSaga.type === "TUTORIAL" && me.isTutorialDialogActive) {
-             const cx = canvas.width / 2; const cy = canvas.height - 150;
-             
-             // Fundo escuro para foco
-             ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0,0,canvas.width, canvas.height);
+        const W = canvas.width;
+        const H = canvas.height;
 
-             ctx.fillStyle = "rgba(0, 0, 0, 0.9)"; ctx.strokeStyle = "#00ff00"; ctx.lineWidth = 4;
-             ctx.beginPath(); ctx.roundRect(cx - 300, cy - 50, 600, 150, 10); ctx.fill(); ctx.stroke();
-             
-             ctx.fillStyle = "#fff"; ctx.font = "bold 24px Orbitron"; ctx.textAlign = "center";
-             ctx.fillText("MESTRE KAMI DIZ:", cx, cy - 10);
-             ctx.font = "18px Arial"; ctx.fillStyle = "#ccc";
-             ctx.fillText(currentSaga.objective, cx, cy + 30);
-             
-             ctx.fillStyle = "#ffff00"; ctx.font = "italic 14px Arial"; 
-             ctx.fillText("[ CLIQUE OU ESPAÇO PARA CONTINUAR ]", cx, cy + 70);
-             return; // Pausa render do resto da UI para focar
-        }
+        // 1. Painel de Status (Canto Superior Esquerdo)
+        const barW = 300, barH = 20, x = 20, y = 20;
+        
+        // HP Bar
+        ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, y, barW, barH);
+        ctx.fillStyle = "#ff3333"; ctx.fillRect(x, y, barW * (me.hp / me.maxHp), barH);
+        ctx.strokeStyle = "#fff"; ctx.strokeRect(x, y, barW, barH);
+        ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial"; ctx.textAlign = "left";
+        ctx.fillText(`HP: ${Math.floor(me.hp)} / ${me.maxHp}`, x + 10, y + 14);
 
-        // --- 2. PAINEL DE SAGA (TOPO) ---
+        // KI Bar
+        ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, y + 25, barW, barH);
+        ctx.fillStyle = "#ffff00"; ctx.fillRect(x, y + 25, barW * (me.ki / me.maxKi), barH);
+        ctx.strokeStyle = "#fff"; ctx.strokeRect(x, y + 25, barW, barH);
+        ctx.fillStyle = "#000"; ctx.fillText(`KI: ${Math.floor(me.ki)} / ${me.maxKi}`, x + 10, y + 39);
+
+        // Level & BP info
+        ctx.fillStyle = "#00ffff"; ctx.font = "16px Orbitron";
+        ctx.fillText(`LVL ${me.level}  |  BP: ${me.bp.toLocaleString()}`, x, y + 70);
+        
+        // 2. PAINEL SCOUTER (Sistema de Guia / Tutorial)
         if (currentSaga) {
-            const boxW = 500; const boxX = canvas.width / 2 - boxW / 2;
-            ctx.fillStyle = "rgba(0, 0, 0, 0.7)"; ctx.strokeStyle = "#ffcc00"; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(boxX, 10, boxW, 50, 5); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = "#ffcc00"; ctx.font = "bold 16px Orbitron"; ctx.textAlign = "center"; ctx.fillText(`SAGA: ${currentSaga.title}`, canvas.width / 2, 30);
-            ctx.fillStyle = "#fff"; ctx.font = "14px Arial"; ctx.fillText(currentSaga.objective, canvas.width / 2, 48);
+            drawScouterPanel(currentSaga);
         }
-        
-        // --- 3. BARRA DE STATUS (ESQUERDA) ---
-        const barW = 300; const barH = 20; const x = 20; let y = 20;
-        ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, y, barW, barH); ctx.fillStyle = "#ff3333"; ctx.fillRect(x, y, barW * (me.hp / me.maxHp), barH); ctx.strokeStyle = "#fff"; ctx.strokeRect(x, y, barW, barH); ctx.fillStyle = "#fff"; ctx.font = "bold 14px Arial"; ctx.textAlign = "left"; ctx.fillText(`HP: ${Math.floor(me.hp)} / ${me.maxHp}`, x + 5, y + 15);
-        y += 25; ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, y, barW, barH); ctx.fillStyle = "#ffff00"; ctx.fillRect(x, y, barW * (me.ki / me.maxKi), barH); ctx.strokeStyle = "#fff"; ctx.strokeRect(x, y, barW, barH); ctx.fillStyle = "#000"; ctx.fillText(`KI: ${Math.floor(me.ki)} / ${me.maxKi}`, x + 5, y + 15);
-        y += 25; ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, y, barW, barH/2); const xpPct = Math.min(1, me.xp / me.xpToNext); ctx.fillStyle = "#00ffff"; ctx.fillRect(x, y, barW * xpPct, barH/2); ctx.fillStyle = "#fff"; ctx.font = "12px Orbitron"; ctx.fillText(`LVL: ${me.level}  |  BP: ${me.bp.toLocaleString()}`, x, y + 25);
-        
-        // Indicador de Skills (Se carregando)
+
+        // 3. Seta de Navegação GPS (Mantido do código anterior)
+        drawNavigationArrow(me);
+
+        // 4. Notificações de Skills (Tutorial de Combate em tempo real)
         if (me.state === "CHARGING") {
-            const cx = canvas.width/2; const cy = canvas.height/2 + 80;
+            const cx = W / 2, cy = H / 2 + 100;
             ctx.textAlign = "center"; ctx.font = "bold 14px Orbitron";
-            if (me.ki >= 80 && (!me.skills || me.skills.includes("KAMEHAMEHA"))) { ctx.fillStyle = "#00ffff"; ctx.fillText("[SOLTE PARA KAMEHAMEHA]", cx, cy); }
-            if (me.ki >= 300 && me.skills && me.skills.includes("GENKI_DAMA")) { ctx.fillStyle = "#00aaff"; ctx.fillText("[SOLTE PARA GENKI DAMA]", cx, cy + 20); }
+            
+            // Dica visual para ensinar o jogador a usar skills
+            if (me.ki >= 80 && (!me.skills || me.skills.includes("KAMEHAMEHA"))) {
+                ctx.fillStyle = "#00ffff"; 
+                ctx.fillText("⚡ KAMEHAMEHA PRONTO! [SOLTE 'C']", cx, cy);
+            }
+            if (me.ki >= 300 && me.skills && me.skills.includes("GENKI_DAMA")) {
+                ctx.fillStyle = "#00aaff"; 
+                ctx.fillText("⚡ GENKI DAMA PRONTA! [SOLTE 'C']", cx, cy + 25);
+            }
         }
 
-        // Indicador de Esferas
-        if(me.dbCount > 0) { ctx.textAlign = "left"; ctx.fillStyle = "orange"; ctx.font = "bold 18px Orbitron"; ctx.fillText(`ESFERAS: ${me.dbCount}/7 (PVP ON)`, x, y + 50); }
-
-        const questDesc = (me.quest && me.quest.desc) ? me.quest.desc : "Nenhuma Missão"; const questProg = (me.quest && me.quest.required) ? `${Math.floor(me.quest.current)} / ${me.quest.required}` : "";
-        const qY = 180; ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(10, qY, 220, 50); ctx.fillStyle = "#0f0"; ctx.font = "12px Orbitron"; ctx.textAlign = "left"; ctx.fillText("MISSÃO DIÁRIA:", 20, qY + 15); ctx.fillStyle = "#fff"; ctx.fillText(questDesc, 20, qY + 35); if(questProg) ctx.fillText(questProg, 20, qY + 48);
+        // 5. Radar / Minimapa (Mantém o desenho padrão)
+        if (showMap) {
+            // ... (Seu código de minimapa existente é chamado no loop principal, 
+            // mas se quiser desenhar bordas extras tech, pode adicionar aqui)
+        }
     }
 
     function drawLeaderboard() {
@@ -867,12 +951,3 @@ window.onload = function() {
 
     loop();
 };
-
-
-/* =========================
-   CLOUD INTERPOLATION SAFETY
-   ========================= */
-let lastServerTime = 0;
-socket.on("state", data => {
-  if(data.t) lastServerTime = data.t;
-});

@@ -49,50 +49,65 @@ let PLANETS = [
     { id: "MAKAI_CORE", name: "Reino dos Demônios", x: 5000, y: 35000, radius: 1000, owner: null, guild: null, stability: 100, taxRate: 8, treasury: 0, level: 70, biome: "DEMON" },
     { id: "VAMPA_WASTES", name: "Deserto de Vampa", x: -45000, y: 15000, radius: 1400, owner: null, guild: null, stability: 100, taxRate: 2, treasury: 0, level: 80, biome: "VAMPA" },
     { id: "BEERUS_PLANET", name: "Planeta de Beerus", x: 0, y: -90000, radius: 2000, owner: null, guild: null, stability: 100, taxRate: 15, treasury: 0, level: 100, biome: "DIVINE" },
-    { id: "ZEN_PALACE", name: "Palácio Zen-Oh", x: 0, y: -120000, radius: 3000, owner: null, guild: null, stability: 100, taxRate: 20, treasury: 0, level: 150, biome: "DIVINE" }
+    { id: "ZEN_PALACE", name: "Palácio Zen-Oh", x: 0, y: -120000, radius: 3000, owner: null, guild: null, stability: 100, taxRate: 20, treasury: 0, level: 150, biome: "DIVINE" },
+    
+    // Planetas Virtuais para GPS (Sem bioma, apenas para guia)
+    { id: "KAIOH_PLANET", name: "Planeta Kaioh", x: 0, y: -25000, radius: 500, biome: "DIVINE", level: 1 }
 ];
 
 // ==========================================
-// SAGAS (PROGRESSÃO & TUTORIAL)
-// ATUALIZADO: Foco em Guia
+// SAGAS (PROGRESSÃO REFINADA E GUIADA)
 // ==========================================
 const SAGA_STEPS = [
-    // --- FASE 1: TUTORIAL ---
-    { id: 0, title: "CONTROLE DE KI", objective: "Segure 'C' para carregar sua energia ao máximo.", type: "BP", req: 600, targetZone: "EARTH_CORE" },
-    { id: 1, title: "COMBATE BÁSICO", objective: "Treine socando Rochas ou um Saibaman.", type: "LEVEL", req: 2, targetZone: "EARTH_CORE" },
-    { id: 2, title: "EXPLORAÇÃO", objective: "Voe até a Casa do Kame (Ilha ao Sul).", type: "VISIT", target: "KAME_ISLAND", targetZone: "KAME_ISLAND" },
+    // --- TUTORIAL: BÁSICO ---
+    { id: 0, title: "TUTORIAL: ENERGIA", objective: "Segure [TECLA C] para carregar KI até 100%.", type: "BP", req: 600, targetZone: "EARTH_CORE" },
+    { id: 1, title: "TUTORIAL: COMBATE", objective: "Use [CLIQUE ESQUERDO] para destruir 3 Rochas.", type: "BP", req: 800, targetZone: "EARTH_CORE" }, // BP aumenta ao destruir rocha
+    { id: 2, title: "PRIMEIRA LUTA", objective: "Derrote um SAIBAMAN fraco (Verde).", type: "KILL", target: "SAIBAMAN", targetZone: "EARTH_CORE" },
     
-    // --- FASE 2: HISTÓRIA ---
-    { id: 3, title: "PRIMEIRA AMEAÇA", objective: "Derrote Raditz na Terra Central.", type: "KILL", target: "RADITZ", targetZone: "EARTH_CORE" },
-    { id: 4, title: "TREINO NO ALÉM", objective: "Voe para o Norte (Céu) e encontre o Caminho da Serpente.", type: "VISIT", target: "SNAKE_WAY", targetZone: null }, 
-    { id: 5, title: "KAIOH DO NORTE", objective: "Chegue ao Planeta Kaioh e aprenda o Kaioken.", type: "VISIT", target: "KAIOH", targetZone: "KAIOH_PLANET" }, // Lógica especial no loop
+    // --- FASE 1: TERRA ---
+    { id: 3, title: "MESTRE KAME", objective: "Voe para o SUDESTE (Baixo-Direita) até a Casa do Kame.", type: "VISIT", target: "KAME_ISLAND", targetZone: "KAME_ISLAND" },
+    { id: 4, title: "TREINO DE KAME", objective: "Aprenda o KAMEHAMEHA (Fique na ilha).", type: "BP", req: 2500, targetZone: "KAME_ISLAND" },
+    { id: 5, title: "AMEAÇA SAIYAJIN", objective: "Volte à Terra e encontre RADITZ.", type: "VISIT", target: "EARTH", targetZone: "EARTH_CORE" },
+    { id: 6, title: "GUERREIRO Z", objective: "Derrote RADITZ (Use 'Q' para Bloquear!).", type: "KILL", target: "RADITZ", targetZone: "EARTH_CORE" },
     
-    { id: 6, title: "INVASÃO SAIYAJIN", objective: "Volte para a Terra e vença Nappa ou Vegeta.", type: "KILL", target: "VEGETA_SCOUTER", targetZone: "EARTH_CORE" },
-    { id: 7, title: "A LENDA DO SUPER SAIYAJIN", objective: "Transforme-se em SSJ (Tecla G).", type: "FORM", target: "SSJ", targetZone: "ANY" },
+    // --- FASE 2: CAMINHO DA SERPENTE ---
+    { id: 7, title: "O OUTRO MUNDO", objective: "Voe para o CÉU (Cima/Norte) até achar o Caminho da Serpente.", type: "VISIT", target: "SNAKE_WAY", targetZone: "KAIOH_PLANET" }, 
+    { id: 8, title: "PLANETA KAIOH", objective: "Continue subindo até o final da Serpente.", type: "VISIT", target: "KAIOH", targetZone: "KAIOH_PLANET" },
+    { id: 9, title: "TREINO PESADO", objective: "Alcance Nível 10 treinando com a gravidade.", type: "LEVEL", req: 10, targetZone: "KAIOH_PLANET" },
     
-    // --- FASE 3: ESPAÇO ---
-    { id: 8, title: "RUMO A NAMEKUSEI", objective: "Viaje para o Setor Oeste (Esquerda Total).", type: "VISIT", target: "NAMEK", targetZone: "NAMEK_VILLAGE" },
-    { id: 9, title: "FORÇAS ESPECIAIS", objective: "Derrote o Capitão Ginyu em Namek.", type: "KILL", target: "GINYU", targetZone: "NAMEK_VILLAGE" },
-    { id: 10, title: "O IMPERADOR", objective: "Derrote Freeza Forma Final.", type: "KILL", target: "FRIEZA_FINAL", targetZone: "NAMEK_VILLAGE" },
+    // --- FASE 3: INVASÃO ---
+    { id: 10, title: "O RETORNO", objective: "Desça de volta para a Terra (Sul).", type: "VISIT", target: "EARTH", targetZone: "EARTH_CORE" },
+    { id: 11, title: "ELITE SAIYAJIN", objective: "Derrote NAPPA ou VEGETA na Terra.", type: "KILL", target: "VEGETA_SCOUTER", targetZone: "EARTH_CORE" },
     
-    // --- FASE 4: ANDROIDES ---
-    { id: 11, title: "FUTURO SOMBRIO", objective: "Vá para o Futuro (Leste/Direita).", type: "VISIT", target: "FUTURE", targetZone: "FUTURE_RUINS" },
-    { id: 12, title: "PERFEIÇÃO", objective: "Derrote Perfect Cell nas Ruínas.", type: "KILL", target: "PERFECT_CELL", targetZone: "FUTURE_RUINS" },
-    { id: 13, title: "SUPERAR LIMITES", objective: "Alcance a forma SSJ2 ou superior.", type: "FORM", target: "SSJ2", targetZone: "ANY" },
+    // --- FASE 4: NAMEKUSEI (ESPAÇO) ---
+    { id: 12, title: "VIAGEM ESPACIAL", objective: "Voe para o OESTE (Esquerda) até o Espaço Profundo.", type: "VISIT", target: "NAMEK", targetZone: "NAMEK_VILLAGE" },
+    { id: 13, title: "FORÇAS ESPECIAIS", objective: "Encontre a Aldeia Namek e vença GINYU.", type: "KILL", target: "GINYU", targetZone: "NAMEK_VILLAGE" },
+    { id: 14, title: "O TIRANO", objective: "Voe mais a OESTE para a Base de Freeza.", type: "VISIT", target: "FRIEZA", targetZone: "FRIEZA_BASE" },
+    { id: 15, title: "LENDA DOURADA", objective: "Derrote FREEZA FINAL. (Dica: Transforme-se com 'G')", type: "KILL", target: "FRIEZA_FINAL", targetZone: "FRIEZA_BASE" },
+    { id: 16, title: "SUPER SAIYAJIN", objective: "Atinja a forma SSJ (Precisa Nível 20+).", type: "FORM", target: "SSJ", targetZone: "ANY" },
     
-    // --- FASE 5: MAGIA ---
-    { id: 14, title: "REINO INFERIOR", objective: "Vá para o Sul Profundo (Portão Demoníaco).", type: "VISIT", target: "DEMON", targetZone: "DEMON_GATE" },
-    { id: 15, title: "MAGIA NEGRA", objective: "Derrote Kid Buu.", type: "KILL", target: "KID_BUU", targetZone: "MAKAI_CORE" },
+    // --- FASE 5: ANDROIDES (FUTURO) ---
+    { id: 17, title: "LINHA DO TEMPO", objective: "Voe para o LESTE (Direita) passando da Terra.", type: "VISIT", target: "FUTURE", targetZone: "FUTURE_RUINS" },
+    { id: 18, title: "AMEAÇA BIOLÓGICA", objective: "Derrote PERFECT CELL nas Ruínas.", type: "KILL", target: "PERFECT_CELL", targetZone: "FUTURE_RUINS" },
+    { id: 19, title: "PODER ALÉM", objective: "Alcance a forma SSJ2 ou SSJ3.", type: "FORM", target: "SSJ2", targetZone: "ANY" },
     
-    // --- FASE 6: DEUSES ---
-    { id: 16, title: "REINO DIVINO", objective: "Voe extremamente ao Norte (Espaço Profundo).", type: "VISIT", target: "DIVINE", targetZone: "BEERUS_PLANET" },
-    { id: 17, title: "O DESTRUIDOR", objective: "Derrote Beerus.", type: "KILL", target: "BEERUS", targetZone: "BEERUS_PLANET" },
-    { id: 18, title: "INSTINTO", objective: "Alcance a forma UI (Ultra Instinct).", type: "FORM", target: "UI", targetZone: "ANY" },
-    { id: 19, title: "O LENDÁRIO", objective: "Vá para Vampa (Extremo Oeste) e vença Broly.", type: "KILL", target: "LEGENDARY_BROLY", targetZone: "VAMPA_WASTES" },
+    // --- FASE 6: MAGIA (SUL) ---
+    { id: 20, title: "REINO DAS TREVAS", objective: "Voe para o SUL PROFUNDO (Baixo).", type: "VISIT", target: "DEMON", targetZone: "DEMON_GATE" },
+    { id: 21, title: "MAGIA NEGRA", objective: "Derrote KID BUU no Reino Demoníaco.", type: "KILL", target: "KID_BUU", targetZone: "MAKAI_CORE" },
+    
+    // --- FASE 7: VAMPA (EXTREMO OESTE) ---
+    { id: 22, title: "PLANETA SELVAGEM", objective: "Voe para o EXTREMO OESTE (Muito a Esquerda).", type: "VISIT", target: "VAMPA", targetZone: "VAMPA_WASTES" },
+    { id: 23, title: "O LENDÁRIO", objective: "Sobreviva e derrote BROLY LENDÁRIO.", type: "KILL", target: "LEGENDARY_BROLY", targetZone: "VAMPA_WASTES" },
+    
+    // --- FASE 8: DEUSES (EXTREMO NORTE) ---
+    { id: 24, title: "REINO DIVINO", objective: "Voe para o EXTREMO NORTE (Muito Acima).", type: "VISIT", target: "DIVINE", targetZone: "BEERUS_PLANET" },
+    { id: 25, title: "DESTRUIÇÃO", objective: "Derrote o Deus BEERUS.", type: "KILL", target: "BEERUS", targetZone: "BEERUS_PLANET" },
+    { id: 26, title: "INSTINTO SUPERIOR", objective: "Alcance a forma UI (Nível 100+).", type: "FORM", target: "UI", targetZone: "ANY" },
     
     // --- ENDGAME ---
-    { id: 20, title: "DOMINAÇÃO", objective: "Conquiste um Planeta para sua Guilda.", type: "DOMINATION", target: "ANY", targetZone: "ANY" },
-    { id: 21, title: "CICLO ETERNO", objective: "Faça um Rebirth (Nível 150 - Tecla R no Menu).", type: "REBIRTH", target: "ANY", targetZone: "ANY" }
+    { id: 27, title: "TORNEIO DO PODER", objective: "Vença JIREN no Reino Divino.", type: "KILL", target: "JIREN", targetZone: "BEERUS_PLANET" },
+    { id: 28, title: "IMPERADOR", objective: "Conquiste um Planeta para sua Guilda.", type: "DOMINATION", target: "ANY", targetZone: "ANY" },
+    { id: 29, title: "DIVINDADE", objective: "Faça um REBIRTH (Nível 150 - Menu 'R').", type: "REBIRTH", target: "ANY", targetZone: "ANY" }
 ];
 
 // ==========================================
@@ -503,7 +518,10 @@ function initWorld() {
     }
     npcs = [];
     for(let i=0; i<600; i++) spawnMobRandomly();
-    PLANETS.forEach(p => { const list = BESTIARY[p.biome]?.bosses || BESTIARY.EARTH.bosses; spawnBossAt(p.x, p.y, list[Math.floor(Math.random() * list.length)]); });
+    PLANETS.forEach(p => { 
+        if(p.id === "KAIOH_PLANET") return; // Não spawnar boss no ponto GPS
+        const list = BESTIARY[p.biome]?.bosses || BESTIARY.EARTH.bosses; spawnBossAt(p.x, p.y, list[Math.floor(Math.random() * list.length)]); 
+    });
     
     // Spawna apenas 5 Bots
     for(let i=0; i<5; i++) { npcs.push(new BotPlayer()); } 
@@ -1121,45 +1139,3 @@ if (p.comboTargetId) {
 }, TICK);
 
 server.listen(3000, () => console.log(">> SERVER ONLINE EM: http://localhost:3000"));
-
-
-/* =========================
-   CLOUD STABLE LOOP (DELTA TIME)
-   ========================= */
-const TICK_RATE = 30;
-const TICK_MS = 1000 / TICK_RATE;
-const NET_FPS = 12;
-
-let lastTick = Date.now();
-let netAccum = 0;
-
-function serverLoop() {
-  const now = Date.now();
-  let delta = now - lastTick;
-  if (delta > 200) delta = 200;
-
-  while (delta >= TICK_MS) {
-    updateWorld(TICK_MS / 1000);
-    delta -= TICK_MS;
-    lastTick += TICK_MS;
-  }
-  setImmediate(serverLoop);
-}
-
-function updateWorld(dt) {
-  Object.values(players).forEach(p => {
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-  });
-
-  netAccum += dt;
-  if (netAccum >= 1 / NET_FPS) {
-    io.emit("state", {
-      players, npcs, projectiles, rocks, craters, chats,
-      domination: PLANETS, leaderboard, saga: null, dbs: dragonBalls
-    });
-    netAccum = 0;
-  }
-}
-
-serverLoop();
