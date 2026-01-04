@@ -4,7 +4,7 @@ const path = require("path");
 const { Server } = require("socket.io");
 
 // ==========================================
-// BANCO DE DADOS (Opcional)
+// BANCO DE DADOS (PostgreSQL + Fallback RAM)
 // ==========================================
 let pool = null;
 let Pool = null;
@@ -12,24 +12,28 @@ let Pool = null;
 try {
     ({ Pool } = require("pg"));
 } catch (e) {
-    console.log(">> pg não disponível, rodando em modo local.");
+    console.log(">> MÓDULO 'pg' NÃO ENCONTRADO. Rodando 100% em memória (RAM).");
+    console.log(">> Para corrigir: npm install pg");
 }
 
-
 async function initDB() {
+    if (!Pool || !process.env.DATABASE_URL) {
+        console.log(">> AVISO: DATABASE_URL ausente ou 'pg' não instalado. Usando RAM.");
+        pool = null;
+        return;
+    }
+
     try {
+        console.log(">> Conectando ao PostgreSQL...");
         pool = new Pool({
             connectionString: process.env.DATABASE_URL,
-            ssl: false,
+            ssl: { rejectUnauthorized: false }, 
+            connectionTimeoutMillis: 5000
         });
 
-        // TESTE REAL DE CONEXÃO
-        await pool.query("SELECT 1");
+        await pool.query("SELECT 1"); // Teste de conexão
 
-        // FORÇA SCHEMA
-        await pool.query("SET search_path TO public");
-
-        // CRIA TABELA SE NÃO EXISTIR (AUTO-MIGRATION)
+        // CRIA TABELA USERS (SE NÃO EXISTIR)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -40,46 +44,98 @@ async function initDB() {
                 y INT DEFAULT 0,
                 level INT DEFAULT 1,
                 xp INT DEFAULT 0,
-                bp INT DEFAULT 100,
+                bp BIGINT DEFAULT 500,
                 saga_step INT DEFAULT 0,
                 form TEXT DEFAULT 'BASE',
                 hp INT DEFAULT 1000,
                 max_hp INT DEFAULT 1000,
                 ki INT DEFAULT 300,
                 max_ki INT DEFAULT 300,
-                pvp BOOLEAN DEFAULT false,
-                kills INT DEFAULT 0,
+                pvp_score INT DEFAULT 0,
+                pvp_kills INT DEFAULT 0,
                 rebirths INT DEFAULT 0,
-                quest_data JSONB,
+                quest_data JSONB DEFAULT '{}',
                 guild TEXT,
-                current_title TEXT,
+                titles TEXT DEFAULT 'Novato',
+                current_title TEXT DEFAULT 'Novato',
+                skills JSONB DEFAULT '[]',
                 created_at TIMESTAMP DEFAULT NOW()
             );
         `);
+        
+        // CRIA TABELA PLANETS
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS planets (
+                id TEXT PRIMARY KEY,
+                owner TEXT,
+                guild TEXT,
+                stability INT DEFAULT 100,
+                tax_rate INT DEFAULT 5,
+                treasury INT DEFAULT 0
+            );
+        `);
 
-        console.log(">> MODO ONLINE REAL: Postgres conectado e validado.");
+        // MIGRATION DE EMERGÊNCIA: Adiciona coluna skills se o banco já existir sem ela
+        try {
+            await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS skills JSONB DEFAULT '[]'`);
+        } catch (e) { /* Coluna ja existe ou erro ignoravel */ }
+
+        console.log(">> MODO ONLINE REAL: Postgres conectado e tabelas verificadas.");
 
     } catch (err) {
-        console.error(">> FALHA DB, CAINDO PARA RAM:", err.message);
+        console.error(">> ERRO FATAL NO DB:", err.message);
         pool = null;
     }
 }
 
+// ==========================================
+// FUNÇÃO CENTRAL DE SALVAMENTO
+// ==========================================
+async function saveAccount(p) {
+    if (!pool || !p) return;
+    try {
+        // Prepara dados complexos para JSON
+        const questJson = JSON.stringify(p.quest || {});
+        const skillsJson = JSON.stringify(p.skills || []);
+        
+        await pool.query(`
+            UPDATE users SET
+                x=$1, y=$2, level=$3, xp=$4, bp=$5,
+                hp=$6, ki=$7, max_hp=$8, max_ki=$9,
+                form=$10, saga_step=$11, quest_data=$12,
+                titles=$13, current_title=$14,
+                pvp_score=$15, pvp_kills=$16, rebirths=$17,
+                guild=$18, skills=$19
+            WHERE username=$20
+        `, [
+            Math.round(p.x), Math.round(p.y), p.level, p.xp, p.bp,
+            Math.floor(p.hp), Math.floor(p.ki), p.maxHp, p.maxKi,
+            p.form, p.sagaStep, questJson,
+            p.titles, p.current_title,
+            p.pvp_score, p.pvp_kills, p.rebirths,
+            p.guild, skillsJson,
+            p.name
+        ]);
+        // console.log(`>> Progresso salvo para: ${p.name}`);
+    } catch (err) {
+        console.error(`>> ERRO AO SALVAR ${p.name}:`, err.message);
+    }
+}
 
 // ==========================================
 // CONFIGURAÇÕES GERAIS E LORE
 // ==========================================
 const SNAKE_WAY_START = { x: 0, y: -12000 };
 const KAIOH_PLANET    = { x: 0, y: -25000 };
-const TICK = 33; // ~30 FPS Server loop
+const TICK = 33; 
 
-// --- FACÇÕES (Galáxia Viva) ---
 const FACTIONS = {
     "FRIEZA_FORCE": { name: "Exército Imperial", color: "#a0a", enemies: ["EARTH", "SAIYAN", "DEMON"] },
     "SAIYAN_REBELS": { name: "Saiyajins Puros", color: "#fa0", enemies: ["FRIEZA_FORCE", "EARTH"] },
     "RED_RIBBON": { name: "Red Ribbon", color: "#f00", enemies: ["EARTH", "ALIEN"] },
     "DEMONS": { name: "Reino Demoníaco", color: "#509", enemies: ["ALL"] },
-    "EARTH_DEFENSE": { name: "Defensores da Terra", color: "#0af", enemies: ["ALL_INVADERS"] }
+    "EARTH_DEFENSE": { name: "Defensores da Terra", color: "#0af", enemies: ["ALL_INVADERS"] },
+    "GODS": { name: "Destruidores", color: "#90f", enemies: [] }
 };
 
 const BOSS_PHASES = {
@@ -88,9 +144,6 @@ const BOSS_PHASES = {
     PHASE_3: { hp: 0.0,  aggression: 1.0 }
 };
 
-// ==========================================
-// MAPA (PLANETAS COM DOMÍNIO DE FACÇÃO)
-// ==========================================
 let PLANETS = [
     { id: "EARTH_CORE", name: "Capital do Oeste", x: 2000, y: 2000, radius: 1200, owner: null, guild: null, faction: "EARTH_DEFENSE", stability: 100, taxRate: 5, treasury: 0, level: 1, biome: "EARTH" },
     { id: "KAME_ISLAND", name: "Casa do Kame", x: 6000, y: -4000, radius: 800, owner: null, guild: null, faction: "EARTH_DEFENSE", stability: 100, taxRate: 5, treasury: 0, level: 5, biome: "EARTH" },
@@ -106,86 +159,88 @@ let PLANETS = [
     { id: "KAIOH_PLANET", name: "Planeta Kaioh", x: 0, y: -25000, radius: 500, biome: "DIVINE", level: 1 }
 ];
 
-// ==========================================
-// SAGAS: UNIVERSE Z (NARRATIVA GUIADA PELA A.R.I.S)
-// ==========================================
 const SAGA_STEPS = [
-    { id: 0, title: "INICIALIZAÇÃO DO SISTEMA", objective: "A.R.I.S: 'Detecto assinaturas de energia hostis. Primeiro, aprenda a controlar seu Ki. Segure [C] para carregar.'", type: "BP", req: 600, targetZone: "EARTH_CORE", hint: "Segure 'C' ou botão CARGA" },
-    { id: 1, title: "AMEAÇA BIOLÓGICA", objective: "A.R.I.S: 'Um Saibaman foi plantado perto da capital. Elimine-o antes que se multiplique.'", type: "KILL", target: "SAIBAMAN", targetZone: "EARTH_CORE", hint: "Clique para atacar" },
-    { id: 2, title: "A INVASÃO SAIYAJIN", objective: "A.R.I.S: 'Naves espaciais detectadas. Guerreiros de elite Raditz e Nappa estão atacando. Impeça-os!'", type: "KILL", target: "RADITZ", targetZone: "EARTH_CORE", hint: "Use 'Q' para Bloquear" },
-    { id: 3, title: "TREINO NO OUTRO MUNDO", objective: "A.R.I.S: 'Seu poder atual é insuficiente. Voe para o NORTE (Cima) pelo Caminho da Serpente até o Sr. Kaioh.'", type: "VISIT", target: "KAIOH_PLANET", targetZone: "KAIOH_PLANET", hint: "Voe para Cima (Norte)" },
-    { id: 4, title: "TÉCNICA PROIBIDA", objective: "A.R.I.S: 'Kaioh vai te ensinar o Kaioken e a Genki Dama. Atinja 5000 de BP para dominar as técnicas.'", type: "BP", req: 5000, targetZone: "KAIOH_PLANET", hint: "Treine no Planeta Kaioh" },
-    { id: 5, title: "O IMPERADOR GALÁCTICO", objective: "A.R.I.S: 'Sinal de socorro em Namekusei (Oeste). O tirano Freeza busca a imortalidade. Impeça-o!'", type: "VISIT", target: "NAMEK_VILLAGE", targetZone: "NAMEK_VILLAGE", hint: "Voe para Esquerda (Oeste)" },
-    { id: 6, title: "A LENDA DOURADA", objective: "A.R.I.S: 'A fúria é o gatilho. Atinja Nível 20 e transforme-se em SUPER SAIYAJIN [G] para derrotar Freeza Final.'", type: "FORM", target: "SSJ", targetZone: "FRIEZA_BASE", hint: "Aperte 'G' ao Nvl 20" },
-    { id: 7, title: "LINHA DO TEMPO ROMPIDA", objective: "A.R.I.S: 'Distorção temporal detectada. Viaje ao LESTE para o futuro e destrua os Androides.'", type: "VISIT", target: "FUTURE_RUINS", targetZone: "FUTURE_RUINS", hint: "Voe para Direita (Leste)" },
-    { id: 8, title: "A PERFEIÇÃO", objective: "A.R.I.S: 'Cell alcançou sua forma perfeita. Ele ameaça explodir o sistema solar. Elimine-o.'", type: "KILL", target: "PERFECT_CELL", targetZone: "FUTURE_RUINS", hint: "Derrote Cell Perfeito" },
-    { id: 9, title: "O DESPERTAR MÁGICO", objective: "A.R.I.S: 'Magia negra detectada no Sul Profundo. O demônio Majin Buu acordou.'", type: "VISIT", target: "DEMON_GATE", targetZone: "DEMON_GATE", hint: "Voe para Baixo (Sul)" },
-    { id: 10, title: "PURIFICAÇÃO", objective: "A.R.I.S: 'Kid Buu é pura maldade. Você precisa de SSJ3 ou superior para vencê-lo.'", type: "KILL", target: "KID_BUU", targetZone: "MAKAI_CORE", hint: "Vença Kid Buu" },
-    { id: 11, title: "O LENDÁRIO", objective: "A.R.I.S: 'Uma energia colossal vem de Vampa (Extremo Oeste). O Lendário Super Saiyajin Broly está fora de controle.'", type: "KILL", target: "LEGENDARY_BROLY", targetZone: "VAMPA_WASTES", hint: "Cuidado com Broly" },
-    { id: 12, title: "TERRITÓRIO DIVINO", objective: "A.R.I.S: 'Sua força chamou a atenção dos Deuses. Voe para o Extremo Norte e desafie Beerus.'", type: "VISIT", target: "BEERUS_PLANET", targetZone: "BEERUS_PLANET", hint: "Muito Acima (Norte)" },
-    { id: 13, title: "O INSTINTO", objective: "A.R.I.S: 'Liberte-se de pensamentos. Alcance o INSTINTO SUPERIOR (UI) no Nível 100.'", type: "FORM", target: "UI", targetZone: "ANY", hint: "Forma Final" },
-    { id: 14, title: "GUARDIÃO DA GALÁXIA", objective: "A.R.I.S: 'A Galáxia precisa de ordem. Crie uma Guilda e domine um planeta.'", type: "DOMINATION", target: "ANY", targetZone: "ANY", hint: "/guild Nome" }
+    { id: 0, title: "A CHEGADA DE RADITZ", objective: "A.R.I.S: 'Um guerreiro alienígena pousou. Ele procura por Kakarotto. Impeça-o na Capital do Oeste.'", type: "KILL", target: "RADITZ", targetZone: "EARTH_CORE", hint: "Derrote Raditz na Terra" },
+    { id: 1, title: "CAMINHO DA SERPENTE", objective: "A.R.I.S: 'Você precisa de poder. Voe para o NORTE (Cima) até chegar ao Planeta do Sr. Kaioh para treinar.'", type: "VISIT", target: "KAIOH_PLANET", targetZone: "KAIOH_PLANET", hint: "Voe muito para Cima (Norte)" },
+    { id: 2, title: "TREINO DE GRAVIDADE", objective: "A.R.I.S: 'Kaioh diz que seu corpo precisa aguentar o Kaioken. Atinja 5.000 de BP treinando aqui.'", type: "BP", req: 5000, targetZone: "KAIOH_PLANET", hint: "Treine no Planeta Kaioh" },
+    { id: 3, title: "A ELITE SAIYAJIN", objective: "A.R.I.S: 'Vegeta e Nappa chegaram à Terra. Volte para a Capital do Oeste e derrote o Príncipe dos Saiyajins.'", type: "KILL", target: "VEGETA_SCOUTER", targetZone: "EARTH_CORE", hint: "Volte para a Terra e vença Vegeta" },
+    { id: 4, title: "VIAGEM PARA NAMEKUSEI", objective: "A.R.I.S: 'Precisamos das Esferas de Namek. Voe para o OESTE (Esquerda) profundo.'", type: "VISIT", target: "NAMEK_VILLAGE", targetZone: "NAMEK_VILLAGE", hint: "Voe para Esquerda (Oeste)" },
+    { id: 5, title: "AS FORÇAS ESPECIAIS", objective: "A.R.I.S: 'O Capitão Ginyu está com as esferas. Recupere-as.'", type: "KILL", target: "GINYU", targetZone: "NAMEK_VILLAGE", hint: "Derrote Ginyu em Namek" },
+    { id: 6, title: "O IMPERADOR DO MAL", objective: "A.R.I.S: 'Freeza está em sua forma final na Base 79 (Mais a Oeste).'", type: "KILL", target: "FRIEZA_FINAL", targetZone: "FRIEZA_BASE", hint: "Vença Freeza na Base dele" },
+    { id: 7, title: "O LENDÁRIO SUPER SAIYAJIN", objective: "A.R.I.S: 'A fúria desperta o poder. Alcance Nível 20 e aperte [G] para virar Super Saiyajin.'", type: "FORM", target: "SSJ", targetZone: "ANY", hint: "Vire SSJ (Nvl 20 + G)" },
+    { id: 8, title: "O FUTURO SOMBRIO", objective: "A.R.I.S: 'Uma mensagem do futuro alerta sobre androides. Voe para o LESTE (Direita) até as Ruínas.'", type: "VISIT", target: "FUTURE_RUINS", targetZone: "FUTURE_RUINS", hint: "Voe para Direita (Leste)" },
+    { id: 9, title: "CRIAÇÕES DE GERO", objective: "A.R.I.S: 'Androides 17 e 18 estão causando caos. Destrua um deles nas Ruínas.'", type: "KILL", target: "ANDROID_18", targetZone: "FUTURE_RUINS", hint: "Derrote Android 18" },
+    { id: 10, title: "A PERFEIÇÃO", objective: "A.R.I.S: 'Cell absorveu os androides. Ele está muito forte. Você precisa do SSJ2 (Nível 40) para vencer.'", type: "KILL", target: "PERFECT_CELL", targetZone: "FUTURE_RUINS", hint: "Vença Cell Perfeito" },
+    { id: 11, title: "O MAGO BABIDI", objective: "A.R.I.S: 'Energia maligna detectada no SUL (Baixo). O Reino Demoníaco está ativo.'", type: "VISIT", target: "DEMON_GATE", targetZone: "DEMON_GATE", hint: "Voe para Baixo (Sul)" },
+    { id: 12, title: "O TERROR ROSA", objective: "A.R.I.S: 'Majin Buu renasceu. Sua regeneração é infinita. Destrua-o com alto poder.'", type: "KILL", target: "FAT_BUU", targetZone: "MAKAI_CORE", hint: "Derrote Majin Buu Gordo" },
+    { id: 13, title: "A FORMA FINAL", objective: "A.R.I.S: 'Kid Buu está destruindo planetas. Use o SSJ3 (Nível 60) para acabar com isso.'", type: "KILL", target: "KID_BUU", targetZone: "MAKAI_CORE", hint: "Vença Kid Buu no Inferno" },
+    { id: 14, title: "O DEUS DA DESTRUIÇÃO", objective: "A.R.I.S: 'Bills acordou. Ele exige um Deus Super Saiyajin. Vá ao Extremo Norte.'", type: "VISIT", target: "BEERUS_PLANET", targetZone: "BEERUS_PLANET", hint: "Voe MUITO para Norte" },
+    { id: 15, title: "TREINO DIVINO", objective: "A.R.I.S: 'Prove seu valor para Whis. Atinja 1.000.000 de BP para desbloquear o KI DIVINO.'", type: "BP", req: 1000000, targetZone: "BEERUS_PLANET", hint: "Alcance 1 Milhão de BP" },
+    { id: 16, title: "TORNEIO DO PODER", objective: "A.R.I.S: 'Jiren, o Cinzento, aguarda no Palácio Zen-Oh (Acima de Bills). É a batalha final.'", type: "KILL", target: "JIREN_FULL_POWER", targetZone: "ZEN_PALACE", hint: "Vença Jiren Full Power" },
+    { id: 17, title: "O INSTINTO SUPERIOR", objective: "A.R.I.S: 'Quebre seus limites. Atinja o Nível 100 para dominar o Ultra Instinct [UI].'", type: "FORM", target: "UI", targetZone: "ANY", hint: "Domine o UI (Nvl 100)" },
+    { id: 18, title: "CONQUISTA GALÁCTICA", objective: "A.R.I.S: 'O universo está livre, mas precisa de ordem. Crie uma Guilda (/guild) e domine um Planeta.'", type: "DOMINATION", target: "ANY", targetZone: "ANY", hint: "Crie Guilda e Domine Planeta" }
 ];
 
-// ==========================================
-// CLASSE DE IA: A.R.I.S. (Artificial Reconnaissance Intelligence System)
-// ==========================================
 class ArisAI {
     constructor(player) {
         this.player = player;
         this.lastMessageTime = 0;
         this.lastZone = null;
     }
-
     evaluate(io) {
-        if (Date.now() - this.lastMessageTime < 15000) return; // Cooldown de 15s
+        const now = Date.now();
+        if (now - this.lastMessageTime < 12000) return; 
 
         const p = this.player;
-        const zone = getZoneInfo(p.x, p.y);
+        const currentSaga = SAGA_STEPS[p.sagaStep] || SAGA_STEPS[SAGA_STEPS.length - 1];
         
         let msg = null;
-        let type = "INFO"; // INFO, WARN, DANGER
+        let type = "INFO"; 
 
-        // 1. Dica de Vida Baixa
-        if (p.hp < p.maxHp * 0.25) {
-            msg = "ALERTA CRÍTICO: Integridade física comprometida. Recue e regenere!";
-            type = "DANGER";
-        }
-        // 2. Mudança de Zona
-        else if (this.lastZone !== zone.id) {
-            this.lastZone = zone.id;
-            const zoneName = PLANETS.find(pl => pl.biome === zone.id)?.name || "Espaço Desconhecido";
-            msg = `Entrando no setor: ${zoneName}. Análise de ameaça iniciada.`;
-        }
-        // 3. Dica de Transformação
-        else if (p.ki >= p.maxKi && p.form === "BASE" && p.level >= 5) {
-            msg = "Níveis de energia máximos. Transformação disponível para aumentar eficiência de combate.";
+        const dist = this.getDistanceToTarget(p, currentSaga);
+        
+        if (dist !== null && dist > 3000) {
+            const dir = this.getDirectionText(p, currentSaga);
+            msg = `MISSÃO: ${currentSaga.title}. Destino: ${dir}.`;
             type = "WARN";
+        } else if (dist !== null && dist < 3000) {
+             msg = `Zona da Missão Alcançada. ${currentSaga.hint}`;
+             type = "SUCCESS";
         }
-        // 4. Dica da Saga
-        else if (Math.random() > 0.9) {
-            const currentStep = SAGA_STEPS[p.sagaStep || 0];
-            if (currentStep) {
-                msg = `Lembrete de Missão: ${currentStep.hint}`;
-            }
+
+        if (!msg && p.hp < p.maxHp * 0.3) {
+            msg = "ALERTA: Integridade Crítica! Recue.";
+            type = "DANGER";
         }
 
         if (msg) {
             this.sendMessage(io, msg, type);
         }
     }
-
+    getDistanceToTarget(p, saga) {
+        if (!saga.targetZone || saga.targetZone === "ANY") return null;
+        const target = PLANETS.find(pl => pl.id === saga.targetZone);
+        if (!target) return null;
+        return Math.hypot(target.x - p.x, target.y - p.y);
+    }
+    getDirectionText(p, saga) {
+        if (!saga.targetZone || saga.targetZone === "ANY") return "Qualquer lugar";
+        const target = PLANETS.find(pl => pl.id === saga.targetZone);
+        if (!target) return "Desconhecido";
+        const dx = target.x - p.x; const dy = target.y - p.y;
+        let dir = "";
+        if (Math.abs(dy) > Math.abs(dx)) { dir = dy < 0 ? "NORTE (Cima)" : "SUL (Baixo)"; } 
+        else { dir = dx < 0 ? "OESTE (Esquerda)" : "LESTE (Direita)"; }
+        return `${target.name} ao ${dir}`;
+    }
     sendMessage(io, text, type) {
         io.to(this.player.id).emit("aris_msg", { text, type });
         this.lastMessageTime = Date.now();
     }
 }
 
-// ==========================================
-// SISTEMAS DE DADOS E ENTIDADES
-// ==========================================
 const players = {};
-const arisInstances = {}; // Instancias da IA por player
+const arisInstances = {};
 let projectiles = [];
 let npcs = [];
 let rocks = []; 
@@ -198,295 +253,51 @@ let eventActive = false;
 let eventMobIds = [];
 let leaderboard = [];
 
-const TITLES_DATA = {
-    "WARRIOR": { req: "level", val: 10, name: "Guerreiro Z" },
-    "ELITE": { req: "bp", val: 10000, name: "Elite Saiyajin" },
-    "SLAYER": { req: "kills", val: 50, name: "Assassino" },
-    "GOD": { req: "form", val: "GOD", name: "Divindade" },
-    "CONQUEROR": { req: "domination", val: 1, name: "Imperador" },
-    "LEGEND": { req: "rebirth", val: 1, name: "Lenda Viva" }
-};
-
-const FORM_STATS = {
-    "BASE": { spd: 6,  dmg: 1.0, hpMult: 1.0, kiMult: 1.0 },
-    "SSJ":  { spd: 8,  dmg: 1.5, hpMult: 1.5, kiMult: 1.2 },
-    "SSJ2": { spd: 9,  dmg: 1.8, hpMult: 1.8, kiMult: 1.4 },
-    "SSJ3": { spd: 11, dmg: 2.2, hpMult: 2.2, kiMult: 1.5 },
-    "GOD":  { spd: 14, dmg: 3.0, hpMult: 3.0, kiMult: 2.0 },
-    "BLUE": { spd: 17, dmg: 4.5, hpMult: 4.0, kiMult: 3.0 },
-    "UI":   { spd: 22, dmg: 6.0, hpMult: 5.0, kiMult: 5.0 }
-};
-
+const TITLES_DATA = { "WARRIOR": { req: "level", val: 10, name: "Guerreiro Z" }, "ELITE": { req: "bp", val: 10000, name: "Elite Saiyajin" }, "SLAYER": { req: "kills", val: 50, name: "Assassino" }, "GOD": { req: "form", val: "GOD", name: "Divindade" }, "CONQUEROR": { req: "domination", val: 1, name: "Imperador" }, "LEGEND": { req: "rebirth", val: 1, name: "Lenda Viva" } };
+const FORM_STATS = { "BASE": { spd: 6, dmg: 1.0, hpMult: 1.0, kiMult: 1.0 }, "SSJ": { spd: 9, dmg: 1.5, hpMult: 1.5, kiMult: 1.2 }, "SSJ2": { spd: 11, dmg: 1.8, hpMult: 1.8, kiMult: 1.4 }, "SSJ3": { spd: 13, dmg: 2.3, hpMult: 2.2, kiMult: 1.5 }, "GOD": { spd: 16, dmg: 3.5, hpMult: 3.0, kiMult: 2.0 }, "BLUE": { spd: 20, dmg: 5.0, hpMult: 4.5, kiMult: 3.0 }, "UI": { spd: 25, dmg: 7.0, hpMult: 6.0, kiMult: 5.0 } };
 const FORM_ORDER = ["BASE", "SSJ", "SSJ2", "SSJ3", "GOD", "BLUE", "UI"];
-const FORM_REQS = { "BASE": 0, "SSJ": 5, "SSJ2": 20, "SSJ3": 40, "GOD": 60, "BLUE": 80, "UI": 100 };
-const BP_TRAIN_CAP = { BASE: 2000, SSJ: 8000, SSJ2: 20000, SSJ3: 50000, GOD: 150000, BLUE: 500000, UI: 2000000 };
+const FORM_REQS = { "BASE": 0, "SSJ": 20, "SSJ2": 40, "SSJ3": 60, "GOD": 80, "BLUE": 90, "UI": 100 };
+const BP_TRAIN_CAP = { BASE: 5000, SSJ: 25000, SSJ2: 80000, SSJ3: 200000, GOD: 1000000, BLUE: 5000000, UI: 100000000 };
+const BESTIARY = { EARTH: { mobs: ["RR_SOLDIER", "SAIBAMAN", "WOLF_BANDIT"], bosses: ["RADITZ", "NAPPA", "VEGETA_SCOUTER"] }, NAMEK: { mobs: ["FRIEZA_SOLDIER", "NAMEK_WARRIOR"], bosses: ["GINYU", "FRIEZA_FINAL"] }, FRIEZA: { mobs: ["FRIEZA_ELITE", "ROBOT_GUARD"], bosses: ["COOLER", "METAL_COOLER"] }, FUTURE: { mobs: ["ANDROID_19", "ANDROID_20", "CELL_JR"], bosses: ["ANDROID_18", "PERFECT_CELL"] }, DEMON: { mobs: ["PUIPUI", "YAKON", "DABURA_MINION"], bosses: ["DABURA", "FAT_BUU", "KID_BUU"] }, VAMPA: { mobs: ["GIANT_SPIDER", "VAMPA_BEAST"], bosses: ["PARAGUS", "BROLY_WRATH", "LEGENDARY_BROLY"] }, DIVINE: { mobs: ["PRIDE_TROOPER", "ANGEL_TRAINEE"], bosses: ["TOPPO_GOD", "JIREN", "JIREN_FULL_POWER", "BEERUS"] } };
 
-const BESTIARY = {
-    EARTH: { mobs: ["RR_SOLDIER", "WOLF_BANDIT", "DINOSAUR", "SAIBAMAN"], bosses: ["RADITZ", "NAPPA", "VEGETA_SCOUTER"] },
-    NAMEK: { mobs: ["FRIEZA_SOLDIER", "NAMEK_WARRIOR", "ZARBON_MONSTER"], bosses: ["GINYU", "FRIEZA_FINAL"] },
-    FRIEZA: { mobs: ["FRIEZA_ELITE", "ROBOT_GUARD", "ALIEN_MERCENARY"], bosses: ["COOLER", "METAL_COOLER"] },
-    FUTURE: { mobs: ["ANDROID_19", "ANDROID_20", "CELL_JR"], bosses: ["ANDROID_17", "ANDROID_18", "PERFECT_CELL"] },
-    DEMON: { mobs: ["PUIPUI", "YAKON", "DABURA_MINION"], bosses: ["DABURA", "FAT_BUU", "KID_BUU"] },
-    VAMPA: { mobs: ["GIANT_SPIDER", "VAMPA_BEAST"], bosses: ["PARAGUS", "BROLY_WRATH", "LEGENDARY_BROLY"] },
-    DIVINE: { mobs: ["PRIDE_TROOPER", "ANGEL_TRAINEE"], bosses: ["TOPPO_GOD", "JIREN", "JIREN_FULL_POWER", "BEERUS"] }
-};
+// FUNÇÕES AUXILIARES
+function getMaxBP(p) { const form = p.form || "BASE"; const formCap = BP_TRAIN_CAP[form] || BP_TRAIN_CAP.BASE; const rebirthMult = 1 + ((p.rebirths || 0) * 1.5); return Math.floor(formCap * rebirthMult); }
+function clampBP(p) { const maxBP = getMaxBP(p); if (p.bp > maxBP) p.bp = maxBP; checkAchievements(p); checkQuest(p, "BP", null); checkSaga(p, "BP", null); }
 
-// ==========================================
-// FUNÇÕES AUXILIARES E LÓGICA DE JOGO
-// ==========================================
-
-function getMaxBP(p) {
-    const form = p.form || "BASE";
-    const formCap = BP_TRAIN_CAP[form] || BP_TRAIN_CAP.BASE;
-    const rebirthMult = 1 + ((p.rebirths || 0) * 1.0); 
-    return Math.floor(formCap * rebirthMult);
-}
-
-function clampBP(p) {
-    const maxBP = getMaxBP(p);
-    if (p.bp > maxBP) p.bp = maxBP;
-    checkAchievements(p);
-    checkQuest(p, "BP", null);
-    checkSaga(p, "BP", null);
-}
-
-function initDragonBalls() {
-    dragonBalls = [];
-    for(let i=1; i<=7; i++) {
-        spawnDragonBall(i);
-    }
-}
-
-function spawnDragonBall(id) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 5000 + Math.random() * 35000;
-    dragonBalls.push({
-        id: id,
-        x: Math.cos(angle) * dist,
-        y: Math.sin(angle) * dist,
-        holderId: null,
-        groundTimer: 9000 
-    });
-}
-
-function checkDragonBallPickup(p) {
-    dragonBalls.forEach(db => {
-        if (!db.holderId) {
-            const dist = Math.hypot(p.x - db.x, p.y - db.y);
-            if (dist < 60) {
-                db.holderId = p.id;
-                p.dbCount = (p.dbCount || 0) + 1;
-                p.pvpMode = true; 
-                io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: `PEGOU ESFERA ${db.id}!` });
-            }
-        }
-    });
-}
-
-function dropDragonBalls(p) {
-    if (!p.dbCount || p.dbCount <= 0) return;
-    dragonBalls.forEach(db => {
-        if (db.holderId === p.id) {
-            db.holderId = null;
-            db.x = p.x + (Math.random()-0.5) * 100;
-            db.y = p.y + (Math.random()-0.5) * 100;
-            db.groundTimer = 9000;
-        }
-    });
-    p.dbCount = 0;
-    io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "ESFERAS PERDIDAS!" });
-}
+function initDragonBalls() { dragonBalls = []; for(let i=1; i<=7; i++) { spawnDragonBall(i); } }
+function spawnDragonBall(id) { const angle = Math.random() * Math.PI * 2; const dist = 5000 + Math.random() * 35000; dragonBalls.push({ id: id, x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, holderId: null, groundTimer: 9000 }); }
+function checkDragonBallPickup(p) { dragonBalls.forEach(db => { if (!db.holderId) { const dist = Math.hypot(p.x - db.x, p.y - db.y); if (dist < 60) { db.holderId = p.id; p.dbCount = (p.dbCount || 0) + 1; p.pvpMode = true; io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: `PEGOU ESFERA ${db.id}!` }); } } }); }
+function dropDragonBalls(p) { if (!p.dbCount || p.dbCount <= 0) return; dragonBalls.forEach(db => { if (db.holderId === p.id) { db.holderId = null; db.x = p.x + (Math.random()-0.5) * 100; db.y = p.y + (Math.random()-0.5) * 100; db.groundTimer = 9000; } }); p.dbCount = 0; io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "ESFERAS PERDIDAS!" }); }
 
 function findBestCombatTarget(p, range, inputAngle) {
-    let best = null;
-    let bestScore = Infinity; 
-    
-    const possibleTargets = [...Object.values(players), ...npcs];
-    
-    possibleTargets.forEach(t => {
-        if (t.id === p.id || t.isDead || t.isSpirit) return;
-        if (!t.isNPC && !p.pvpMode && !t.pvpMode) return; 
-
-        const dist = Math.hypot(t.x - p.x, t.y - p.y);
-        if (dist > range) return;
-
-        const angleToEnemy = Math.atan2(t.y - p.y, t.x - p.x);
-        let angleDiff = Math.abs(angleToEnemy - inputAngle);
-        if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
-
-        if (angleDiff < Math.PI / 2.5) {
-            const score = dist + (angleDiff * 100); 
-            if (score < bestScore) {
-                bestScore = score;
-                best = t;
-            }
-        }
-    });
+    let best = null; let bestScore = Infinity; const possibleTargets = [...Object.values(players), ...npcs];
+    possibleTargets.forEach(t => { if (t.id === p.id || t.isDead || t.isSpirit) return; if (!t.isNPC && !p.pvpMode && !t.pvpMode) return; const dist = Math.hypot(t.x - p.x, t.y - p.y); if (dist > range) return; const angleToEnemy = Math.atan2(t.y - p.y, t.x - p.x); let angleDiff = Math.abs(angleToEnemy - inputAngle); if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff; if (angleDiff < Math.PI / 2.0) { const score = dist + (angleDiff * 100); if (score < bestScore) { bestScore = score; best = t; } } });
     return best;
 }
 
-function getZoneInfo(x, y) {
-    if (y < -80000) return { id: "DIVINE", level: 100 };
-    if (x < -40000) return { id: "VAMPA", level: 80 };
-    if (x < -10000 && y < 10000) { if (x < -30000) return { id: "FRIEZA", level: 40 }; return { id: "NAMEK", level: 20 }; }
-    if (x > 10000 && y > -5000 && y < 5000) return { id: "FUTURE", level: 50 };
-    if (y > 20000) return { id: "DEMON", level: 60 };
-    return { id: "EARTH", level: Math.max(1, Math.floor(Math.hypot(x,y)/2000)) };
-}
+function getZoneInfo(x, y) { if (y < -80000) return { id: "DIVINE", level: 100 }; if (x < -40000) return { id: "VAMPA", level: 80 }; if (x < -10000 && y < 10000) { if (x < -30000) return { id: "FRIEZA", level: 40 }; return { id: "NAMEK", level: 20 }; } if (x > 10000 && y > -5000 && y < 5000) return { id: "FUTURE", level: 50 }; if (y > 20000) return { id: "DEMON", level: 60 }; return { id: "EARTH", level: Math.max(1, Math.floor(Math.hypot(x,y)/2000)) }; }
 
-function assignQuest(p) {
-    // Sistema de Missão Secundária Simples
-    if (p.quest && !p.quest.completed) return; 
-    const zone = getZoneInfo(p.x, p.y);
-    // Tipos: KILL, BP, VISIT
-    const types = ["KILL", "BP", "VISIT"];
-    const type = types[Math.floor(Math.random() * types.length)];
-    
-    let target = "", count = 0, desc = "";
-    if (type === "KILL") {
-        const list = BESTIARY[zone.id].mobs;
-        target = list[Math.floor(Math.random() * list.length)];
-        count = 5 + Math.floor(p.level * 0.2);
-        desc = `Derrote ${count} ${target}`;
-    } else if (type === "BP") {
-        target = "POWER"; count = Math.floor(getMaxBP(p) * 0.9); desc = `Treine até ${count} BP`;
-    } else {
-        const zones = Object.keys(BESTIARY); target = zones[Math.floor(Math.random() * zones.length)];
-        count = 1; desc = `Patrulhe o setor ${target}`;
-    }
-    p.quest = { type: type, target, required: count, current: 0, desc, rewardXp: p.level * 2000, completed: false };
-    if(pool) pool.query('UPDATE users SET quest_data=$1 WHERE name=$2', [JSON.stringify(p.quest), p.name]).catch(console.error);
-}
+function assignQuest(p) { if (p.quest && !p.quest.completed) return; const zone = getZoneInfo(p.x, p.y); const types = ["KILL", "BP", "VISIT"]; const type = types[Math.floor(Math.random() * types.length)]; let target = "", count = 0, desc = ""; if (type === "KILL") { const list = BESTIARY[zone.id].mobs; target = list[Math.floor(Math.random() * list.length)]; count = 3 + Math.floor(p.level * 0.1); desc = `Derrote ${count} ${target}`; } else if (type === "BP") { target = "POWER"; count = Math.floor(getMaxBP(p) * 0.95); desc = `Treine até ${count} BP`; } else { const zones = Object.keys(BESTIARY); target = zones[Math.floor(Math.random() * zones.length)]; count = 1; desc = `Explore o setor ${target}`; } p.quest = { type: type, target, required: count, current: 0, desc, rewardXp: p.level * 2500, completed: false }; saveAccount(p); }
+function checkQuest(p, type, data) { if (!p.quest || p.quest.completed) return; let progress = false; if (p.quest.type === "KILL" && type === "KILL" && (p.quest.target === "ANY" || p.quest.target === data.name)) { p.quest.current++; progress = true; } if (p.quest.type === "BP" && type === "BP" && p.bp >= p.quest.required) { p.quest.current = p.bp; progress = true; } if (p.quest.type === "VISIT" && type === "VISIT" && getZoneInfo(p.x, p.y).id === p.quest.target) { p.quest.current = 1; progress = true; } if (progress) { if (p.quest.current >= p.quest.required) { p.quest.completed = true; p.xp += p.quest.rewardXp; io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y }); io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "MISSÃO DIÁRIA COMPLETA!" }); setTimeout(() => assignQuest(p), 10000); } saveAccount(p); } }
+function checkSaga(p, type, data) { const currentStep = SAGA_STEPS[p.sagaStep || 0]; if(!currentStep) return; let completed = false; if (type === "BP" && currentStep.type === "BP" && p.bp >= currentStep.req) completed = true; if (type === "KILL" && currentStep.type === "KILL" && (data.name === currentStep.target || currentStep.target === "ANY")) completed = true; if (type === "VISIT" && currentStep.type === "VISIT") { if (currentStep.target === "KAIOH_PLANET" && p.y < -24000) completed = true; else if (currentStep.targetZone && Math.hypot(p.x - PLANETS.find(pl=>pl.id===currentStep.targetZone)?.x, p.y - PLANETS.find(pl=>pl.id===currentStep.targetZone)?.y) < 2000) completed = true; else if (getZoneInfo(p.x, p.y).id === currentStep.target) completed = true; } if (type === "FORM" && currentStep.type === "FORM" && p.form === currentStep.target) completed = true; if (type === "DOMINATION" && currentStep.type === "DOMINATION" && p.guild) completed = true; if (completed) { p.sagaStep = (p.sagaStep || 0) + 1; p.xp += p.level * 10000; io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "CAPÍTULO CONCLUÍDO!" }); io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y }); const nextStep = SAGA_STEPS[p.sagaStep]; const msg = nextStep ? `NOVA MISSÃO: ${nextStep.title}` : "VOCÊ ZEROU A HISTÓRIA! AGORA CONQUISTE A GALÁXIA!"; io.to(p.id).emit("aris_msg", { text: msg, type: "SUCCESS" }); saveAccount(p); } }
 
-function checkQuest(p, type, data) {
-    if (!p.quest || p.quest.completed) return;
-    let progress = false;
-    if (p.quest.type === "KILL" && type === "KILL" && (p.quest.target === "ANY" || p.quest.target === data.name)) { p.quest.current++; progress = true; }
-    if (p.quest.type === "BP" && type === "BP" && p.bp >= p.quest.required) { p.quest.current = p.bp; progress = true; }
-    if (p.quest.type === "VISIT" && type === "VISIT" && getZoneInfo(p.x, p.y).id === p.quest.target) { p.quest.current = 1; progress = true; }
-    
-    if (progress) {
-        if (p.quest.current >= p.quest.required) {
-            p.quest.completed = true; p.xp += p.quest.rewardXp;
-            io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y }); 
-            io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "MISSÃO COMPLETA!" });
-            setTimeout(() => assignQuest(p), 5000);
-        }
-        if(pool) pool.query('UPDATE users SET quest_data=$1 WHERE name=$2', [JSON.stringify(p.quest), p.name]).catch(console.error);
-    }
-}
-
-function checkSaga(p, type, data) {
-    const currentStep = SAGA_STEPS[p.sagaStep || 0];
-    if(!currentStep) return;
-
-    let completed = false;
-    if (type === "BP" && currentStep.type === "BP" && p.bp >= currentStep.req) completed = true;
-    if (type === "KILL" && currentStep.type === "KILL" && (data.name === currentStep.target || currentStep.target === "ANY")) completed = true;
-    if (type === "VISIT" && currentStep.type === "VISIT") {
-        if (currentStep.target === "KAIOH_PLANET" && p.y < -24000) completed = true;
-        else if (currentStep.targetZone && Math.hypot(p.x - PLANETS.find(pl=>pl.id===currentStep.targetZone)?.x, p.y - PLANETS.find(pl=>pl.id===currentStep.targetZone)?.y) < 2000) completed = true;
-        else if (getZoneInfo(p.x, p.y).id === currentStep.target) completed = true;
-    }
-    if (type === "FORM" && currentStep.type === "FORM" && p.form === currentStep.target) completed = true;
-    if (type === "DOMINATION" && currentStep.type === "DOMINATION" && p.guild) completed = true;
-
-    if (completed) {
-        p.sagaStep = (p.sagaStep || 0) + 1;
-        p.xp += p.level * 8000;
-        io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "SAGA AVANÇADA!" });
-        io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y });
-        
-        // Notificação da A.R.I.S sobre o sucesso
-        const nextStep = SAGA_STEPS[p.sagaStep];
-        const msg = nextStep ? `Objetivo concluído. Próxima fase: ${nextStep.title}` : "Campanha Concluída.";
-        io.to(p.id).emit("aris_msg", { text: msg, type: "SUCCESS" });
-
-        if(pool) pool.query('UPDATE users SET saga_step=$1 WHERE name=$2', [p.sagaStep, p.name]).catch(console.error);
-    }
-}
-
-function initWorld() {
-    rocks = [];
-    for(let i=0; i<1800; i++) {
-        const angle = Math.random() * Math.PI * 2; const dist = Math.random() * 90000; 
-        const x = Math.cos(angle) * dist; const y = Math.sin(angle) * dist; 
-        const zone = getZoneInfo(x, y);
-        let type = "rock_earth";
-        if(zone.id === "NAMEK") type = "rock_namek"; if(zone.id === "FRIEZA") type = "rock_metal"; if(zone.id === "FUTURE") type = "rock_ruin";
-        if(zone.id === "DEMON") type = "rock_magic"; if(zone.id === "VAMPA") type = "rock_bone"; if(zone.id === "DIVINE") type = "rock_god";
-        if (zone.id === "DIVINE" && Math.random() > 0.4) continue; 
-        rocks.push({ id: i, x: Math.round(x), y: Math.round(y), r: 35 + Math.random() * 80, hp: 500 + (dist/20), maxHp: 500 + (dist/20), type });
-    }
-    npcs = [];
-    for(let i=0; i<600; i++) spawnMobRandomly();
-    PLANETS.forEach(p => { 
-        if(p.id === "KAIOH_PLANET") return;
-        const list = BESTIARY[p.biome]?.bosses || BESTIARY.EARTH.bosses; spawnBossAt(p.x, p.y, list[Math.floor(Math.random() * list.length)]); 
-    });
-    initDragonBalls();
-    console.log(">> Universo Gerado e Pronto.");
-}
-
+function initWorld() { rocks = []; for(let i=0; i<1800; i++) { const angle = Math.random() * Math.PI * 2; const dist = Math.random() * 90000; const x = Math.cos(angle) * dist; const y = Math.sin(angle) * dist; const zone = getZoneInfo(x, y); let type = "rock_earth"; if(zone.id === "NAMEK") type = "rock_namek"; if(zone.id === "FRIEZA") type = "rock_metal"; if(zone.id === "FUTURE") type = "rock_ruin"; if(zone.id === "DEMON") type = "rock_magic"; if(zone.id === "VAMPA") type = "rock_bone"; if(zone.id === "DIVINE") type = "rock_god"; rocks.push({ id: i, x: Math.round(x), y: Math.round(y), r: 35 + Math.random() * 80, hp: 500 + (dist/20), maxHp: 500 + (dist/20), type }); } npcs = []; for(let i=0; i<600; i++) spawnMobRandomly(); PLANETS.forEach(p => { if(p.id === "KAIOH_PLANET") return; const list = BESTIARY[p.biome]?.bosses || BESTIARY.EARTH.bosses; list.forEach(bossType => { spawnBossAt(p.x + (Math.random()-0.5)*1000, p.y + (Math.random()-0.5)*1000, bossType); }); }); initDragonBalls(); console.log(">> Universo Gerado e Pronto."); }
 function spawnMobRandomly() { const a = Math.random() * Math.PI * 2; const d = 2000 + Math.random() * 80000; spawnMobAt(Math.cos(a)*d, Math.sin(a)*d); }
-function spawnMobAt(x, y, aggressive = false) {
-    const zone = getZoneInfo(x, y); const list = BESTIARY[zone.id]?.mobs || BESTIARY.EARTH.mobs; const type = list[Math.floor(Math.random() * list.length)];
-    const id = "mob_" + Math.random().toString(36).substr(2, 9);
-    let stats = { name: type, hp: 500 * zone.level, bp: 1200 * zone.level, level: zone.level, color: "#fff", aggro: aggressive ? 3000 : (1000 + (zone.level * 20)), aiType: "MELEE" };
-    if(zone.id === "NAMEK") stats.color = "#8f8"; if(zone.id === "DEMON") stats.color = "#f0f"; if(zone.id === "FRIEZA") stats.color = "#a0a"; if(zone.id === "FUTURE") stats.color = "#888"; if(zone.id === "VAMPA") stats.color = "#dd4"; if(zone.id === "DIVINE") stats.color = "#0ff";
-    const npc = { id, isNPC: true, r: 25, x: Math.round(x), y: Math.round(y), vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 200, maxKi: 200, level: stats.level, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0, name: stats.name, zoneId: zone.id, aiType: stats.aiType, aggro: stats.aggro, targetId: null };
-    npcs.push(npc); return npc;
-}
-function spawnBossAt(x, y, forcedType = null) {
-    const zone = getZoneInfo(x, y); let type = forcedType;
-    if (!type) { const list = BESTIARY[zone.id]?.bosses || BESTIARY.EARTH.bosses; type = list[Math.floor(Math.random() * list.length)]; }
-    let stats = { name: type, hp: 40000 * zone.level, bp: 120000 * zone.level, color: "#f00", r: 70 };
-    if(type.includes("VEGETA")) stats.color = "#33f"; if(type.includes("FRIEZA")) stats.color = "#fff"; if(type.includes("CELL")) stats.color = "#484"; if(type.includes("BUU")) stats.color = "#fbb"; if(type.includes("BLACK")) stats.color = "#333"; if(type.includes("JIREN")) stats.color = "#f22"; if(type.includes("BROLY")) { stats.color = "#0f0"; stats.r = 90; }
-    const boss = { id: "BOSS_" + type + "_" + Date.now(), name: type, isNPC: true, isBoss: true, x: Math.round(x), y: Math.round(y), vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 20000, maxKi: 20000, level: zone.level + 20, cancelWindow: 0, lastInputTime: 0, orbitDir: 1, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0, targetId: null };
-    npcs.push(boss); return boss;
-}
-
-function checkAchievements(p) {
-    let unlocked = p.titles ? p.titles.split(',') : ["Novato"]; let changed = false;
-    if (p.level >= TITLES_DATA.WARRIOR.val && !unlocked.includes(TITLES_DATA.WARRIOR.name)) { unlocked.push(TITLES_DATA.WARRIOR.name); changed = true; }
-    if (p.bp >= TITLES_DATA.ELITE.val && !unlocked.includes(TITLES_DATA.ELITE.name)) { unlocked.push(TITLES_DATA.ELITE.name); changed = true; }
-    if (p.form === "GOD" && !unlocked.includes(TITLES_DATA.GOD.name)) { unlocked.push(TITLES_DATA.GOD.name); changed = true; }
-    if (p.pvp_kills >= TITLES_DATA.SLAYER.val && !unlocked.includes(TITLES_DATA.SLAYER.name)) { unlocked.push(TITLES_DATA.SLAYER.name); changed = true; }
-    if ((p.rebirths || 0) >= TITLES_DATA.LEGEND.val && !unlocked.includes(TITLES_DATA.LEGEND.name)) { unlocked.push(TITLES_DATA.LEGEND.name); changed = true; }
-    if (changed) { p.titles = unlocked.join(','); io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "NOVO TÍTULO DESBLOQUEADO!" }); if(pool) pool.query('UPDATE users SET titles=$1 WHERE name=$2', [p.titles, p.name]).catch(console.error); }
-}
-
-initWorld();
+function spawnMobAt(x, y, aggressive = false) { const zone = getZoneInfo(x, y); const list = BESTIARY[zone.id]?.mobs || BESTIARY.EARTH.mobs; const type = list[Math.floor(Math.random() * list.length)]; const id = "mob_" + Math.random().toString(36).substr(2, 9); let stats = { name: type, hp: 600 * zone.level, bp: 1500 * zone.level, level: zone.level, color: "#fff", aggro: aggressive ? 3000 : (1000 + (zone.level * 20)), aiType: "MELEE" }; if(zone.id === "NAMEK") stats.color = "#8f8"; if(zone.id === "DEMON") stats.color = "#f0f"; if(zone.id === "FRIEZA") stats.color = "#a0a"; if(zone.id === "FUTURE") stats.color = "#888"; if(zone.id === "VAMPA") stats.color = "#dd4"; if(zone.id === "DIVINE") stats.color = "#0ff"; const npc = { id, isNPC: true, r: 25, x: Math.round(x), y: Math.round(y), vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 200, maxKi: 200, level: stats.level, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0, name: stats.name, zoneId: zone.id, aiType: stats.aiType, aggro: stats.aggro, targetId: null }; npcs.push(npc); return npc; }
+function spawnBossAt(x, y, forcedType = null) { const zone = getZoneInfo(x, y); let type = forcedType; if (!type) { const list = BESTIARY[zone.id]?.bosses || BESTIARY.EARTH.bosses; type = list[Math.floor(Math.random() * list.length)]; } let stats = { name: type, hp: 50000 * zone.level, bp: 150000 * zone.level, color: "#f00", r: 70 }; if(type.includes("VEGETA")) stats.color = "#33f"; if(type.includes("FRIEZA")) stats.color = "#fff"; if(type.includes("CELL")) stats.color = "#484"; if(type.includes("BUU")) { stats.color = "#fbb"; stats.hp *= 1.5; } if(type.includes("JIREN")) { stats.color = "#f22"; stats.hp *= 3; } if(type.includes("BROLY")) { stats.color = "#0f0"; stats.r = 90; stats.hp *= 2; } const boss = { id: "BOSS_" + type + "_" + Date.now(), name: type, isNPC: true, isBoss: true, x: Math.round(x), y: Math.round(y), vx: 0, vy: 0, maxHp: stats.hp, hp: stats.hp, ki: 20000, maxKi: 20000, level: zone.level + 15, cancelWindow: 0, lastInputTime: 0, orbitDir: 1, bp: stats.bp, state: "IDLE", color: stats.color, lastAtk: 0, combo: 0, stun: 0, targetId: null }; npcs.push(boss); return boss; }
+function checkAchievements(p) { let unlocked = p.titles ? p.titles.split(',') : ["Novato"]; let changed = false; if (p.level >= TITLES_DATA.WARRIOR.val && !unlocked.includes(TITLES_DATA.WARRIOR.name)) { unlocked.push(TITLES_DATA.WARRIOR.name); changed = true; } if (p.bp >= TITLES_DATA.ELITE.val && !unlocked.includes(TITLES_DATA.ELITE.name)) { unlocked.push(TITLES_DATA.ELITE.name); changed = true; } if (p.form === "GOD" && !unlocked.includes(TITLES_DATA.GOD.name)) { unlocked.push(TITLES_DATA.GOD.name); changed = true; } if (p.pvp_kills >= TITLES_DATA.SLAYER.val && !unlocked.includes(TITLES_DATA.SLAYER.name)) { unlocked.push(TITLES_DATA.SLAYER.name); changed = true; } if ((p.rebirths || 0) >= TITLES_DATA.LEGEND.val && !unlocked.includes(TITLES_DATA.LEGEND.name)) { unlocked.push(TITLES_DATA.LEGEND.name); changed = true; } if (changed) { p.titles = unlocked.join(','); io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "NOVO TÍTULO DESBLOQUEADO!" }); saveAccount(p); } }
+function handleKill(killer, victim) { const planet = PLANETS.find(pl => Math.hypot(pl.x - victim.x, pl.y - victim.y) < pl.radius); if (planet && !killer.isNPC) { if (planet.owner && planet.owner !== killer.guild) { planet.stability -= 5; if (planet.stability <= 0) { planet.owner = null; planet.guild = null; planet.stability = 20; io.emit("fx", { type: "bp_limit", x: planet.x, y: planet.y, text: "PLANETA NEUTRO!" }); } } else if (!planet.owner && killer.guild) { planet.stability += 5; if (planet.stability >= 100) { planet.owner = killer.guild; planet.guild = killer.guild; io.emit("fx", { type: "bp_limit", x: planet.x, y: planet.y, text: "DOMINADO POR " + killer.guild }); } } if(pool && planet) { pool.query(`INSERT INTO planets (id, owner, guild, stability, treasury) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET owner=$2, guild=$3, stability=$4, treasury=$5`, [planet.id, planet.owner, planet.guild, planet.stability, planet.treasury]).catch(console.error); } } if(!victim.isNPC) { dropDragonBalls(victim); } if(victim.isNPC) { victim.isDead = true; if(!killer.isNPC) { checkQuest(killer, "KILL", victim); checkSaga(killer, "KILL", victim); killer.hp = Math.min(killer.maxHp, killer.hp + (killer.maxHp * 0.2)); const levelDiff = victim.level - killer.level; let xpMultiplier = 1.0; if(levelDiff < -10) xpMultiplier = 0.1; if(levelDiff > 5) xpMultiplier = 1.5; const xpGain = Math.floor(victim.level * 100 * xpMultiplier); const xpReq = killer.level * 800; killer.xp += xpGain; killer.xpToNext = xpReq; if(xpGain > 0) io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: xpGain }); if (planet && planet.owner && planet.owner !== killer.guild) { const tax = Math.floor(xpGain * (planet.taxRate / 100)); planet.treasury += tax; } if(killer.xp >= xpReq) { killer.level++; killer.xp = 0; killer.bp += 5000; clampBP(killer); const rebirthMult = 1 + ((killer.rebirths||0) * 0.2); killer.baseMaxHp += 1000 * rebirthMult; killer.baseMaxKi += 100 * rebirthMult; const stats = FORM_STATS[killer.form] || FORM_STATS["BASE"]; killer.maxHp = killer.baseMaxHp * stats.hpMult; killer.maxKi = killer.baseMaxKi * stats.kiMult; killer.hp = killer.maxHp; killer.ki = killer.maxKi; killer.xpToNext = killer.level * 800; io.emit("fx", { type: "levelup", x: killer.x, y: killer.y }); saveAccount(killer); } } setTimeout(() => { npcs = npcs.filter(n => n.id !== victim.id); spawnMobRandomly(); }, 5000); } else { victim.isSpirit = true; victim.hp = 1; victim.ki = 0; victim.state = "SPIRIT"; victim.vx = 0; victim.vy = 0; victim.x = SNAKE_WAY_START.x; victim.y = SNAKE_WAY_START.y; victim.angle = -Math.PI / 2; io.emit("fx", { type: "vanish", x: victim.x, y: victim.y }); if(!killer.isNPC) { killer.pvp_score += 10; killer.pvp_kills = (killer.pvp_kills || 0) + 1; checkAchievements(killer); io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: 50 }); saveAccount(killer); } } }
+function triggerRandomEvent() { if(eventActive) { npcs = npcs.filter(n => !eventMobIds.includes(n.id)); eventMobIds = []; eventActive = false; io.emit("fx", { type: "bp_limit", x: 0, y: 0, text: "AMEAÇA CONTIDA." }); return; } let targetPlanet = PLANETS.find(p => p.owner) || PLANETS[Math.floor(Math.random() * PLANETS.length)]; const events = [ { type: "HORDE_SAIBAMAN", msg: `INVASÃO EM ${targetPlanet.name}!`, zoneId: targetPlanet.id }, { type: "INVASION_FRIEZA", msg: `FORÇAS DE FREEZA EM ${targetPlanet.name}!`, zoneId: targetPlanet.id }, { type: "BOSS_BROLY", msg: `BROLY ESTÁ DESTRUINDO ${targetPlanet.name}!`, zoneId: targetPlanet.id }]; const ev = events[Math.floor(Math.random() * events.length)]; io.emit("fx", { type: "bp_limit", x: targetPlanet.x, y: targetPlanet.y, text: ev.msg }); eventActive = true; if (targetPlanet.owner) targetPlanet.stability = Math.max(10, targetPlanet.stability - 20); if(ev.type.includes("HORDE")) { for(let i=0; i<15; i++) { const mob = spawnMobAt(targetPlanet.x + (Math.random()-0.5)*1000, targetPlanet.y + (Math.random()-0.5)*1000, true); mob.name = "INVASOR"; mob.color = "#f00"; eventMobIds.push(mob.id); } } else if(ev.type.includes("INVASION")) { for(let i=0; i<10; i++) { const mob = spawnMobAt(targetPlanet.x + (Math.random()-0.5)*800, targetPlanet.y + (Math.random()-0.5)*800, true); mob.name = "ELITE"; mob.color = "#808"; mob.hp *= 2; eventMobIds.push(mob.id); } } else if(ev.type.includes("BOSS")) { const boss = spawnBossAt(targetPlanet.x, targetPlanet.y, "LEGENDARY_BROLY"); boss.hp *= 3; boss.bp *= 2; eventMobIds.push(boss.id); } }
 
 // ==========================================
-// SERVIDOR E SOCKETS
+// SERVER LOGIC (HTTP/SOCKETS)
 // ==========================================
 const server = http.createServer((req, res) => {
-    let filePath = "." + req.url;
-    if (filePath === "./") filePath = "./index.html";
-    
+    let filePath = "." + req.url; if (filePath === "./") filePath = "./index.html";
     const extname = path.extname(filePath);
     let contentType = "text/html";
-    switch (extname) {
-        case ".js": contentType = "text/javascript"; break;
-        case ".css": contentType = "text/css"; break;
-        case ".json": contentType = "application/json"; break;
-        case ".png": contentType = "image/png"; break;
-        case ".mp3": contentType = "audio/mpeg"; break;
-    }
-
-    fs.readFile(filePath, (error, content) => {
-        if (error) {
-            if(error.code == 'ENOENT'){
-                res.writeHead(404); res.end("Arquivo nao encontrado.");
-            } else {
-                res.writeHead(500); res.end('Erro no servidor: '+error.code);
-            }
-        } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content, 'utf-8');
-        }
-    });
+    switch (extname) { case ".js": contentType = "text/javascript"; break; case ".css": contentType = "text/css"; break; case ".json": contentType = "application/json"; break; case ".png": contentType = "image/png"; break; case ".mp3": contentType = "audio/mpeg"; break; }
+    fs.readFile(filePath, (error, content) => { if (error) { if(error.code == 'ENOENT'){ res.writeHead(404); res.end("Arquivo nao encontrado."); } else { res.writeHead(500); res.end('Erro no servidor: '+error.code); } } else { res.writeHead(200, { 'Content-Type': contentType }); res.end(content, 'utf-8'); } });
 });
 
 const io = new Server(server, { transports: ['websocket'], pingInterval: 25000, pingTimeout: 5000 });
@@ -496,26 +307,15 @@ function packStateForPlayer(pid) {
     const p = players[pid]; if (!p) return null;
     const VIEW_DIST = 2500; const filterFunc = (o) => Math.abs(o.x - p.x) < VIEW_DIST && Math.abs(o.y - p.y) < VIEW_DIST;
     
-    const packedDragonBalls = dragonBalls.map(db => {
-        if(db.holderId && players[db.holderId]) {
-            return { id: db.id, x: players[db.holderId].x, y: players[db.holderId].y, held: true };
-        }
-        return { id: db.id, x: db.x, y: db.y, held: false };
-    });
-
+    const packedDragonBalls = dragonBalls.map(db => { if(db.holderId && players[db.holderId]) { return { id: db.id, x: players[db.holderId].x, y: players[db.holderId].y, held: true }; } return { id: db.id, x: db.x, y: db.y, held: false }; });
     const packedPlayers = {};
-    for (const pid in players) { const pl = players[pid]; if (pid === p.id || filterFunc(pl)) { packedPlayers[pid] = { id: pl.id, name: pl.name, x: Math.round(pl.x), y: Math.round(pl.y), vx: Math.round(pl.vx), vy: Math.round(pl.vy), hp: pl.hp, maxHp: pl.maxHp, ki: pl.ki, maxKi: pl.maxKi, xp: pl.xp, xpToNext: pl.xpToNext, level: pl.level, bp: pl.bp, state: pl.state, form: pl.form, color: pl.color, stun: pl.stun, isSpirit: pl.isSpirit, pvpMode: pl.pvpMode, quest: pl.quest, rebirths: pl.rebirths || 0, current_title: pl.current_title, guild: pl.guild, skills: pl.skills || [], dbCount: pl.dbCount || 0 }; } }
-    
-    // IMPORTANTE: Envia a Saga específica do Player
-    const currentSagaStep = SAGA_STEPS[p.sagaStep || 0] || { title: "FIM DO JOGO", objective: "Aguarde updates!", targetZone: null };
-    
+    for (const pid in players) { const pl = players[pid]; if (pid === p.id || filterFunc(pl)) { packedPlayers[pid] = { id: pl.id, name: pl.name, x: Math.round(pl.x), y: Math.round(pl.y), vx: Math.round(pl.vx), vy: Math.round(pl.vy), hp: pl.hp, maxHp: pl.maxHp, ki: pl.ki, maxKi: pl.maxKi, xp: pl.xp, xpToNext: pl.xpToNext, level: pl.level, bp: pl.bp, state: pl.state, form: pl.form, color: pl.color, stun: pl.stun, isSpirit: pl.isSpirit, pvpMode: pl.pvpMode, quest: pl.quest, rebirths: pl.rebirths || 0, current_title: pl.current_title, guild: pl.guild, skills: pl.skills || [], dbCount: pl.dbCount || 0, angle: pl.angle }; } }
+    const currentSagaStep = SAGA_STEPS[p.sagaStep || 0] || SAGA_STEPS[SAGA_STEPS.length-1];
     const visibleNpcs = npcs.filter(filterFunc).map(n => ({...n, x: Math.round(n.x), y: Math.round(n.y)}));
     const visibleProjs = projectiles.filter(filterFunc).map(pr => ({...pr, x: Math.round(pr.x), y: Math.round(pr.y)}));
     const visibleChats = chats.filter(c => c.life > 0 && Math.abs(c.x - p.x) < VIEW_DIST && Math.abs(c.y - p.y) < VIEW_DIST);
     
-    return { 
-        players: packedPlayers, npcs: visibleNpcs, projectiles: visibleProjs, rocks: rocks.filter(filterFunc), craters, chats: visibleChats, domination: PLANETS, leaderboard: leaderboard.slice(0, 5), saga: currentSagaStep, dbs: packedDragonBalls
-    };
+    return { players: packedPlayers, npcs: visibleNpcs, projectiles: visibleProjs, rocks: rocks.filter(filterFunc), craters, chats: visibleChats, domination: PLANETS, leaderboard: leaderboard.slice(0, 5), saga: currentSagaStep, dbs: packedDragonBalls };
 }
 const localUsers = {};
 
@@ -524,36 +324,48 @@ io.on("connection", (socket) => {
         try {
             let user;
             if (pool) {
-                const res = await pool.query('SELECT * FROM users WHERE name = $1', [data.user]);
-                user = res.rows[0];
-                if (!user) {
-                    const insert = await pool.query('INSERT INTO users (name, pass, level, xp, bp, guild, titles, current_title, pvp_score, rebirths, quest_data, saga_step) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *', [data.user, data.pass, 1, 0, 500, null, 'Novato', 'Novato', 0, 0, '{}', 0]);
-                    user = insert.rows[0];
-                } else if (user.pass !== data.pass) return;
+                // TENTA DB
+                try {
+                    const res = await pool.query('SELECT * FROM users WHERE username = $1', [data.user]);
+                    user = res.rows[0];
+                    if (!user) {
+                        const insert = await pool.query('INSERT INTO users (username, name, password) VALUES ($1,$1,$2) RETURNING *', [data.user, data.pass]);
+                        user = insert.rows[0];
+                    } else if (user.password !== data.pass) return; // Senha errada
+                } catch(dbErr) {
+                     console.error("ERRO LOGIN DB, usando RAM temp:", dbErr);
+                     // Fallback imediato se query falhar
+                     user = localUsers[data.user];
+                     if (!user) { user = { username: data.user, name: data.user, password: data.pass, level: 1, xp: 0, bp: 500, guild: null, titles: 'Novato', current_title: 'Novato', pvp_score: 0, pvp_kills: 0, rebirths: 0, quest_data: '{}', saga_step: 0, skills: '[]' }; localUsers[data.user] = user; } else if (user.password !== data.pass) return;
+                }
             } else {
+                // MODO RAM
                 user = localUsers[data.user];
-                if (!user) { user = { name: data.user, pass: data.pass, level: 1, xp: 0, bp: 500, guild: null, titles: 'Novato', current_title: 'Novato', pvp_score: 0, pvp_kills: 0, rebirths: 0, quest_data: '{}', saga_step: 0 }; localUsers[data.user] = user; } else if (user.pass !== data.pass) return;
+                if (!user) { user = { username: data.user, name: data.user, password: data.pass, level: 1, xp: 0, bp: 500, guild: null, titles: 'Novato', current_title: 'Novato', pvp_score: 0, pvp_kills: 0, rebirths: 0, quest_data: '{}', saga_step: 0, skills: '[]' }; localUsers[data.user] = user; } else if (user.password !== data.pass) return;
             }
             
             const xpToNext = user.level * 800;
             const rebirthMult = 1 + (user.rebirths || 0) * 0.2; 
             const quest = user.quest_data ? (typeof user.quest_data === 'string' ? JSON.parse(user.quest_data) : user.quest_data) : {};
-            let skills = quest.skills || [];
+            const skills = user.skills ? (typeof user.skills === 'string' ? JSON.parse(user.skills) : user.skills) : [];
 
             players[socket.id] = {
-                ...user, id: socket.id, r: 20, x: 0, y: 0, vx: 0, vy: 0, angle: 0,
+                ...user, id: socket.id, r: 20, 
+                x: user.x || 0, y: user.y || 0, vx: 0, vy: 0, angle: 0,
                 baseMaxHp: (1000 + user.level * 200) * rebirthMult, baseMaxKi: (100 + user.level * 10) * rebirthMult,
-                hp: (1000 + user.level * 200) * rebirthMult, maxHp: (1000 + user.level * 200) * rebirthMult,
-                ki: 100, maxKi: (100 + user.level * 10) * rebirthMult, form: "BASE", xpToNext,
+                hp: user.hp > 0 ? user.hp : (1000 + user.level * 200) * rebirthMult, 
+                maxHp: (1000 + user.level * 200) * rebirthMult,
+                ki: user.ki > 0 ? user.ki : (100 + user.level * 10) * rebirthMult, 
+                maxKi: (100 + user.level * 10) * rebirthMult, 
+                form: user.form || "BASE", xpToNext,
                 state: "IDLE", lastHit: 0, stunImmune: 0, combo: 0, comboTimer: 0, attackLock: 0, counterWindow: 0, lastAtk: 0,
                 isDead: false, isSpirit: false, stun: 0, color: "#ff9900", chargeStart: 0, pvpMode: false, lastTransform: 0, bpCapped: false,
                 reviveTimer: 0, linkId: null, quest: quest || {}, rebirths: user.rebirths || 0, sagaStep: user.saga_step || 0,
                 skills: skills, dbCount: 0, isTutorialDialogActive: false
             };
             
-            // INICIALIZA A A.R.I.S PARA O JOGADOR
             arisInstances[socket.id] = new ArisAI(players[socket.id]);
-            socket.emit("aris_msg", { text: `A.R.I.S: Sistema Online. Bem-vindo, Guerreiro ${data.user}.`, type: "INFO" });
+            socket.emit("aris_msg", { text: `A.R.I.S: Conectado. Assinatura: ${data.user}. Carregando Missão...`, type: "INFO" });
             
             if(!players[socket.id].quest.type) assignQuest(players[socket.id]);
             socket.emit("auth_success", players[socket.id]);
@@ -561,21 +373,10 @@ io.on("connection", (socket) => {
         } catch (err) { console.error("Erro no Login:", err); }
     });
 
-    socket.on("toggle_pvp", () => { 
-        const p = players[socket.id]; 
-        if (!p || p.isDead || p.isSpirit) return;
-        if (p.dbCount > 0) return; 
-        p.pvpMode = !p.pvpMode; 
-        socket.emit("pvp_status", p.pvpMode); 
-    });
-    
-    socket.on("tutorial_dialog_state", (isOpen) => {
-         const p = players[socket.id];
-         if(p) p.isTutorialDialogActive = isOpen;
-    });
-
-    socket.on("set_title", (title) => { const p = players[socket.id]; if(p && p.titles.includes(title)) { p.current_title = title; if(pool) pool.query('UPDATE users SET current_title=$1 WHERE name=$2', [title, p.name]).catch(console.error); } });
-    socket.on("create_guild", (guildName) => { const p = players[socket.id]; if(p && !p.guild && guildName.length < 15) { p.guild = guildName; if(pool) pool.query('UPDATE users SET guild=$1 WHERE name=$2', [guildName, p.name]).catch(console.error); io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "GUILDA CRIADA: " + guildName }); checkSaga(p, "DOMINATION", {owner: guildName}); } });
+    socket.on("toggle_pvp", () => { const p = players[socket.id]; if (!p || p.isDead || p.isSpirit) return; if (p.dbCount > 0) return; p.pvpMode = !p.pvpMode; socket.emit("pvp_status", p.pvpMode); });
+    socket.on("tutorial_dialog_state", (isOpen) => { const p = players[socket.id]; if(p) p.isTutorialDialogActive = isOpen; });
+    socket.on("set_title", (title) => { const p = players[socket.id]; if(p && p.titles.includes(title)) { p.current_title = title; saveAccount(p); } });
+    socket.on("create_guild", (guildName) => { const p = players[socket.id]; if(p && !p.guild && guildName.length < 15) { p.guild = guildName; saveAccount(p); io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "GUILDA CRIADA: " + guildName }); checkSaga(p, "DOMINATION", {owner: guildName}); } });
 
     socket.on("rebirth", () => {
         const p = players[socket.id];
@@ -587,12 +388,11 @@ io.on("connection", (socket) => {
         io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: `${p.name} RENASCEU! (${p.rebirths}x)` });
         io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y });
         checkSaga(p, "REBIRTH", null);
-        if(pool) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3, rebirths=$4 WHERE name=$5', [p.level, p.xp, p.bp, p.rebirths, p.name]).catch(console.error);
+        saveAccount(p);
         checkAchievements(p);
     });
 
     socket.on("chat", (msg) => { const p = players[socket.id]; if (!p || msg.length > 50) return; if (msg.startsWith("/guild ")) { const name = msg.substring(7).trim(); if (name.length >= 3) socket.emit("create_guild", name); return; } if (msg.startsWith("/title ")) { const title = msg.substring(7).trim(); socket.emit("set_title", title); return; } if (p.lastMsg && Date.now() - p.lastMsg < 1000) return; p.lastMsg = Date.now(); chats.push({ x: p.x, y: p.y, text: msg, owner: p.name, life: 150 }); });
-    socket.on("emote", (type) => { const p = players[socket.id]; if(!p) return; io.emit("fx", { type: "emote", x: p.x, y: p.y, icon: type }); });
 
     socket.on("input", (input) => {
         const p = players[socket.id]; if(!p || p.stun > 0 || p.isDead) return; 
@@ -609,7 +409,10 @@ io.on("connection", (socket) => {
             if(!["ATTACKING", "BLOCKING", "CHARGING"].includes(p.state)) p.state = "MOVING"; 
         }
 
-        if (p.attackLock <= 0 && input.angle !== undefined) p.angle = input.angle;
+        // --- CORREÇÃO DO BLOQUEIO: PERMITE GIRAR EM 360 ---
+        if (p.attackLock <= 0 && input.angle !== undefined) {
+             p.angle = input.angle;
+        }
 
         if(input.block) { 
             if(p.state !== "BLOCKING") { p.blockStart = now; p.state = "BLOCKING"; }
@@ -683,10 +486,12 @@ io.on("connection", (socket) => {
                 if (target.isNPC) target.targetId = p.id; 
                 let dmg = baseDmg; if (!target.isNPC) dmg *= 0.5;
 
-                if (target.state === "BLOCKING" && !isFinisher) {
-                    dmg *= 0.25; target.ki -= 12; target.counterWindow = 12; io.emit("fx", { type: "block_hit", x: target.x, y: target.y });
+                const isBlocked = isAttackBlocked(p, target);
+
+                if (isBlocked && !isFinisher) {
+                    dmg *= 0.1; target.ki -= 12; target.counterWindow = 12; io.emit("fx", { type: "block_hit", x: target.x, y: target.y });
                 } else {
-                    if (target.state === "BLOCKING" && isFinisher) { target.state = "IDLE"; target.stun = 30; io.emit("fx", { type: "guard_break", x: target.x, y: target.y }); }
+                    if (isBlocked && isFinisher) { target.state = "IDLE"; target.stun = 30; io.emit("fx", { type: "guard_break", x: target.x, y: target.y }); }
                     target.hp -= dmg; target.stun = step.stun; target.vx = Math.cos(p.angle) * step.targetPush; target.vy = Math.sin(p.angle) * step.targetPush;
                     io.emit("fx", { type: isFinisher ? "finisher" : "hit", x: target.x, y: target.y, dmg });
                 }
@@ -709,18 +514,14 @@ io.on("connection", (socket) => {
 
         if (p.state === "CHARGING") {
             const unlocked = p.skills || [];
-            
             if (unlocked.includes("GENKI_DAMA") && p.ki > 300) {
-                 p.ki = 0; 
-                 p.state = "ATTACKING"; p.attackLock = 60;
+                 p.ki = 0; p.state = "ATTACKING"; p.attackLock = 60;
                  projectiles.push({ id: Math.random(), owner: p.id, x: p.x, y: p.y - 100, vx: Math.cos(p.angle) * 8, vy: Math.sin(p.angle) * 8, dmg: (500 + p.level * 50) * formStats.dmg, size: 250, isSuper: true, life: 300, color: "#00aaff", pvp: p.pvpMode });
                  io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "GENKI DAMA!" });
                  return;
             }
-
             if (unlocked.includes("KAMEHAMEHA") && p.ki > 80) {
-                 p.ki -= 80;
-                 p.state = "ATTACKING"; p.attackLock = 30;
+                 p.ki -= 80; p.state = "ATTACKING"; p.attackLock = 30;
                  projectiles.push({ id: Math.random(), owner: p.id, x: p.x, y: p.y, vx: Math.cos(p.angle) * 55, vy: Math.sin(p.angle) * 55, dmg: (150 + p.level * 15) * formStats.dmg, size: 60, isSuper: true, life: 120, color: "#3366ff", pvp: p.pvpMode });
                  io.emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "KAMEHAMEHA!" });
                  return;
@@ -746,69 +547,36 @@ io.on("connection", (socket) => {
         p.maxHp = Math.floor(p.baseMaxHp * stats.hpMult); p.maxKi = Math.floor(p.baseMaxKi * stats.kiMult); p.hp = Math.min(p.maxHp, p.hp + (p.maxHp * 0.1));
         io.emit("fx", { type: "transform", x: p.x, y: p.y, form: newFormName });
         [...Object.values(players), ...npcs].forEach(t => { if (t.id === p.id || t.isDead || t.isSpirit) return; const dist = Math.hypot(t.x - p.x, t.y - p.y); if (dist < 300) { const ang = Math.atan2(t.y - p.y, t.x - p.x); t.vx = Math.cos(ang) * 40; t.vy = Math.sin(ang) * 40; t.stun = 15; } });
-        checkAchievements(p); clampBP(p); checkSaga(p, "FORM", null);
+        checkAchievements(p); clampBP(p); checkSaga(p, "FORM", null); saveAccount(p);
     });
     socket.on("set_tax", (val) => { const p = players[socket.id]; if (!p || !p.guild) return; const planet = PLANETS.find(pl => Math.hypot(pl.x - p.x, pl.y - p.y) < pl.radius); if (planet && planet.owner === p.guild && val >= 0 && val <= 20) { planet.taxRate = val; if(pool) pool.query('INSERT INTO planets (id, tax_rate) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET tax_rate = $2', [planet.id, val]).catch(console.error); io.emit("fx", { type: "bp_limit", x: planet.x, y: planet.y, text: `IMPOSTO: ${val}%` }); } });
-    socket.on("disconnect", () => { delete players[socket.id]; delete arisInstances[socket.id]; });
+    
+    // ==========================================
+    // CRÍTICO: SALVAR AO DESCONECTAR
+    // ==========================================
+    socket.on("disconnect", () => { 
+        if(players[socket.id]) {
+            saveAccount(players[socket.id]); // Salva antes de apagar
+            console.log(`>> Jogador desconectado e salvo: ${players[socket.id].name}`);
+        }
+        delete players[socket.id]; 
+        delete arisInstances[socket.id]; 
+    });
 });
 
-function handleKill(killer, victim) {
-    const planet = PLANETS.find(pl => Math.hypot(pl.x - victim.x, pl.y - victim.y) < pl.radius);
-    if (planet && !killer.isNPC) {
-        if (planet.owner && planet.owner !== killer.guild) { planet.stability -= 5; if (planet.stability <= 0) { planet.owner = null; planet.guild = null; planet.stability = 20; io.emit("fx", { type: "bp_limit", x: planet.x, y: planet.y, text: "PLANETA NEUTRO!" }); } } 
-        else if (!planet.owner && killer.guild) { planet.stability += 5; if (planet.stability >= 100) { planet.owner = killer.guild; planet.guild = killer.guild; io.emit("fx", { type: "bp_limit", x: planet.x, y: planet.y, text: "DOMINADO POR " + killer.guild }); } }
-        if(pool && planet) { pool.query(`INSERT INTO planets (id, owner, guild, stability, treasury) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET owner=$2, guild=$3, stability=$4, treasury=$5`, [planet.id, planet.owner, planet.guild, planet.stability, planet.treasury]).catch(console.error); }
-    }
-    
-    if(!victim.isNPC) {
-        dropDragonBalls(victim);
-    }
+initWorld();
+initDB(); // INICIA O BANCO
 
-    if(victim.isNPC) {
-        victim.isDead = true;
-        if(!killer.isNPC) {
-            checkQuest(killer, "KILL", victim); 
-            checkSaga(killer, "KILL", victim); 
-            killer.hp = Math.min(killer.maxHp, killer.hp + (killer.maxHp * 0.2)); 
-            const levelDiff = victim.level - killer.level;
-            let xpMultiplier = 1.0;
-            if(levelDiff < -10) xpMultiplier = 0.1;
-            if(levelDiff > 5) xpMultiplier = 1.5;
-            const xpGain = Math.floor(victim.level * 100 * xpMultiplier);
-            const xpReq = killer.level * 800; 
-            killer.xp += xpGain; 
-            killer.xpToNext = xpReq;
-            if(xpGain > 0) io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: xpGain });
-            if (planet && planet.owner && planet.owner !== killer.guild) { const tax = Math.floor(xpGain * (planet.taxRate / 100)); planet.treasury += tax; }
-            
-            if(killer.xp >= xpReq) { 
-                killer.level++; killer.xp = 0; killer.bp += 5000; clampBP(killer); 
-                const rebirthMult = 1 + ((killer.rebirths||0) * 0.2);
-                killer.baseMaxHp += 1000 * rebirthMult; killer.baseMaxKi += 100 * rebirthMult; 
-                const stats = FORM_STATS[killer.form] || FORM_STATS["BASE"]; killer.maxHp = killer.baseMaxHp * stats.hpMult; killer.maxKi = killer.baseMaxKi * stats.kiMult; killer.hp = killer.maxHp; killer.ki = killer.maxKi; killer.xpToNext = killer.level * 800; 
-                io.emit("fx", { type: "levelup", x: killer.x, y: killer.y }); 
-                if(pool) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [killer.level, killer.xp, killer.bp, killer.name]).catch(e => console.error(e)); 
-            }
-        }
-        setTimeout(() => { npcs = npcs.filter(n => n.id !== victim.id); spawnMobRandomly(); }, 5000);
-    } else {
-        victim.isSpirit = true; victim.hp = 1; victim.ki = 0; victim.state = "SPIRIT"; victim.vx = 0; victim.vy = 0; victim.x = SNAKE_WAY_START.x; victim.y = SNAKE_WAY_START.y; victim.angle = -Math.PI / 2;
-        io.emit("fx", { type: "vanish", x: victim.x, y: victim.y });
-        if(!killer.isNPC) { killer.pvp_score += 10; killer.pvp_kills = (killer.pvp_kills || 0) + 1; checkAchievements(killer); io.emit("fx", { type: "xp_gain", x: killer.x, y: killer.y, amount: 50 }); if(pool) pool.query('UPDATE users SET pvp_score=$1 WHERE name=$2', [killer.pvp_score, killer.name]).catch(console.error); }
-    }
-}
+// ==========================================
+// LOOP DO JOGO E AUTO-SAVE
+// ==========================================
 
-function triggerRandomEvent() {
-    if(eventActive) { npcs = npcs.filter(n => !eventMobIds.includes(n.id)); eventMobIds = []; eventActive = false; io.emit("fx", { type: "bp_limit", x: 0, y: 0, text: "AMEAÇA CONTIDA." }); return; }
-    let targetPlanet = PLANETS.find(p => p.owner) || PLANETS[Math.floor(Math.random() * PLANETS.length)];
-    const events = [ { type: "HORDE_SAIBAMAN", msg: `INVASÃO EM ${targetPlanet.name}!`, zoneId: targetPlanet.id }, { type: "INVASION_FRIEZA", msg: `FORÇAS DE FREEZA EM ${targetPlanet.name}!`, zoneId: targetPlanet.id }, { type: "BOSS_BROLY", msg: `BROLY ESTÁ DESTRUINDO ${targetPlanet.name}!`, zoneId: targetPlanet.id }];
-    const ev = events[Math.floor(Math.random() * events.length)]; 
-    io.emit("fx", { type: "bp_limit", x: targetPlanet.x, y: targetPlanet.y, text: ev.msg }); eventActive = true;
-    if (targetPlanet.owner) targetPlanet.stability = Math.max(10, targetPlanet.stability - 20);
-    if(ev.type.includes("HORDE")) { for(let i=0; i<15; i++) { const mob = spawnMobAt(targetPlanet.x + (Math.random()-0.5)*1000, targetPlanet.y + (Math.random()-0.5)*1000, true); mob.name = "INVASOR"; mob.color = "#f00"; eventMobIds.push(mob.id); } } 
-    else if(ev.type.includes("INVASION")) { for(let i=0; i<10; i++) { const mob = spawnMobAt(targetPlanet.x + (Math.random()-0.5)*800, targetPlanet.y + (Math.random()-0.5)*800, true); mob.name = "ELITE"; mob.color = "#808"; mob.hp *= 2; eventMobIds.push(mob.id); } } 
-    else if(ev.type.includes("BOSS")) { const boss = spawnBossAt(targetPlanet.x, targetPlanet.y, "LEGENDARY_BROLY"); boss.hp *= 3; boss.bp *= 2; eventMobIds.push(boss.id); }
-}
+// Auto-Save a cada 60 segundos
+setInterval(() => {
+    Object.values(players).forEach(p => {
+        saveAccount(p);
+    });
+}, 60000);
 
 setInterval(() => {
     craters = craters.filter(c => { c.life--; return c.life > 0; });
@@ -863,7 +631,7 @@ setInterval(() => {
                     p.skills.push("KAMEHAMEHA");
                     io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "APRENDEU: KAMEHAMEHA!" });
                     io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y });
-                    if(pool) pool.query('UPDATE users SET quest_data=$1 WHERE name=$2', [JSON.stringify({skills: p.skills}), p.name]).catch(console.error);
+                    saveAccount(p);
                 }
             }
             if (!p.skills.includes("GENKI_DAMA")) {
@@ -872,6 +640,7 @@ setInterval(() => {
                      p.skills.push("GENKI_DAMA");
                      io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "APRENDEU: GENKI DAMA!" });
                      io.to(p.id).emit("fx", { type: "levelup", x: p.x, y: p.y });
+                     saveAccount(p);
                 }
             }
 
@@ -885,7 +654,7 @@ setInterval(() => {
                     p.baseMaxHp += 1000 * rebirthMult; p.baseMaxKi += 100 * rebirthMult; 
                     const stats = FORM_STATS[p.form] || FORM_STATS["BASE"]; p.maxHp = p.baseMaxHp * stats.hpMult; p.maxKi = p.baseMaxKi * stats.kiMult; p.hp = p.maxHp; p.ki = p.maxKi; p.xpToNext = p.level * 800; 
                     io.emit("fx", { type: "levelup", x: p.x, y: p.y }); 
-                    if(pool) pool.query('UPDATE users SET level=$1, xp=$2, bp=$3 WHERE name=$4', [p.level, p.xp, p.bp, p.name]).catch(e => console.error(e)); 
+                    saveAccount(p);
                 } 
             } 
             else if(p.ki < p.maxKi && p.state === "IDLE") { p.ki += 0.5; }
@@ -894,7 +663,7 @@ setInterval(() => {
             if (distToKingKai < 1500 || distToDende < 1500) { p.hp = Math.min(p.maxHp, p.hp + (p.maxHp * 0.05)); p.ki = Math.min(p.maxKi, p.ki + (p.maxKi * 0.05)); }
         }
         if (p.bp >= getMaxBP(p)) { if (!p.bpCapped) { p.bpCapped = true; io.to(p.id).emit("fx", { type: "bp_limit", x: p.x, y: p.y, text: "TREINO MÁXIMO (TRANSFORME-SE)" }); } } else { p.bpCapped = false; }
-        if (p.isSpirit) { const distToKai = Math.hypot(p.x - KAIOH_PLANET.x, p.y - KAIOH_PLANET.y); if (distToKai < 600) { p.isSpirit = false; p.hp = p.maxHp; p.ki = p.maxKi; p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; io.emit("fx", { type: "transform", x: 0, y: 0, form: "BASE" }); io.emit("fx", { type: "levelup", x: 0, y: 0 }); } }
+        if (p.isSpirit) { const distToKai = Math.hypot(p.x - KAIOH_PLANET.x, p.y - KAIOH_PLANET.y); if (distToKai < 600) { p.isSpirit = false; p.hp = p.maxHp; p.ki = p.maxKi; p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; io.emit("fx", { type: "transform", x: 0, y: 0, form: "BASE" }); io.emit("fx", { type: "levelup", x: 0, y: 0 }); saveAccount(p); } }
     });
 
     npcs.forEach(n => {
@@ -929,11 +698,17 @@ setInterval(() => {
                 }
             }
             n.lastAtk = Date.now(); n.state = "ATTACKING"; let dmg = (n.level * 10) + (n.isBoss ? 100 : 30);
-            if (target.state === "BLOCKING") { dmg *= 0.3; target.ki -= 14; target.counterWindow = 14; }
-            target.hp -= dmg; if (target.hp < 0) target.hp = 0; target.lastHit = Date.now();
-            if (!target.stunImmune || Date.now() > target.stunImmune) { target.stun = n.isBoss ? 10 : 4; target.stunImmune = Date.now() + 700; }
-            const push = n.isBoss ? (n.phase === 3 ? 45 : 25) : 15; target.vx = Math.cos(ang) * push; target.vy = Math.sin(ang) * push; if (n.isBoss) n.pushStreak++;
-            io.emit("fx", { type: n.isBoss ? "heavy" : "hit", x: target.x, y: target.y, dmg: Math.floor(dmg) });
+            
+            // VERIFICA SE O PLAYER BLOQUEOU O NPC
+            const blocked = isAttackBlocked(n, target);
+            if (blocked) { dmg *= 0.3; target.ki -= 14; target.counterWindow = 14; io.emit("fx", { type: "block_hit", x: target.x, y: target.y }); }
+            else {
+                 target.hp -= dmg; if (target.hp < 0) target.hp = 0; target.lastHit = Date.now();
+                 if (!target.stunImmune || Date.now() > target.stunImmune) { target.stun = n.isBoss ? 10 : 4; target.stunImmune = Date.now() + 700; }
+                 const push = n.isBoss ? (n.phase === 3 ? 45 : 25) : 15; target.vx = Math.cos(ang) * push; target.vy = Math.sin(ang) * push; if (n.isBoss) n.pushStreak++;
+                 io.emit("fx", { type: n.isBoss ? "heavy" : "hit", x: target.x, y: target.y, dmg: Math.floor(dmg) });
+            }
+            
             n.vx *= 0.25; n.vy *= 0.25; if (target.hp <= 0) handleKill(n, target);
         }
         const speed = Math.hypot(n.vx, n.vy); if (speed > MAX_SPEED) { const s = MAX_SPEED / speed; n.vx *= s; n.vy *= s; }
@@ -963,38 +738,27 @@ setInterval(() => {
         }
         if (hit || pr.life <= 0) projectiles.splice(i, 1);
     });
-	});
-async function startServer() {
-    await initDB();
-    console.log(">> DB pronto, iniciando loop de mundo.");
-}
 
-startServer();
-
-setInterval(() => {
-    craters = craters.filter(c => { c.life--; return c.life > 0; });
-    chats = chats.filter(c => { c.life--; return c.life > 0; });
-
-    leaderboard = Object.values(players)
-        .sort((a,b) => b.pvp_score - a.pvp_score)
-        .slice(0,5)
-        .map(p => ({ name: p.name, score: p.pvp_score, guild: p.guild }));
-
-    globalEventTimer++;
-    if (globalEventTimer > 6000) {
-        triggerRandomEvent();
-        globalEventTimer = 0;
-    }
-
-    // TODO O RESTO DO LOOP COMPLETO
-    // players, npcs, projectiles, rocks, colisões, etc
-    // NÃO DUPLICAR EM OUTRO LUGAR
-
+    Object.keys(players).forEach(id => { const st = packStateForPlayer(id); if(st) io.to(id).emit("state", st); });
 }, TICK);
 
-server.listen(3000, () =>
-    console.log(">> UNIVERSE Z DEFINITIVE EDITION ONLINE: http://localhost:3000")
-);
+server.listen(3000, () => console.log(">> UNIVERSE Z EVOLUTION EDITION ONLINE: http://localhost:3000"));
 
+// =========================
+// CORREÇÃO: LÓGICA DE BLOQUEIO
+// =========================
+function isAttackBlocked(attacker, defender){
+    if(defender.state !== "BLOCKING") return false;
 
+    // Angulo do atacante em relação ao defensor
+    const angleToAttacker = Math.atan2(attacker.y - defender.y, attacker.x - defender.x);
+    
+    // Diferença entre onde o defensor está olhando (block) e onde o atacante está
+    let diff = Math.abs(angleToAttacker - defender.angle);
+    
+    // Normaliza para PI
+    if(diff > Math.PI) diff = Math.PI*2 - diff;
 
+    // Se a diferença for menor que ~60 graus (1.0 rad), bloqueia com sucesso
+    return diff < 1.0; 
+}
