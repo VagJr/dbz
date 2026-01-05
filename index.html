@@ -83,17 +83,122 @@
         .saga-hint { font-size: 12px; color: #aaa; font-style: italic; margin-top: 2px; }
 
         /* PAINEL LUMIA (MEIO DA TELA, LEVEMENTE ACIMA) */
-        #hud-lumia {
-            position: absolute;
-            top: 35%; left: 50%; transform: translate(-50%, -50%);
-            width: auto; max-width: 80%; min-width: 300px;
-            background: rgba(0, 10, 0, 0.85);
-            border: 1px solid #00ff00; border-radius: 4px 12px 4px 12px;
-            padding: 15px; text-align: center;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
-            display: none; opacity: 0; transition: opacity 0.5s;
-            pointer-events: none;
-        }
+        /* ===============================
+   LUMIA SYSTEM MESSAGE (FINA)
+   =============================== */
+
+/* ===============================
+   LUMIA SYSTEM MESSAGE (FINA)
+   =============================== */
+
+/* ===============================
+   LUMIA SYSTEM MESSAGE (FINA)
+   =============================== */
+
+#hud-lumia {
+    position: absolute;
+    top: 170px; /* ⬅️ MAIS ABAIXO — zona segura no PC */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70%;
+    max-width: 640px;
+    height: 28px;
+
+    background: linear-gradient(
+        90deg,
+        rgba(0,0,0,0) 0%,
+        rgba(0,40,60,0.85) 15%,
+        rgba(0,40,60,0.85) 85%,
+        rgba(0,0,0,0) 100%
+    );
+
+    border-top: 1px solid #00ffff;
+    border-bottom: 1px solid #00ffff;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 13px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 6px rgba(0,255,255,0.6);
+
+    pointer-events: none;
+    z-index: 400;
+}
+
+#hud-lumia.active {
+    display: flex;
+}
+
+/* -------- MOBILE PORTRAIT -------- */
+@media (orientation: portrait) {
+    #hud-lumia {
+        top: 95px;   /* mantém perfeito no mobile */
+        width: 92%;
+        font-size: 12px;
+        height: 26px;
+    }
+}
+
+
+/* ===============================
+   XP BAR
+   =============================== */
+
+#xp-bar {
+    position: absolute;
+    top: 42px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    max-width: 500px;
+    height: 8px;
+
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #00ff00;
+    box-shadow: 0 0 8px rgba(0,255,0,0.4);
+
+    overflow: hidden;
+    z-index: 350;
+}
+
+#xp-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(
+        90deg,
+        #00ff66,
+        #66ff99
+    );
+    transition: width 0.3s ease;
+}
+
+/* MOBILE PORTRAIT */
+@media (orientation: portrait) {
+    #xp-bar {
+        top: 70px;
+        width: 90%;
+        height: 7px;
+    }
+}
+
+
+#hud-lumia.active {
+    display: flex;
+}
+
+/* -------- MOBILE PORTRAIT -------- */
+@media (orientation: portrait) {
+    #hud-lumia {
+        top: 95px;              /* abaixo da barra de HP */
+        width: 92%;
+        font-size: 12px;
+        height: 26px;
+    }
+}
+
         #hud-lumia.active { display: block; opacity: 1; }
         .lumia-icon { font-size: 20px; color: #0f0; margin-bottom: 5px; display: block; }
         .lumia-text { font-size: 14px; color: #fff; line-height: 1.4; }
@@ -182,6 +287,12 @@
             <div class="saga-title" id="saga-title">Carregando...</div>
             <div class="saga-hint" id="saga-hint">Aguarde...</div>
         </div>
+		
+		<!-- XP BAR -->
+<div id="xp-bar">
+    <div id="xp-fill"></div>
+</div>
+
 
         <div id="hud-lumia">
             <span class="lumia-icon">⚡ SISTEMA LUMIA</span>

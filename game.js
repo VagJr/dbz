@@ -155,15 +155,52 @@ window.onload = function() {
         if(uiLayer) uiLayer.style.display = "block"; 
         if (isMobile) { document.getElementById("mobile-ui").style.display = "block"; initMobileControls(); } 
     });
+	
+	socket.on("aris_msg", (data) => {
+    const hud = document.getElementById("hud-lumia");
+    const textEl = hud.querySelector(".lumia-text");
+    if (!hud || !textEl) return;
+
+    textEl.innerText = data.text.replace("LUMIA:", "").trim();
+
+    hud.classList.add("active");
+
+    clearTimeout(hud._timer);
+    hud._timer = setTimeout(() => {
+        hud.classList.remove("active");
+    }, 5000);
+});
+
 
     socket.on("state", (data) => { 
-        if(!myId) return; 
-        players = data.players; npcs = data.npcs; projectiles = data.projectiles; 
-        rocks = data.rocks; craters = data.craters || []; chats = data.chats || []; 
-        dominationZones = data.domination || []; leaderboard = data.leaderboard || []; 
-        currentSaga = data.saga || null;
-        dragonBalls = data.dbs || [];
-    });
+    if (!myId) return; 
+
+    players = data.players; 
+    npcs = data.npcs; 
+    projectiles = data.projectiles; 
+    rocks = data.rocks; 
+    craters = data.craters || []; 
+    chats = data.chats || []; 
+    dominationZones = data.domination || []; 
+    leaderboard = data.leaderboard || []; 
+    currentSaga = data.saga || null;
+    dragonBalls = data.dbs || [];
+
+    // ===============================
+    // XP BAR UPDATE (CLIENT SIDE)
+    // ===============================
+    const me = players[myId];
+    if (me) {
+        const xpFill = document.getElementById("xp-fill");
+        if (xpFill) {
+            // Mantém coerência com o server (level * 800)
+            const xpForNext = me.level * 800;
+            const percent = Math.min(100, (me.xp / xpForNext) * 100);
+            xpFill.style.width = percent + "%";
+        }
+    }
+});
+
 
     // OBS: Mensagens da LUMIA e SAGA agora são tratadas apenas pelo index.html
     // para evitar duplicação no Canvas.
@@ -231,6 +268,15 @@ window.onload = function() {
         textInput.style.display = "block"; textInput.placeholder = "Digite... (Enter para enviar)"; textInput.focus();
         Object.keys(keys).forEach(k => keys[k] = false);
     }
+function updateXPBar(p) {
+    const bar = document.getElementById("xp-fill");
+    if (!bar || !p) return;
+
+    const xpForNext = Math.floor(p.level * 10000); // mantém balance atual
+    const percent = Math.min(100, (p.xp / xpForNext) * 100);
+
+    bar.style.width = percent + "%";
+}
 
     function bindBtn(id, onPress, onRelease) { 
         const el = document.getElementById(id); if (!el) return; 

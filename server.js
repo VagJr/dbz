@@ -752,13 +752,21 @@ setInterval(() => {
         if (p.comboTimer <= 0) p.comboTargetId = null;
 
         // FÍSICA E STATUS (60Hz Tuned)
-        if(p.stun > 0) { 
-            p.stun--; p.vx *= 0.8; p.vy *= 0.8; // Fricção alta se estunado
-            n.state = "STUNNED";
-        } else {
-            if (p.state === "MOVING") { p.vx *= 0.96; p.vy *= 0.96; } 
-            else { p.vx *= 0.88; p.vy *= 0.88; } // Para mais rápido quando solta o dedo
-        }
+if (p.stun > 0) { 
+    p.stun--; 
+    p.vx *= 0.8; 
+    p.vy *= 0.8; // Fricção alta se estunado
+    p.state = "STUNNED"; // ✅ FIX
+} else {
+    if (p.state === "MOVING") { 
+        p.vx *= 0.96; 
+        p.vy *= 0.96; 
+    } else { 
+        p.vx *= 0.88; 
+        p.vy *= 0.88; 
+    }
+}
+
 
         if(p.attackLock > 0) p.attackLock--; 
         if(p.comboTimer > 0) p.comboTimer--; 
