@@ -88,7 +88,7 @@ class Limiter {
     return ++e.n <= max;
   }
 }
-function headers(req, res, next) {
+function headers(req, res, next, cfg) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "same-origin");
   res.setHeader("X-Frame-Options", "DENY");
@@ -96,9 +96,23 @@ function headers(req, res, next) {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), payment=()",
   );
+  const socketOrigins = (cfg?.origins || []).flatMap((origin) => {
+    try {
+      const url = new URL(origin);
+      return [`${url.protocol === "https:" ? "wss:" : "ws:"}//${url.host}`];
+    } catch {
+      return [];
+    }
+  });
+  if (!cfg?.production)
+    socketOrigins.push(
+      "ws://localhost:*",
+      "ws://127.0.0.1:*",
+      "ws://[::1]:*",
+    );
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+    `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${[...new Set(socketOrigins)].join(" ")}; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`,
   );
   next();
 }

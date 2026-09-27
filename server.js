@@ -55,7 +55,7 @@ async function start(options = {}) {
     });
   engine.worldMemory = store.worldMemory;
   app.disable("x-powered-by");
-  app.use(Security.headers);
+  app.use((req, res, next) => Security.headers(req, res, next, cfg));
   app.use((req, res, next) => {
     if (cfg.production)
       res.setHeader("Strict-Transport-Security", "max-age=31536000");

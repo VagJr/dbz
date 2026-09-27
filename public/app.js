@@ -1,7 +1,11 @@
 "use strict";
 (() => {
   const $ = (id) => document.getElementById(id),
-    socket = io({ autoConnect: true, reconnection: true }),
+    socket = io({
+      autoConnect: true,
+      reconnection: true,
+      transports: ["websocket"],
+    }),
     renderer = new Art.Renderer($("world"));
   window.UZSandboxUI?.connect(socket);
   window.UZBetaUI?.connect(socket,type=>openPanel(type));
