@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UNIVERSE Z: DESTROY THE GALAXY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Bangers&family=Russo+One&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+
+    <style>
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #000; overflow: hidden; 
+            font-family: 'Orbitron', sans-serif; 
+            color: #fff; user-select: none; touch-action: none;
+        }
+
+        /* CAMADAS */
+        #bg-animation { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        canvas#gameCanvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* TELA DE LOGIN */
+        #login-screen { 
+            position: fixed; width: 100%; height: 100%; 
+            z-index: 2000; display: flex; align-items: center; 
+            justify-content: center; flex-direction: column;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
+        }
+
+        .logo-container { text-align: center; margin-bottom: 30px; animation: floatLogo 3s ease-in-out infinite; }
+        .logo-main {
+            font-family: 'Russo One', sans-serif; font-size: 60px; color: #ffcc00;
+            background: linear-gradient(to bottom, #ffee00 0%, #ffaa00 50%, #ff6600 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255, 200, 0, 0.6));
+            transform: skewX(-10deg); display: inline-block;
+        }
+        .logo-z {
+            font-family: 'Russo One', sans-serif; font-size: 100px; color: #f00;
+            position: absolute; top: -20px; right: -60px;
+            background: linear-gradient(to bottom, #ff3333 0%, #cc0000 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            transform: skewX(-15deg) rotate(-5deg); z-index: 10;
+        }
+        .logo-sub { font-family: 'Bangers', cursive; font-size: 32px; color: #fff; text-shadow: 0 0 10px #00ccff; margin-top: -10px; letter-spacing: 4px; }
+        @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .login-box { 
+            background: rgba(10, 10, 20, 0.9); border: 2px solid #00aaff; 
+            box-shadow: 0 0 30px rgba(0, 170, 255, 0.4); padding: 40px; 
+            border-radius: 12px; text-align: center; width: 90%; max-width: 380px; position: relative;
+        }
+        input { 
+            width: 100%; padding: 15px; margin: 10px 0; background: #fff; 
+            border: 3px solid #555; border-radius: 4px; font-family: 'Orbitron', sans-serif; 
+            font-weight: bold; text-align: center; box-sizing: border-box; font-size: 18px;
+        }
+        #btn-login { 
+            width: 100%; padding: 15px; margin-top: 15px;
+            background: linear-gradient(to bottom, #0088ff, #0044aa); 
+            color: #fff; border: 2px solid #fff; cursor: pointer; font-family: 'Bangers', cursive; 
+            font-size: 28px; text-transform: uppercase; border-radius: 8px;
+        }
+
+        /* --- UI OVERLAYS (NOVO LAYOUT) --- */
+        #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; display: none; }
+
+        /* PAINEL SAGA (TOPO CENTRO) */
+        #hud-saga {
+            position: absolute;
+            top: 75px; /* Abaixo da barra de HP (que fica ~20px + altura) */
+            left: 50%; transform: translateX(-50%);
+            width: 60%; max-width: 500px;
+            background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,20,40,0.8) 20%, rgba(0,20,40,0.8) 80%, rgba(0,0,0,0) 100%);
+            border-top: 2px solid #00ffff; border-bottom: 2px solid #00ffff;
+            padding: 10px; text-align: center;
+            display: none; /* Só aparece quando tem saga */
+            pointer-events: none;
+        }
+        .saga-label { font-size: 10px; color: #00ffff; letter-spacing: 2px; margin-bottom: 4px; }
+        .saga-title { font-size: 14px; color: #fff; font-weight: bold; text-shadow: 0 0 5px #0ff; }
+        .saga-hint { font-size: 12px; color: #aaa; font-style: italic; margin-top: 2px; }
+
+        /* PAINEL LUMIA (MEIO DA TELA, LEVEMENTE ACIMA) */
+        /* ===============================
+   LUMIA SYSTEM MESSAGE (FINA)
+   =============================== */
+
+/* ===============================
+   LUMIA SYSTEM MESSAGE (FINA)
+   =============================== */
+
+/* ===============================
+   LUMIA SYSTEM MESSAGE (FINA)
+   =============================== */
+
+#hud-lumia {
+    position: absolute;
+    top: 170px; /* ⬅️ MAIS ABAIXO — zona segura no PC */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70%;
+    max-width: 640px;
+    height: 28px;
+
+    background: linear-gradient(
+        90deg,
+        rgba(0,0,0,0) 0%,
+        rgba(0,40,60,0.85) 15%,
+        rgba(0,40,60,0.85) 85%,
+        rgba(0,0,0,0) 100%
+    );
+
+    border-top: 1px solid #00ffff;
+    border-bottom: 1px solid #00ffff;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 13px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 6px rgba(0,255,255,0.6);
+
+    pointer-events: none;
+    z-index: 400;
+}
+
+#hud-lumia.active {
+    display: flex;
+}
+
+/* -------- MOBILE PORTRAIT -------- */
+@media (orientation: portrait) {
+    #hud-lumia {
+        top: 95px;   /* mantém perfeito no mobile */
+        width: 92%;
+        font-size: 12px;
+        height: 26px;
+    }
+}
+
+
+/* ===============================
+   XP BAR
+   =============================== */
+
+#xp-bar {
+    position: absolute;
+    top: 42px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    max-width: 500px;
+    height: 8px;
+
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #00ff00;
+    box-shadow: 0 0 8px rgba(0,255,0,0.4);
+
+    overflow: hidden;
+    z-index: 350;
+}
+
+#xp-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(
+        90deg,
+        #00ff66,
+        #66ff99
+    );
+    transition: width 0.3s ease;
+}
+
+/* MOBILE PORTRAIT */
+@media (orientation: portrait) {
+    #xp-bar {
+        top: 70px;
+        width: 90%;
+        height: 7px;
+    }
+}
+
+
+#hud-lumia.active {
+    display: flex;
+}
+
+/* -------- MOBILE PORTRAIT -------- */
+@media (orientation: portrait) {
+    #hud-lumia {
+        top: 95px;              /* abaixo da barra de HP */
+        width: 92%;
+        font-size: 12px;
+        height: 26px;
+    }
+}
+
+        #hud-lumia.active { display: block; opacity: 1; }
+        .lumia-icon { font-size: 20px; color: #0f0; margin-bottom: 5px; display: block; }
+        .lumia-text { font-size: 14px; color: #fff; line-height: 1.4; }
+
+        /* CONTROLES MOBILE */
+        #mobile-ui { display: none; pointer-events: auto; width: 100%; height: 100%; }
+        #joystick-container { position: absolute; bottom: 50px; left: 50px; width: 120px; height: 120px; z-index: 300; }
+        .m-btn {
+            position: absolute; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; color: #fff; font-weight: bold; font-family: 'Bangers', cursive;
+            user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255,255,255,0.4);
+            backdrop-filter: blur(4px); text-shadow: 1px 1px 0 #000;
+        }
+        .m-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.3); }
+
+        #btn-atk { width: 90px; height: 90px; bottom: 50px; right: 30px; background: rgba(255, 50, 50, 0.25); border-color: #ff4444; font-size: 24px; color: #ffcccc; }
+        #btn-block { width: 60px; height: 60px; bottom: 40px; right: 140px; font-size: 16px; background: rgba(50, 50, 255, 0.25); border-color: #4444ff; }
+        #btn-blast { width: 65px; height: 65px; bottom: 150px; right: 40px; font-size: 16px; background: rgba(0, 255, 255, 0.25); border-color: #00ffff; }
+        #btn-charge { width: 60px; height: 60px; bottom: 130px; right: 120px; font-size: 14px; background: rgba(255, 255, 0, 0.25); border-color: #ffff00; color: #ffff00; }
+        #btn-vanish { width: 50px; height: 50px; bottom: 210px; right: 110px; font-size: 12px; border-style: dashed; }
+        #btn-transform { width: 50px; height: 50px; bottom: 230px; right: 40px; font-size: 10px; border-color: #ffaa00; color: #ffaa00; }
+
+        .sys-btn {
+            position: absolute; width: 45px; height: 45px; right: 15px;
+            background: rgba(0,0,0,0.7); border: 1px solid #777; color: #fff; 
+            font-size: 20px; border-radius: 8px; display: flex; align-items: center; justify-content: center; pointer-events: auto;
+        }
+        #btn-scouter { top: 15px; color: #0f0; border-color: #0f0; box-shadow: 0 0 5px #0f0; }
+        #btn-pvp { top: 70px; color: #f0f; border-color: #f0f; box-shadow: 0 0 5px #f0f; }
+        #btn-pvp.active { background: #f0f; color: #fff; }
+
+        .menu-btn {
+            position: absolute; left: 15px; width: 45px; height: 45px;
+            background: rgba(0,0,0,0.6); border: 1px solid #aaa;
+            border-radius: 4px; color: #fff; pointer-events: auto; display: flex; align-items: center; justify-content: center;
+        }
+        #btn-menu { top: 120px; font-size: 10px; font-weight: bold; }
+        #btn-chat { top: 175px; font-size: 22px; }
+        #btn-ranking { top: 230px; font-size: 22px; color: #fe0; }
+        #btn-guild { top: 285px; font-size: 22px; color: #0ff; }
+        #btn-rebirth { top: 340px; font-size: 22px; color: #f00; }
+
+        /* AJUSTES MOBILE PORTRAIT (Celular em pé) */
+        @media (orientation: portrait) {
+            #hud-saga { width: 90%; top: 90px; } /* Desce um pouco mais para não bater no HP */
+            #hud-lumia { width: 90%; top: 40%; }
+            .logo-main { font-size: 40px; }
+            .logo-z { font-size: 70px; right: -40px; }
+            
+            /* Reajuste de Botões para não cobrir a tela */
+            #joystick-container { bottom: 30px; left: 30px; width: 100px; height: 100px; }
+            #btn-atk { width: 80px; height: 80px; right: 20px; bottom: 30px; }
+            /* Esconde botões menos vitais da HUD direta para limpar visão */
+            #btn-guild, #btn-ranking { display: none; } 
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-animation"></canvas>
+
+    <div id="login-screen">
+        <div class="logo-container">
+            <div style="position:relative; display: inline-block;">
+                <span class="logo-main">UNIVERSE</span>
+                <span class="logo-z">Z</span>
+            </div>
+            <div class="logo-sub">DESTROY THE GALAXY</div>
+        </div>
+
+        <div class="login-box">
+            <input id="username" type="text" placeholder="NOME DO GUERREIRO" maxlength="12" autocomplete="off">
+            <input id="password" type="password" placeholder="SENHA SECRETA">
+            <button id="btn-login">INICIAR JORNADA</button>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa; text-shadow: 1px 1px 0 #000;">v 2.0 EVOLUTION</div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui">
+        <div id="hud-saga">
+            <div class="saga-label">/// MISSÃO ATUAL</div>
+            <div class="saga-title" id="saga-title">Carregando...</div>
+            <div class="saga-hint" id="saga-hint">Aguarde...</div>
+        </div>
+		
+		<!-- XP BAR -->
+<div id="xp-bar">
+    <div id="xp-fill"></div>
+</div>
+
+
+        <div id="hud-lumia">
+            <span class="lumia-icon">⚡ SISTEMA LUMIA</span>
+            <span class="lumia-text" id="lumia-text">Analisando ambiente...</span>
+        </div>
+
+        <div id="mobile-ui">
+            <div id="joystick-container"></div>
+            <div id="btn-atk" class="m-btn">ATK</div>
+            <div id="btn-blast" class="m-btn">KI</div>
+            <div id="btn-block" class="m-btn">DEF</div>
+            <div id="btn-charge" class="m-btn">PW</div>
+            <div id="btn-vanish" class="m-btn">TP</div>
+            <div id="btn-transform" class="m-btn">G</div>
+
+            <div id="btn-scouter" class="sys-btn">👁️</div>
+            <div id="btn-pvp" class="sys-btn">⚔️</div>
+
+            <button id="btn-menu" class="menu-btn">MENU</button>
+            <button id="btn-chat" class="menu-btn">💬</button>
+            <button id="btn-ranking" class="menu-btn">🏆</button>
+            <button id="btn-guild" class="menu-btn">👥</button>
+            <button id="btn-rebirth" class="menu-btn">♻️</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // --- SCRIPT DO FUNDO ANIMADO (LOGIN) ---
+        const bgCanvas = document.getElementById('bg-animation');
+        const bgCtx = bgCanvas.getContext('2d');
+        
+        function resizeBg() { bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeBg);
+        resizeBg();
+
+        const bgStars = [];
+        for(let i=0; i<150; i++) {
+            bgStars.push({ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight, size: Math.random() * 2, speed: Math.random() * 0.5 + 0.1 });
+        }
+
+        function animateBg() {
+            bgCtx.fillStyle = "#000000"; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            const grd = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/2, 100, bgCanvas.width/2, bgCanvas.height/2, bgCanvas.width);
+            grd.addColorStop(0, "#1a0033"); grd.addColorStop(1, "#000000");
+            bgCtx.fillStyle = grd; bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
+            bgCtx.fillStyle = "#fff";
+            bgStars.forEach(s => { s.x -= s.speed; if(s.x < 0) s.x = bgCanvas.width; bgCtx.globalAlpha = Math.random() * 0.5 + 0.5; bgCtx.beginPath(); bgCtx.arc(s.x, s.y, s.size, 0, Math.PI*2); bgCtx.fill(); });
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+        // --- LÓGICA MOBILE & BRIDGE UI ---
+        if (navigator.maxTouchPoints > 0 || /Android|iPhone/i.test(navigator.userAgent)) {
+            document.getElementById('mobile-ui').style.display = 'block';
+        }
+
+        // --- BRIDGE: ATUALIZAR HTML COM DADOS DO SOCKET (Sem mexer no game.js) ---
+        // Espera o socket ser criado pelo game.js
+        const checkSocket = setInterval(() => {
+            if (window.socket) {
+                clearInterval(checkSocket);
+                
+                // Ouve SAGA
+                window.socket.on("state", (data) => {
+                    if (data.saga) {
+                        document.getElementById("hud-saga").style.display = "block";
+                        document.getElementById("saga-title").innerText = data.saga.title;
+                        document.getElementById("saga-hint").innerText = data.saga.hint;
+                    }
+                });
+
+                // Ouve LUMIA
+                window.socket.on("aris_msg", (msg) => {
+                    const el = document.getElementById("hud-lumia");
+                    const txt = document.getElementById("lumia-text");
+                    el.classList.add("active");
+                    el.style.borderColor = msg.type === "DANGER" ? "#f00" : (msg.type === "WARN" ? "#ff0" : "#0f0");
+                    txt.innerText = msg.text;
+                    // Auto-hide
+                    setTimeout(() => { el.classList.remove("active"); }, 5000);
+                });
+            }
+        }, 500);
+    </script>
+    <script type="module" src="./game.js"></script>
+
+</body>
+</html>

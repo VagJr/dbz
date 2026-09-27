@@ -1,0 +1,28 @@
+
+DRAGON BOLT UNIVERSE — ROADMAP TÉCNICO
+
+FASE 1 (OK)
+- Combate DBZ rápido
+- Mundo horizontal por sagas
+- Outro Mundo funcional
+
+FASE 2 (OK)
+- Universo vertical (Kaio / Inferno)
+- Scouter
+- Radar do Dragão
+
+FASE 3 (OK)
+- Dragon Balls
+- Shenlong global
+
+FASE 4 (OK)
+- Procedural infinito pós-VOID
+
+FASE 5 (FUTURO)
+- Técnicas aprendidas
+- Eventos globais
+- Persistência total MMO
+
+VALIDAÇÃO:
+- Nada quebra o loop atual
+- Conteúdo cresce sem inflar código

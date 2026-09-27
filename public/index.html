@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#07121e" />
+    <title>UNIVERSE Z — DESTROY THE GALAXY</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/flight-ui.css" />
+  </head>
+  <body>
+    <canvas
+      id="world"
+      aria-label="Mundo de Universe Z. Use WASD para mover seu personagem."
+    ></canvas>
+    <div class="vignette"></div>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="UNIVERSE Z — DESTROY THE GALAXY">
+        <img src="/logo.svg" alt="UNIVERSE Z — DESTROY THE GALAXY" />
+      </a>
+      <div class="location">
+        <span class="tiny-label" id="world-name">PLANETA TERRA</span
+        ><strong id="region-name">Monte Paozu</strong>
+      </div>
+      <div class="server-state">
+        <i id="connection-dot"></i><span id="connection">Conectando</span
+        ><button
+          class="icon-button"
+          id="audio-button"
+          aria-label="Ativar áudio"
+          title="Ativar áudio"
+        >
+          ♫</button
+        ><button
+          class="icon-button"
+          id="help-button"
+          aria-label="Abrir controles"
+          title="Controles"
+        >
+          ?
+        </button>
+      </div>
+    </header>
+    <section id="welcome" class="welcome">
+      <div class="intro">
+        <div class="eyebrow"><span></span> ACTION RPG MULTIPLAYER</div>
+        <h1>Um universo inteiro.<br /><em>Poder sem limites.</em></h1>
+        <p>
+          Encontre seu mestre. Domine seu ki.<br />Escreva sua própria história
+          no universo Dragon Ball.
+        </p>
+        <div class="intro-features">
+          <span>01 <b>EXPLORE</b></span
+          ><span>02 <b>TREINE</b></span
+          ><span>03 <b>SUPERE</b></span>
+        </div>
+        <div class="preview-note">
+          <span>✦</span> MONTE PAOZU <span class="line"></span> TERRA · UNIVERSO
+          7
+        </div>
+      </div>
+      <form id="join-form" class="creation-panel">
+        <div class="eyebrow">SUA HISTÓRIA COMEÇA AQUI</div>
+        <h2>Um novo guerreiro.</h2>
+        <p class="muted">A origem é só o começo. O resto é treino.</p>
+        <div id="origin-options" class="origins"></div>
+        <div class="origin-preview">
+          <canvas
+            id="portrait"
+            width="160"
+            height="140"
+            aria-label="Prévia do personagem"
+          ></canvas>
+          <div>
+            <strong id="origin-name"></strong><small id="origin-style"></small>
+            <p id="origin-description"></p>
+          </div>
+        </div>
+        <label class="field-label" for="player-name"
+          >COMO VÃO CHAMAR VOCÊ?</label
+        ><input
+          id="player-name"
+          name="name"
+          placeholder="Nome do guerreiro"
+          maxlength="20"
+          minlength="2"
+          required
+          autocomplete="nickname"
+        /><button class="primary" id="join-button" type="submit">
+          Começar aventura <span>↗</span></button
+        ><button class="resume-button" id="resume-button" type="button" hidden>
+          Continuar minha jornada →</button
+        ><small class="save-note"
+          >Seu progresso fica salvo neste navegador e servidor.</small
+        >
+      </form>
+    </section>
+    <main id="hud" hidden>
+      <section class="player-card">
+        <div class="portrait-small">
+          <canvas id="hud-portrait" width="72" height="76"></canvas
+          ><span id="level">1</span>
+        </div>
+        <div class="vitals">
+          <div class="name-row">
+            <strong id="name">Guerreiro</strong
+            ><small id="form-label">SAIYAJIN</small>
+          </div>
+          <div class="bar hp">
+            <i id="hp-fill"></i><span id="hp-value"></span>
+          </div>
+          <div class="bar ki">
+            <i id="ki-fill"></i><span id="ki-value"></span>
+          </div>
+          <div class="xp-bar"><i id="xp-fill"></i></div>
+          <div class="power-row">
+            <span id="power">500 BP</span
+            ><button id="character-button">Personagem <kbd>C</kbd></button>
+          </div>
+        </div>
+      </section>
+      <section class="quest-card">
+        <div class="eyebrow">
+          SUA JORNADA
+          <button id="campaign-button" aria-label="Ver campanhas">↗</button>
+        </div>
+        <h3 id="quest-title">O começo da aventura</h3>
+        <p id="quest-description">Encontre Mestre Kame no dojo.</p>
+        <div class="quest-progress" id="quest-progress"></div>
+      </section>
+      <button id="event-banner" class="event-banner" hidden>
+        ✦ Invasão em andamento
+      </button>
+      <section class="radar-card">
+        <div class="radar-title">
+          <span>RADAR DO DRAGÃO</span
+          ><button id="map-button" aria-label="Abrir atlas">
+            ↗ <kbd>M</kbd>
+          </button>
+        </div>
+        <canvas
+          id="radar"
+          width="176"
+          height="150"
+          aria-label="Radar com inimigos, mestres e esferas"
+        ></canvas>
+        <button
+          id="flight-button"
+          class="flight-toggle"
+          aria-label="Alternar entre voo e combate terrestre"
+        >
+          <span id="flight-label">VOO LIVRE</span><kbd>F</kbd>
+        </button>
+        <div class="orbs" id="orbs"></div>
+      </section>
+      <div
+        id="objective-arrow"
+        class="objective-arrow"
+        aria-hidden="true"
+      ></div>
+      <div class="interaction" id="interaction" hidden>
+        <button id="interact-button">
+          <kbd>E</kbd>
+          <span id="interact-label">Conversar com Kame</span></button
+        ><button id="train-button"><kbd>T</kbd> Treinar</button>
+      </div>
+      <section class="training" id="training" hidden>
+        <small>TREINO DE PRECISÃO</small><strong>Golpeie no centro</strong>
+        <div class="rhythm-track">
+          <i class="rhythm-target"></i><i id="rhythm-cursor"></i>
+        </div>
+        <span id="training-score"></span>
+      </section>
+      <div class="action-dock">
+        <button class="action" data-action="cycleTarget" title="Tab no PC · toque no inimigo para selecionar">Alvo</button><button class="action" data-action="attack" title="Clique para combo; segure e solte para golpe pesado">
+          <kbd>J / CLIQUE</kbd><span class="skill-icon">✦</span
+          ><strong>Golpe</strong><small>Combo de 3</small><i></i></button
+        ><button class="action" data-action="blast">
+          <kbd>K / DIREITO</kbd><span class="skill-icon">◉</span
+          ><strong id="technique-name">Disparo de ki</strong
+          ><small>Segure: concentrar</small><i></i></button
+        ><button class="action" data-action="dash">
+          <kbd>ESPAÇO</kbd><span class="skill-icon">»</span
+          ><strong>Esquiva</strong><small>Cancela o golpe</small><i></i></button
+        ><button class="action" data-action="guard">
+          <kbd>L</kbd><span class="skill-icon">◇</span><strong>Defesa</strong
+          ><small>No tempo: parry</small><i></i></button
+        ><button class="action" data-action="kaioken" title="Requer treinamento do Senhor Kaio">Kaioken <small>X</small></button><button class="awaken" id="awaken-button">
+          <span>✧</span><strong>Despertar</strong
+          ><small id="focus-value">0% · R</small>
+        </button>
+      </div>
+      <section class="nav-telemetry" aria-label="Navegação de voo">
+        <span id="flight-status">VOO LIVRE</span
+        ><strong id="route-name">Explore o universo</strong>
+        <div>
+          <span id="route-bearing">↗</span
+          ><span id="route-distance">Marque um destino no Atlas</span
+          ><b id="flight-speed">0</b>
+        </div>
+        <button id="orbit-button">↟ Órbita <kbd>V</kbd></button
+        ><button id="teleport-button" hidden>◎ Teletransportar · 40 ki</button>
+      </section>
+      <div class="movement-hint">
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> mover <span>·</span>
+        <kbd>SHIFT</kbd> acelerar <span>·</span><kbd>F</kbd> pousar/decolar
+        <span>·</span> <kbd>Q</kbd> ki
+      </div>
+      <div class="touch-stick" id="stick" aria-label="Joystick de movimento">
+        <span></span>
+      </div>
+      <button class="touch-charge" id="touch-charge" aria-label="Recuperar ki">
+        KI
+      </button>
+      <button class="touch-boost" id="touch-boost" aria-label="Acelerar o voo">
+        BOOST
+      </button>
+      <section class="chat-box">
+        <div id="chat-messages" aria-live="polite"></div>
+        <form id="chat-form">
+          <span>LOCAL</span
+          ><input
+            id="chat-input"
+            placeholder="Enter para conversar…"
+            maxlength="160"
+            aria-label="Mensagem para jogadores locais"
+          /><button type="submit" aria-label="Enviar mensagem">↗</button>
+        </form>
+      </section>
+      <nav class="bottom-nav">
+        <button data-panel="atlas">◎ <span>Atlas</span></button
+        ><button data-panel="campaigns">▤ <span>Crônicas</span></button
+        ><button data-panel="character">♙ <span>Guerreiro</span></button
+        ><button data-panel="settings">☷ <span>Ajustes</span></button>
+      </nav>
+      <div id="death-screen" hidden>
+        <span>O treino continua.</span><strong>Recuperando suas forças…</strong
+        ><small>Você retorna ao vilarejo em instantes.</small>
+      </div>
+    </main>
+    <div class="toast" id="toast" role="status" hidden></div>
+    <dialog id="panel">
+      <header>
+        <div>
+          <small class="eyebrow" id="panel-eyebrow">UNIVERSE Z</small>
+          <h2 id="panel-title"></h2>
+        </div>
+        <button id="close-panel" class="icon-button" aria-label="Fechar janela">
+          ×
+        </button>
+      </header>
+      <div id="panel-body"></div>
+    </dialog>
+    <footer id="welcome-footer">
+      <span>UM FAN GAME · EM DESENVOLVIMENTO</span
+      ><span>PC + MOBILE <span class="footer-dot">●</span> V.03</span>
+    </footer>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/content.js"></script>
+    <script src="/shared/navigation.js"></script>
+    <script src="/shared/open-world.js"></script>
+    <script src="/shared/lore.js"></script>
+    <script src="/renderer.js"></script>
+    <script src="/combat-art.js"></script>
+    <script src="/shared/character-designs.js"></script>
+    <script src="/character-art.js"></script>
+    <script src="/miniature-art.js"></script>
+    <script src="/universe-art.js"></script>
+    <script src="/open-world-art.js"></script>
+    <script src="/lore-art.js"></script>
+    <script src="/audio.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

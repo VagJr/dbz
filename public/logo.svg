@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 92" role="img" aria-labelledby="title desc">
+  <title id="title">UNIVERSE Z — DESTROY THE GALAXY</title>
+  <desc id="desc">A gold Z crossed by a cyan orbit, followed by the Universe Z wordmark.</desc>
+  <defs>
+    <linearGradient id="z" x1="12" y1="15" x2="72" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe07a"/>
+      <stop offset=".48" stop-color="#ffb42e"/>
+      <stop offset="1" stop-color="#ff753a"/>
+    </linearGradient>
+    <linearGradient id="orbit" x1="9" y1="22" x2="80" y2="67" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9ff9ff"/>
+      <stop offset=".5" stop-color="#39dafa"/>
+      <stop offset="1" stop-color="#639eff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g transform="translate(2 1)">
+    <ellipse cx="43" cy="45" rx="39" ry="22" transform="rotate(-31 43 45)" fill="none" stroke="url(#orbit)" stroke-width="1.7" opacity=".85"/>
+    <path d="M15 17h57L44 43h19L28 75H8l34-28H22l29-25H15z" fill="url(#z)" stroke="#fff0b8" stroke-opacity=".32" stroke-width="1"/>
+    <path d="m75 16 2.5 6.5L84 25l-6.5 2.5L75 34l-2.5-6.5L66 25l6.5-2.5z" fill="#e7fbff" filter="url(#glow)"/>
+    <circle cx="8" cy="59" r="2.5" fill="#ffd56b"/>
+  </g>
+  <text x="102" y="49" fill="#e7f1ff" font-family="Arial Narrow,Impact,sans-serif" font-size="40" font-stretch="condensed" font-weight="800" letter-spacing="2.1">UNIVERSE <tspan fill="#ffc447">Z</tspan></text>
+  <path d="M104 61h352" stroke="#55dff5" stroke-opacity=".3" stroke-width=".8"/>
+  <text x="105" y="78" fill="#8bb0d1" font-family="Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="5.2">DESTROY THE GALAXY</text>
+</svg>

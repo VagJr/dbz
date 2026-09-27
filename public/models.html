@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Universe Z · Estúdio de personagens</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #07101d;
+        color: #e3eef5;
+        font: 14px system-ui;
+      }
+      header {
+        padding: 32px 5vw 22px;
+        border-bottom: 1px solid #233648;
+        background: linear-gradient(130deg, #10263a, #101426);
+      }
+      a {
+        color: #8ae6f2;
+        text-decoration: none;
+      }
+      h1 {
+        font-size: 30px;
+        margin: 16px 0 6px;
+      }
+      p {
+        color: #9bb2c5;
+        line-height: 1.6;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        padding: 10px 14px;
+        border: 1px solid #344d60;
+        border-radius: 24px;
+        color: #def2ff;
+        background: #122839;
+        min-height: 44px;
+      }
+      button {
+        cursor: pointer;
+      }
+      button.active {
+        color: #092335;
+        background: #8cdae8;
+      }
+      input {
+        width: 240px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 16px;
+        padding: 24px 5vw;
+      }
+      article {
+        border: 1px solid #264258;
+        border-radius: 14px 30px 14px 14px;
+        overflow: hidden;
+        background: radial-gradient(ellipse at 50% 40%, #193549, #0b1827 65%);
+      }
+      canvas {
+        width: 100%;
+        height: 200px;
+      }
+      article div {
+        padding: 0 18px 16px;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 0 0 5px;
+      }
+      small {
+        color: #92abbd;
+        font-size: 11px;
+      }
+      .legend {
+        font-size: 12px;
+      }
+      .controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      @media (max-width: 520px) {
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          padding: 12px;
+        }
+        canvas {
+          height: 160px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        article div {
+          padding: 0 10px 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/">← UNIVERSE Z · VOLTAR AO JOGO</a>
+      <h1>Identidade em cada movimento.</h1>
+      <p>
+        Catálogo de modelos vetoriais · mesma arte e animações usadas no
+        combate.
+      </p>
+      <div class="controls">
+        <label>Ambiente
+          <select id="mode" aria-label="Ambiente de combate">
+            <option value="ground">Terrestre</option>
+            <option value="flight">Aéreo</option>
+          </select>
+        </label>
+        <input
+          id="search"
+          aria-label="Buscar personagem"
+          placeholder="Buscar personagem…"
+        /><label
+          >Direção
+          <select id="angle">
+            <option value="-1.5708">Câmera de cima</option>
+            <option value="0">Direita</option>
+            <option value="1.5708">Abaixo</option>
+            <option value="3.14159">Esquerda</option>
+          </select></label
+        ><label
+          ><input
+            type="checkbox"
+            id="actual"
+            style="width: auto; min-height: 0"
+          />
+          Escala do jogo</label
+        ><button id="pause">Pausar animação</button>
+      </div>
+      <nav id="states"></nav>
+      <p class="legend" id="count"></p>
+    </header>
+    <main class="grid" id="models"></main>
+    <script src="/shared/content.js"></script>
+    <script src="/shared/character-designs.js"></script>
+    <script src="/renderer.js"></script>
+    <script src="/character-art.js"></script>
+    <script src="/miniature-art.js"></script>
+    <script src="/model-studio.js"></script>
+  </body>
+</html>

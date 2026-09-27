@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Universe Z — Destroy The Galaxy</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Roboto+Condensed:wght@700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+    --orange:#ff9f00;
+    --blue:#007bff;
+    --red:#ff2e2e;
+    --black:#0e0e0e;
+    --white:#ffffff;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+    background:#111;
+    color:#fff;
+    font-family:'Roboto Condensed',sans-serif;
+    overflow-x:hidden;
+}
+
+/* ================= HERO ================= */
+.hero{
+    min-height:100vh;
+    background:
+        radial-gradient(circle at top, rgba(255,160,0,.4), transparent 60%),
+        url("https://images.alphacoders.com/129/1290706.jpg") center/cover no-repeat;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+}
+
+.hero::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to bottom,#000000aa,#000);
+}
+
+.hero-content{
+    position:relative;
+    text-align:center;
+    z-index:2;
+    max-width:900px;
+    padding:30px;
+}
+
+.logo{
+    font-family:'Bangers';
+    font-size:88px;
+    color:var(--orange);
+    text-shadow:
+        4px 4px 0 #000,
+        0 0 40px #ffb300;
+    line-height:.9;
+}
+
+.logo span{
+    display:block;
+    font-size:28px;
+    color:#fff;
+    letter-spacing:4px;
+    margin-top:15px;
+}
+
+.tagline{
+    margin:30px auto;
+    font-size:22px;
+    background:#000;
+    display:inline-block;
+    padding:10px 25px;
+    border:3px solid #fff;
+    transform:skewX(-10deg);
+}
+
+.hero-buttons{
+    margin-top:40px;
+    display:flex;
+    gap:25px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+
+.btn{
+    font-family:'Bangers';
+    font-size:28px;
+    padding:18px 45px;
+    border:4px solid #000;
+    cursor:pointer;
+    box-shadow:8px 8px 0 #000;
+    transition:.2s;
+}
+
+.btn-play{
+    background:var(--blue);
+    color:#fff;
+}
+
+.btn-discord{
+    background:#fff;
+    color:#000;
+}
+
+.btn:hover{
+    transform:translate(-6px,-6px);
+    box-shadow:14px 14px 0 #000;
+}
+
+/* ================= SECTIONS ================= */
+section{
+    padding:90px 20px;
+}
+
+.section-title{
+    font-family:'Bangers';
+    font-size:52px;
+    text-align:center;
+    margin-bottom:50px;
+    color:var(--orange);
+    text-shadow:3px 3px 0 #000;
+}
+
+/* ================= GAME FEATURES ================= */
+.features{
+    max-width:1200px;
+    margin:auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:35px;
+}
+
+.card{
+    background:#fff;
+    color:#000;
+    border:4px solid #000;
+    padding:30px;
+    box-shadow:10px 10px 0 #000;
+    position:relative;
+}
+
+.card h3{
+    font-family:'Bangers';
+    font-size:30px;
+    margin-bottom:15px;
+}
+
+.card p{
+    font-size:18px;
+}
+
+.sfx{
+    position:absolute;
+    bottom:-15px;
+    right:10px;
+    font-family:'Bangers';
+    font-size:72px;
+    color:rgba(0,0,0,.1);
+}
+
+/* ================= POWER LOOP ================= */
+.loop{
+    background:#000;
+    text-align:center;
+}
+
+.loop-steps{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:40px;
+}
+
+.step{
+    width:180px;
+    height:180px;
+    border-radius:50%;
+    border:4px solid #fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Bangers';
+    font-size:22px;
+    background:var(--orange);
+    color:#000;
+}
+
+/* ================= MAP ================= */
+.map{
+    background:url("https://images.alphacoders.com/117/1174584.jpg") center/cover no-repeat;
+    position:relative;
+}
+
+.map::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:#000000bb;
+}
+
+.map-content{
+    position:relative;
+    z-index:2;
+    text-align:center;
+}
+
+.zones span{
+    display:inline-block;
+    margin:10px;
+    padding:12px 25px;
+    border:3px solid #fff;
+    font-family:'Bangers';
+    background:#000;
+}
+
+/* ================= FOOTER ================= */
+footer{
+    background:var(--orange);
+    color:#000;
+    text-align:center;
+    padding:40px;
+    font-weight:bold;
+}
+
+/* ================= MOBILE ================= */
+@media(max-width:768px){
+    .logo{font-size:56px;}
+}
+</style>
+</head>
+
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-content">
+        <div class="logo">
+            UNIVERSE Z
+            <span>DESTROY THE GALAXY</span>
+        </div>
+
+        <div class="tagline">
+            LITE MMO DE AÇÃO • TEMPO REAL • NO NAVEGADOR
+        </div>
+
+        <div class="hero-buttons">
+            <button class="btn btn-play" onclick="location.href='https://dbz-el7n.onrender.com'">
+                JOGAR AGORA
+            </button>
+            <button class="btn btn-discord">
+                COMUNIDADE
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- FEATURES -->
+<section>
+    <h2 class="section-title">O JOGO</h2>
+    <div class="features">
+        <div class="card">
+            <h3>COMBATE ABSURDO</h3>
+            <p>Lutas rápidas, reflexo puro, rajadas de Ki, voo livre e impacto real.</p>
+            <div class="sfx">BAM!</div>
+        </div>
+
+        <div class="card">
+            <h3>MUNDO VIVO</h3>
+            <p>Planetas conectados, jogadores online, bosses globais e eventos.</p>
+            <div class="sfx">WHOOSH</div>
+        </div>
+
+        <div class="card">
+            <h3>TRANSFORMAÇÕES</h3>
+            <p>Cada forma muda velocidade, aura, dano e estilo de combate.</p>
+            <div class="sfx">AURA</div>
+        </div>
+    </div>
+</section>
+
+<!-- LOOP -->
+<section class="loop">
+    <h2 class="section-title">CICLO DO PODER</h2>
+    <div class="loop-steps">
+        <div class="step">TREINAR</div>
+        <div class="step" style="background:var(--red);color:#fff;">LUTAR</div>
+        <div class="step">EVOLUIR</div>
+        <div class="step" style="background:var(--blue);color:#fff;">DOMINAR</div>
+    </div>
+</section>
+
+<!-- MAP -->
+<section class="map">
+    <div class="map-content">
+        <h2 class="section-title">UNIVERSO</h2>
+        <div class="zones">
+            <span>TERRA</span>
+            <span>NAMEK</span>
+            <span>ANDROIDES</span>
+            <span>MAJIN</span>
+            <span>DEUSES</span>
+        </div>
+    </div>
+</section>
+
+<footer>
+    UNIVERSE Z — DESTROY THE GALAXY • PROJETO DE FÃ • 2025
+</footer>
+
+</body>
+</html>

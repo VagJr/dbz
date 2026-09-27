@@ -1,0 +1,216 @@
+/* Curved silhouettes, clear vitals and compact flight instrumentation. */
+.nav-telemetry {
+  position: fixed;
+  left: 50%;
+  top: 86px;
+  transform: translateX(-50%);
+  width: 270px;
+  padding: 12px 18px;
+  color: #d7edf7;
+  background: linear-gradient(110deg, #081723ec, #0a233bcc);
+  border: 1px solid #8bcfee30;
+  border-radius: 8px 28px 8px 28px;
+  box-shadow: 0 10px 36px #0004;
+  backdrop-filter: blur(12px);
+  text-align: center;
+  pointer-events: auto;
+}
+.nav-telemetry > span {
+  display: block;
+  color: #78dfee;
+  font: 600 9px system-ui;
+  letter-spacing: 2.8px;
+}
+.nav-telemetry > strong {
+  display: block;
+  margin: 4px;
+  font: 600 15px system-ui;
+}
+.nav-telemetry > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: 10px system-ui;
+  color: #a5c3d4;
+  min-height: 26px;
+}
+.nav-telemetry b {
+  color: #ffca83;
+  white-space: nowrap;
+  font-size: 9px;
+}
+.nav-telemetry button {
+  border: 1px solid #6db9d947;
+  border-radius: 20px;
+  background: #183c50;
+  color: #dffaff;
+  padding: 8px 14px;
+  min-height: 36px;
+  font: 600 11px system-ui;
+  cursor: pointer;
+}
+.nav-telemetry button:hover {
+  background: #275970;
+}
+.nav-telemetry kbd {
+  margin-left: 6px;
+}
+.nav-telemetry button[hidden] {
+  display: none;
+}
+#route-bearing {
+  display: inline-block;
+  color: #ffca83;
+  font-size: 18px;
+}
+#teleport-button {
+  margin-top: 5px;
+}
+.action-dock .action {
+  border-radius: 28px 28px 14px 14px;
+  background: linear-gradient(160deg, #193344ef, #081824f2);
+  border-color: #73c6e144;
+  box-shadow: 0 5px 18px #0005;
+}
+.action .skill-icon {
+  filter: drop-shadow(0 0 9px #3edbff66);
+}
+.action-dock .action:hover {
+  border-color: #8fe8ff;
+}
+.flight-toggle {
+  border-radius: 22px !important;
+  min-height: 40px;
+}
+.bottom-nav {
+  border-radius: 24px !important;
+}
+.bottom-nav button {
+  border-radius: 18px !important;
+}
+.meter,
+.bar,
+.health-bar,
+.ki-bar {
+  border-radius: 20px;
+  overflow: hidden;
+}
+#hp-fill {
+  background: linear-gradient(90deg, #58bba3, #b6f1be);
+  box-shadow: 0 0 10px #7aefba44;
+}
+#ki-fill {
+  background: linear-gradient(90deg, #328acc, #8eeaff);
+  box-shadow: 0 0 12px #60cfff66;
+}
+.world-card {
+  border-radius: 12px 28px 12px 12px !important;
+}
+.world-card.current {
+  box-shadow: inset 3px 0 #80e5ff;
+}
+.action:focus-visible,
+.nav-telemetry button:focus-visible {
+  outline: 2px solid #ffcf82;
+  outline-offset: 4px;
+}
+@media (max-width: 900px) {
+  .nav-telemetry {
+    top: 75px;
+    left: 50%;
+    width: 210px;
+    padding: 8px 12px;
+  }
+  .nav-telemetry > strong {
+    font-size: 12px;
+  }
+  .nav-telemetry > div {
+    font-size: 9px;
+  }
+  .nav-telemetry button {
+    min-height: 40px;
+  }
+  .nav-telemetry b {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .nav-telemetry {
+    top: auto;
+    bottom: 206px;
+    left: 12px;
+    transform: none;
+    width: 156px;
+    text-align: left;
+    padding: 9px 10px;
+    border-radius: 14px;
+    background: #071827dd;
+  }
+  .nav-telemetry > span {
+    font-size: 8px;
+    letter-spacing: 1.2px;
+  }
+  .nav-telemetry > strong {
+    margin: 4px 0;
+  }
+  .nav-telemetry > div {
+    justify-content: flex-start;
+    line-height: 1.4;
+  }
+  .nav-telemetry button {
+    width: 100%;
+    min-height: 44px;
+  }
+  .nav-telemetry kbd {
+    display: none;
+  }
+  .nav-telemetry #route-distance {
+    max-width: 116px;
+  }
+  .action-dock .action {
+    border-radius: 50%;
+  }
+  .nav-telemetry:has(#teleport-button:not([hidden])) {
+    bottom: 200px;
+  }
+}
+@media (max-height: 530px) and (min-width: 601px) {
+  .nav-telemetry {
+    top: 64px;
+    width: 180px;
+    padding: 6px 10px;
+  }
+  .nav-telemetry > div {
+    min-height: 18px;
+  }
+  .nav-telemetry button {
+    min-height: 30px;
+  }
+  .nav-telemetry > strong {
+    margin: 2px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+  .nav-telemetry {
+    backdrop-filter: none;
+  }
+}
+@media (max-width: 600px) {
+  .nav-telemetry,
+  .nav-telemetry:has(#teleport-button:not([hidden])) {
+    top: 288px;
+    bottom: auto;
+    width: 148px;
+    padding: 8px 9px;
+  }
+  .nav-telemetry > strong {
+    font-size: 11px;
+  }
+  .nav-telemetry > span {
+    font-size: 7px;
+  }
+}
