@@ -534,8 +534,10 @@ async function start(options = {}) {
       server.listen(
         options.port ?? process.env.PORT ?? 25565,
         options.host ||
-          process.env.HOST ||
-          (cfg.production ? "127.0.0.1" : "0.0.0.0"),
+          (process.env.RENDER === "true"
+            ? "0.0.0.0"
+            : process.env.HOST ||
+              (cfg.production ? "127.0.0.1" : "0.0.0.0")),
         resolve,
       );
     });
@@ -572,7 +574,8 @@ async function start(options = {}) {
 if (require.main === module)
   start()
     .then((app) => {
-      console.log(`UNIVERSE Z · http://localhost:${app.server.address().port}`);
+      const address = app.server.address();
+      console.log(`UNIVERSE Z · escutando em ${address.address}:${address.port}`);
       let closing = false;
       for (const signal of ["SIGINT", "SIGTERM"])
         process.on(signal, async () => {
