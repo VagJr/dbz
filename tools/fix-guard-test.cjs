@@ -1,0 +1,1 @@
+const fs=require('fs');const f='tests/combat-brain.test.js';let s=fs.readFileSync(f,'utf8');s=s.replace('  p.input.guard = true;\n  p.input.angle = 0;\n  p.guardAt = -10;\n  p.inputAt = g.time;','  g.input(p.id, { x: 0, y: 0, angle: 0, guard: true });');fs.writeFileSync(f,s);

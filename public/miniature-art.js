@@ -18,21 +18,25 @@
   };
   const paths = Object.fromEntries(Object.entries(hairPaths).map(([k,v])=>[k,new Path2D(v)]));
   function fighter(c,e,t,scale=1) {
-    const meta=UZ.CHARACTERS.find(ch=>ch.id===e.skin), d=UZDesigns[e.skin]||UZDesigns[meta?.skin]||UZDesigns.soldier;
+    const meta=UZ.CHARACTERS.find(ch=>ch.id===e.skin), d=Art.personalDesign(UZDesigns[e.skin]||UZDesigns[meta?.skin]||UZDesigns.soldier,e);
     const f=new Set(d.flags), form=e.form||meta?.form, hair=d.hair?(colors[form]||d.hair):null;
     const state=e.state||'idle', reduced=Art.reduceMotion===true, time=reduced?0:t;
     const flight=e.mode==='flight'||(e.mode!=='ground'&&['fly','glide','boost'].includes(state));
-    const walk=state==='run', guard=state==='guard', charge=['charge','chargeAim'].includes(state), hit=state==='attack', blast=state==='blast';
+    const walk=state==='run', guard=state==='guard', charge=['charge','chargeAim','meleeCharge'].includes(state), hit=!!(e.combatAction&&!['ki','charged','weave'].includes(e.combatAction.key))||state==='attack'||e.clashType==='fists', blast=!!(e.combatAction&&['ki','charged','weave'].includes(e.combatAction.key))||state==='blast'||e.clashType==='beam';
     const beat=Math.sin(time*14), breath=Math.sin(time*3)*.35;
     // Anticipation, fast extension, brief contact, then a slower recovery.
-    const cycle=reduced?.42:(time*2.8)%1;
+    const cycle=reduced?.42:(time*(e.clashType==='fists'?10:2.8))%1;
     const rush=state==='rush'||(hit&&cycle<.22&&Math.hypot(e.vx||0,e.vy||0)>(flight?500:260));
     const boost=e.boosting||state==='boost'||rush;
     const ease=v=>v*v*(3-2*v);
-    const punch=cycle<.22?-.22*ease(cycle/.22):cycle<.38?ease((cycle-.22)/.16):cycle<.48?1:1-ease((cycle-.48)/.52);
-    const strikeSide=(e.combo||1)%2?1:-1;
-    const twist=hit?strikeSide*(punch*.32-.10):guard?-.12:blast?.12:walk?beat*.025:0;
-    const tilt=flight?.72:hit?.40+Math.max(0,punch)*.25:guard?.32:charge?.28:blast?.62:state==='stun'?.55:.04;
+    const m=e.combatAction, clock=e.combatClock||0;
+    const punch=m?(clock<m.impact?-.22*ease(Math.max(0,Math.min(1,(clock-m.start)/(m.impact-m.start)))):clock<m.activeEnd?1:1-ease(Math.max(0,Math.min(1,(clock-m.activeEnd)/(m.end-m.activeEnd))))):cycle<.22?-.22*ease(cycle/.22):cycle<.38?ease((cycle-.22)/.16):cycle<.48?1:1-ease((cycle-.48)/.52);
+    const motion=m?.motion, pose=motion?.pose||((e.combo===3)?'roundhouse':(e.combo===2)?'cross':'jab');
+    const strikeSide=motion?.side||((e.combo||1)%2?1:-1);
+    const reach=Math.max(0,punch), kick=['roundhouse','airSpin','airKnee'].includes(pose);
+    const movingStrike=hit&&motion?.moving, driving=hit&&pose==='lunge';
+    const twist=hit?strikeSide*(punch*(['hook','slipHook','airSpin'].includes(pose)?.65:.32)-.10):guard?-.12:blast?.12:walk?beat*.025:0;
+    const tilt=flight?.72:hit?(driving?.62:.32)+reach*(pose==='uppercut'?.12:.25):guard?.32:charge?.28:blast?.62:state==='stun'?.55:.04;
     const size=f.has('small')?.84:f.has('giant')?1.42:1, width=f.has('wide')?1.22:f.has('large')?1.15:f.has('slim')?.92:1;
     const bare=['bare','alien','majin','animal','dragon'].includes(d.rig), suit=bare?d.skin:d.cloth;
     function ellipse(x,y,rx,ry,color,edge=ink,lw=1.7){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=color;c.fill();if(edge){c.strokeStyle=edge;c.lineWidth=lw;c.stroke();}}
@@ -56,9 +60,15 @@
       if(hit)c.rotate(strikeSide*punch*.13);
       if(state==='stun')c.rotate(Math.sin(time*6)*.2);
     }else if(hit){c.translate(strikeSide*punch*1.4,punch*1.6);}
-    if(rush){c.scale(1,flight?1.12:.90);c.translate(0,3);}
+    if(rush||driving){c.scale(1,flight?1.12:.90);c.translate(0,3);}
+    if(hit&&['airSpin','roundhouse'].includes(pose))c.rotate(strikeSide*reach*.65);
+    if(hit&&pose==='uppercut')c.translate(0,reach*4);
+    if(hit&&pose==='meteor'){c.scale(1,1-reach*.13);c.translate(0,reach*5);}
+    if(hit&&!reduced&&(driving||motion?.airborne||pose==='slipHook')){
+      c.save();c.globalAlpha=.22;for(let i=1;i<=3;i++)stroke([[-10-i*3,-8-i*6],[strikeSide*8,-14-i*7]],form?'#ffdd7c':'#a9eeff',2);c.restore();
+    }
     if(d.rig==='serpent'){
-      const body=Array.from({length:23},(_,i)=>[Math.sin(i*.42-time*2)*(5+i*.4),12-i*3]);
+      const body=Array.from({length:23},(_,i)=>[Math.sin(i*.42-time*(hit?12:2))*(5+i*.4+(hit?reach*4:0)),12-i*3]);
       limb(body,d.skin,11);
       stroke(body.map(([x,y])=>[x+2,y]),d.trim,3);
       for(let i=3;i<21;i+=3){const [x,y]=body[i];shape(`M${x-4} ${y} L${x-10} ${y-5} L${x-3} ${y-6}Z`,d.trim);}
@@ -74,17 +84,23 @@
     if(f.has('staff'))limb([[-25,-23],[-25,24]],'#9c7549',2.4);
     if(f.has('pelt'))shape('M-13-7 L-19-13 L-15-19 L-8-16 L0-21 L7-16 L14-19 L18-12 L12-7Z',d.trim);
     for(const s of [-1,1]){
-      const gait=walk?Math.sin(time*14+s*Math.PI/2):0;
+      const gait=walk||movingStrike?Math.sin(time*(movingStrike?23:14)+s*Math.PI/2):0;
       let foot=[s*7,-10-gait*2.4],knee=[s*6,-7];
       if(flight){foot=[s*5,-29+(boost?0:beat*s*.7)];knee=[s*5,-19];}
       if(state==='dash'){foot=[s*10,-19+s*4];knee=[s*9,-11];}
       if(guard||charge)foot=[s*11,-15];
       if(flight&&(guard||charge)){knee=[s*8,-14];foot=[s*6,-23+s*2];}
-      if(hit&&e.combo!==3){
+      if(hit&&!kick){
         if(flight){knee=[s*7,-17];foot=[s*6,-28+s*punch*3];}
         else{knee=[s*8,-7];foot=[s*10,-12+(s===strikeSide?-punch*3:punch*4)];}
       }
-      if(hit&&e.combo===3&&s===1){knee=[12-7*punch,-3+13*punch];foot=[19-12*punch,-7+40*punch];}
+      if(hit&&kick&&s===strikeSide){
+        if(pose==='airKnee'){knee=[s*9,1+16*reach];foot=[s*8,-9+18*reach];}
+        else {const sweep=pose==='airSpin'?Math.sin(reach*Math.PI*.7):reach;knee=[s*(12-9*sweep),-3+14*reach];foot=[s*(23-24*sweep),-7+43*reach];}
+      }
+      if(movingStrike&&!kick){foot[1]+=gait*3;knee[0]+=gait*2;}
+      if(hit&&pose==='retreatJab'){knee=[s*9,-11];foot=[s*13,-19-reach*3];}
+      if(driving){knee=[s*7,-9+s*4];foot=[s*10,-18+s*8];}
       if(state==='stun')foot=[s*13,-19];
       if(rush){knee=[s*7,-13];foot=[s*6,flight?-31:-14-s*beat*4];}
       limb([[s*5,-7],knee,foot],d.cloth,8);
@@ -104,10 +120,23 @@
       if(flight&&charge){elbow=[s*16,4];hand=[s*(state==='chargeAim'?6:15),state==='chargeAim'?24:12];}
       if(blast){elbow=[s*13,14];hand=[s*7,27];}
       if(hit){
-        if(s===strikeSide&&e.combo!==3){
+        if(s===strikeSide&&!kick){
           elbow=[s*(17-8*punch),3+14*punch];
           hand=e.combo===2?[s*(22-22*punch),8+22*punch]:[s*(15-10*punch),8+29*punch];
         }else{elbow=[s*15,2];hand=[s*9,12];}
+      }
+      if(hit){
+        if(kick){elbow=[s*18,2];hand=[s*22,6+reach*5];}
+        else if(pose==='meteor'){elbow=[s*(13-8*reach),12+reach*3];hand=[s*4,24+reach*8];}
+        else if(s===strikeSide){
+          if(['hook','slipHook','airCross'].includes(pose)){elbow=[s*(22-6*reach),5+reach*12];hand=[s*(25-29*reach),9+23*reach];}
+          else if(pose==='uppercut'){elbow=[s*(17-8*reach),-3+10*reach];hand=[s*(14-10*reach),-5+38*reach];}
+          else if(pose==='cross'){elbow=[s*(16-12*reach),3+15*reach];hand=[s*(14-19*reach),8+33*reach];}
+          else if(pose==='stepJab'){elbow=[s*(17-9*reach),5+16*reach];hand=[s*(16-10*reach),10+32*reach];}
+          else if(pose==='retreatJab'){elbow=[s*(18-6*reach),3+11*reach];hand=[s*(17-8*reach),7+25*reach];}
+          else if(pose==='lunge'){elbow=[s*(13-9*reach),8+16*reach];hand=[s*4,12+36*reach];}
+          else if(pose==='airJab'){elbow=[s*(15-9*reach),7+14*reach];hand=[s*5,11+33*reach];}
+        }
       }
       if(state==='stun'){elbow=[s*19,0];hand=[s*23,5];}
       if(rush){elbow=[s*11,flight?18:7];hand=[s*5,flight?32:18];}

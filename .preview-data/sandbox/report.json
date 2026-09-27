@@ -1,0 +1,26 @@
+[
+  {
+    "name": "desktop",
+    "flow": "harvest → craft → inventory",
+    "tabs": 8,
+    "errors": []
+  },
+  {
+    "name": "mobile",
+    "flow": "harvest → craft → inventory",
+    "tabs": 8,
+    "errors": []
+  },
+  {
+    "name": "landscape",
+    "flow": "harvest → craft → inventory",
+    "tabs": 8,
+    "errors": []
+  },
+  {
+    "name": "compact",
+    "flow": "harvest → craft → inventory",
+    "tabs": 8,
+    "errors": []
+  }
+]

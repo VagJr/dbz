@@ -1,0 +1,38 @@
+[
+  {
+    "viewport": "desktop",
+    "story": true,
+    "duel": true,
+    "delayedImpact": true,
+    "beamClash": true,
+    "restored": true,
+    "errors": []
+  },
+  {
+    "viewport": "mobile",
+    "story": true,
+    "duel": true,
+    "delayedImpact": true,
+    "beamClash": true,
+    "restored": true,
+    "errors": []
+  },
+  {
+    "viewport": "landscape",
+    "story": true,
+    "duel": true,
+    "delayedImpact": true,
+    "beamClash": true,
+    "restored": true,
+    "errors": []
+  },
+  {
+    "viewport": "compact",
+    "story": true,
+    "duel": true,
+    "delayedImpact": true,
+    "beamClash": true,
+    "restored": true,
+    "errors": []
+  }
+]

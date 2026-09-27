@@ -1,0 +1,222 @@
+[
+  {
+    "name": "desktop",
+    "kind": "atlas",
+    "metrics": {
+      "width": 788,
+      "scrollWidth": 788,
+      "height": 778,
+      "scrollHeight": 2937
+    }
+  },
+  {
+    "name": "desktop",
+    "kind": "campaigns",
+    "metrics": {
+      "width": 788,
+      "scrollWidth": 788,
+      "height": 778,
+      "scrollHeight": 1012
+    }
+  },
+  {
+    "name": "desktop",
+    "kind": "character",
+    "metrics": {
+      "width": 788,
+      "scrollWidth": 788,
+      "height": 778,
+      "scrollHeight": 1358
+    }
+  },
+  {
+    "name": "desktop",
+    "kind": "settings",
+    "metrics": {
+      "width": 788,
+      "scrollWidth": 788,
+      "height": 778,
+      "scrollHeight": 778
+    }
+  },
+  {
+    "name": "desktop",
+    "errors": [],
+    "vitals": [
+      {
+        "h": 14,
+        "text": 14
+      },
+      {
+        "h": 14,
+        "text": 14
+      }
+    ],
+    "visibleButtons": 11
+  },
+  {
+    "name": "mobile",
+    "kind": "atlas",
+    "metrics": {
+      "width": 388,
+      "scrollWidth": 388,
+      "height": 641,
+      "scrollHeight": 3408
+    }
+  },
+  {
+    "name": "mobile",
+    "kind": "campaigns",
+    "metrics": {
+      "width": 388,
+      "scrollWidth": 388,
+      "height": 641,
+      "scrollHeight": 1167
+    }
+  },
+  {
+    "name": "mobile",
+    "kind": "character",
+    "metrics": {
+      "width": 388,
+      "scrollWidth": 388,
+      "height": 641,
+      "scrollHeight": 1700
+    }
+  },
+  {
+    "name": "mobile",
+    "kind": "settings",
+    "metrics": {
+      "width": 388,
+      "scrollWidth": 388,
+      "height": 641,
+      "scrollHeight": 641
+    }
+  },
+  {
+    "name": "mobile",
+    "errors": [],
+    "vitals": [
+      {
+        "h": 13,
+        "text": 13
+      },
+      {
+        "h": 13,
+        "text": 13
+      }
+    ],
+    "visibleButtons": 11
+  },
+  {
+    "name": "landscape",
+    "kind": "atlas",
+    "metrics": {
+      "width": 613,
+      "scrollWidth": 613,
+      "height": 364,
+      "scrollHeight": 4313
+    }
+  },
+  {
+    "name": "landscape",
+    "kind": "campaigns",
+    "metrics": {
+      "width": 613,
+      "scrollWidth": 613,
+      "height": 364,
+      "scrollHeight": 999
+    }
+  },
+  {
+    "name": "landscape",
+    "kind": "character",
+    "metrics": {
+      "width": 613,
+      "scrollWidth": 613,
+      "height": 364,
+      "scrollHeight": 1367
+    }
+  },
+  {
+    "name": "landscape",
+    "kind": "settings",
+    "metrics": {
+      "width": 613,
+      "scrollWidth": 613,
+      "height": 364,
+      "scrollHeight": 568
+    }
+  },
+  {
+    "name": "landscape",
+    "errors": [],
+    "vitals": [
+      {
+        "h": 10,
+        "text": 10
+      },
+      {
+        "h": 10,
+        "text": 10
+      }
+    ],
+    "visibleButtons": 11
+  },
+  {
+    "name": "compact",
+    "kind": "atlas",
+    "metrics": {
+      "width": 358,
+      "scrollWidth": 358,
+      "height": 450,
+      "scrollHeight": 3305
+    }
+  },
+  {
+    "name": "compact",
+    "kind": "campaigns",
+    "metrics": {
+      "width": 358,
+      "scrollWidth": 358,
+      "height": 450,
+      "scrollHeight": 1167
+    }
+  },
+  {
+    "name": "compact",
+    "kind": "character",
+    "metrics": {
+      "width": 358,
+      "scrollWidth": 358,
+      "height": 450,
+      "scrollHeight": 1700
+    }
+  },
+  {
+    "name": "compact",
+    "kind": "settings",
+    "metrics": {
+      "width": 358,
+      "scrollWidth": 358,
+      "height": 450,
+      "scrollHeight": 602
+    }
+  },
+  {
+    "name": "compact",
+    "errors": [],
+    "vitals": [
+      {
+        "h": 13,
+        "text": 13
+      },
+      {
+        "h": 13,
+        "text": 13
+      }
+    ],
+    "visibleButtons": 11
+  }
+]

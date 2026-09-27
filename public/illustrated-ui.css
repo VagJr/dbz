@@ -1,0 +1,148 @@
+/* Original generated art. Gauges, labels and input remain live elements. */
+.action-dock{display:flex;align-items:center;gap:16px;bottom:29px;padding:0}
+.action-dock:before{display:none}
+.action-dock .action,.action-dock .awaken,.action-dock .action[data-action]{--button-art:url('/assets/ui/generated/combat/01.png');display:block;flex:0 0 72px;width:72px;height:72px;min-height:72px;max-height:72px;padding:0;border:0;border-radius:50%;clip-path:none;overflow:visible;background:none;box-shadow:none;transition:transform .12s,filter .12s}
+.action-dock .action:before,.action-dock .awaken:before{content:"";position:absolute;inset:0;z-index:-1;border:0;border-radius:50%;background:var(--button-art) center/contain no-repeat;box-shadow:none;clip-path:circle(49%)}
+.action-dock .action[data-action="cycleTarget"]{--button-art:url('/assets/ui/generated/combat/07.png')}
+.action-dock .action[data-action="blast"]{--button-art:url('/assets/ui/generated/combat/08.png')}
+.action-dock .action[data-action="dash"]{--button-art:url('/assets/ui/generated/combat/06.png')}
+.action-dock .action[data-action="guard"]{--button-art:url('/assets/ui/generated/combat/05.png')}
+.action-dock .action[data-action="kaioken"]{--button-art:url('/assets/ui/generated/combat/25.png');font-size:0}
+.action-dock .awaken{--button-art:url('/assets/ui/generated/combat/23.png')}
+.action-dock .action svg,.action-dock .skill-icon,.action-dock .awaken>span{display:none}
+.action-dock .action strong,.action-dock .awaken strong,.action-dock .action[data-action] strong{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);width:92px;color:#fff;font:800 11px/1 "Barlow Condensed",sans-serif;letter-spacing:.4px;text-transform:uppercase;text-shadow:0 2px 3px #000,0 0 5px #000}
+.action-dock .action kbd{position:absolute;top:-8px;right:-1px;font-size:8px;padding:2px 4px;border:1px solid #9ceaff;background:#091d30;color:#fff;border-radius:4px;z-index:2}
+.action-dock .action small{display:none}
+.action-dock .awaken small{position:absolute;top:-7px;right:-9px;padding:2px 5px;background:#162038;border:1px solid #ffcd7e;color:#fff;font-size:8px;border-radius:4px}
+.action-dock .action>i{border-radius:50%;clip-path:circle(49%);pointer-events:none}
+.action-dock .action:hover,.action-dock .awaken:hover{transform:translateY(-3px);filter:brightness(1.15)}
+.action-dock .action:active,.action-dock .awaken:active{transform:scale(.92)}
+.action-dock button:focus-visible,.bottom-nav button:focus-visible{outline:3px solid #fff5af;outline-offset:4px}
+.bottom-nav{gap:12px;bottom:22px}
+.bottom-nav button{position:relative;display:flex;flex-direction:column;width:49px;height:49px;min-height:49px;min-width:49px;padding:0;background:none;border:0;box-shadow:none;overflow:visible;clip-path:none}
+.bottom-nav button svg{display:none}
+.bottom-nav button:before{content:"";position:absolute;inset:0;background:var(--nav-art) center/cover;border-radius:50%;border:2px solid #71dfff;box-shadow:0 2px 5px #000b}
+.bottom-nav [data-panel="atlas"]{--nav-art:url('/assets/ui/generated/menu/44.png')}
+.bottom-nav [data-panel="campaigns"]{--nav-art:url('/assets/ui/generated/menu/42.png')}
+.bottom-nav [data-panel="character"]{--nav-art:url('/assets/ui/generated/combat/22.png')}
+.bottom-nav [data-panel="settings"]{--nav-art:url('/assets/ui/generated/hud/40.png')}
+.bottom-nav button span{position:absolute;bottom:-12px;color:#fff;white-space:nowrap;font-size:9px;text-shadow:0 2px 3px #000}
+.bottom-nav button:hover{background:none;filter:brightness(1.2)}
+.player-card{clip-path:none;border:0;border-radius:0;background:linear-gradient(90deg,#06172be6,#06172bbb 80%,transparent);box-shadow:none}
+.player-card:before{display:none}
+.player-card .portrait-small{border:0;background:url('/assets/ui/generated/hud/15.png') center/contain no-repeat}
+.player-card .portrait-small #level{background:url('/assets/ui/generated/hud/04.png') center/contain no-repeat;border:0;border-radius:0;min-width:27px;height:30px;line-height:30px;color:#fff}
+.player-card .bar,.player-card .xp-bar{position:relative;overflow:hidden;height:24px;margin:0;transform:none;border-radius:0;border:0;box-shadow:none;background:var(--gauge-art) center/100% 100% no-repeat}
+.player-card .bar.hp{--gauge-art:url('/assets/ui/generated/hud/bar-1.png')}
+.player-card .bar.ki{--gauge-art:url('/assets/ui/generated/hud/bar-2.png')}
+.player-card .xp-bar{--gauge-art:url('/assets/ui/generated/hud/bar-3.png');height:14px}
+.player-card .bar i,.player-card .xp-bar i{position:absolute;left:10%;top:34%;height:35%;transform:scaleX(.80);transform-origin:left;box-shadow:none;border-radius:0;clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%)}
+.player-card .bar span{position:absolute;inset:0;line-height:24px;z-index:1;font-size:10px;text-shadow:0 1px 2px #000,0 0 3px #000}
+#panel{--scene:url('/assets/ui/generated/paozu-background.jpg');background:#08182b var(--scene) center/cover no-repeat;color:#fff;border-left:2px solid #8addf5}
+#panel[data-kind="atlas"]{--scene:url('/assets/ui/generated/namek-background.jpg')}
+#panel[data-kind="campaigns"]{--scene:url('/assets/ui/generated/arena-background.jpg')}
+#panel[data-kind="help"],#panel[data-kind="settings"]{--scene:url('/assets/ui/generated/kame-background.jpg')}
+#panel:before{background:linear-gradient(180deg,transparent 0 170px,#061426d9 310px,#061426ed 100%);position:absolute;inset:0}
+#panel>header{min-height:205px;padding:108px 26px 20px;background:linear-gradient(0deg,#071c35ee,transparent 90%);border-bottom:2px solid #94eaf1}
+#panel>header:before,#panel>header:after{display:none}
+#panel>header>div{max-width:85%}
+#panel>header #close-panel{position:absolute;right:16px;top:16px;background:#071b30de;border:1px solid #fff8}
+#panel-body{max-height:calc(100dvh - 205px);background:transparent}
+#panel h2{font-size:32px;color:#fff;text-shadow:0 3px 5px #051629}
+#panel .eyebrow{color:#fbe4a4;text-shadow:0 2px 3px #001a29}
+#panel-body .world-card[data-world]{min-height:145px;padding:75px 12px 12px;background:linear-gradient(0deg,#05182bf5 0%,#05182bbc 45%,transparent 90%),var(--card-scene) center/cover no-repeat;border:1px solid #8ceaff82;clip-path:none;border-radius:8px}
+#panel-body .world-card[data-world] .planet-emblem{display:none}
+#panel-body .chapter-row[data-world]{background:linear-gradient(90deg,#071d32ee,#071d32c9),var(--card-scene) center/cover;border:1px solid #95cfdc44;border-left:3px solid #80e5eb;border-radius:6px;clip-path:none}
+#panel-body .technique-row{gap:9px}.technique-art{width:48px;height:48px;flex-shrink:0;object-fit:contain;border-radius:50%}.technique-row>div{flex:1;min-width:0}
+.character-hero{background:linear-gradient(90deg,#0b284cdb,#0b284c60);border-left:3px solid #f9d18e}
+.welcome{background:linear-gradient(90deg,#061426c4,#06142638),url('/assets/ui/generated/paozu-background.jpg') center/cover}
+.creation-panel{background:linear-gradient(140deg,#091f38eb,#12375cdc);border-color:#a6f1ff9e}
+.creation-panel .origin-preview{background:linear-gradient(90deg,#0836595e,#052745bb),url('/assets/ui/generated/paozu-background.jpg') center/cover}
+.touch-charge{background:url('/assets/ui/generated/combat/22.png') center/contain no-repeat!important;border:0!important;color:transparent!important}
+.touch-boost{background:url('/assets/ui/generated/combat/31.png') center/contain no-repeat!important;border:0!important;color:transparent!important}
+@media(max-width:1100px) and (min-width:761px){.action-dock{gap:11px}.action-dock .action,.action-dock .awaken,.action-dock .action[data-action]{width:64px;height:64px;min-height:64px;flex-basis:64px}}
+@media(max-width:760px){
+.action-dock{display:grid;grid-template-columns:repeat(3,54px);gap:18px 7px;right:10px;bottom:max(30px,env(safe-area-inset-bottom));padding:0}
+.action-dock .action,.action-dock .awaken,.action-dock .action[data-action]{grid-column:auto;width:54px;height:54px;min-height:54px;max-height:54px;padding:0}
+.action-dock .action strong,.action-dock .awaken strong,.action-dock .action[data-action] strong{width:64px;font-size:8px;bottom:-10px;line-height:1;white-space:nowrap}
+.action-dock .awaken small{font-size:7px;top:-5px;right:-1px}.action-dock .action kbd{display:none}
+.bottom-nav{left:12px;right:auto;top:auto;bottom:191px;display:grid;grid-template-columns:repeat(2,36px);gap:5px;transform:none;padding:0;background:none;border:0}
+.bottom-nav button{width:36px;height:36px;min-width:36px;min-height:36px}.bottom-nav button span{display:none}
+.player-card .bar{height:17px}.player-card .bar span{line-height:17px;font-size:8px;display:block}.player-card .xp-bar{height:10px}
+.player-card .name-row{margin-bottom:1px}.player-card .power-row{margin-top:0}
+.touch-charge{left:20px;bottom:139px;width:42px;height:42px}
+.touch-boost{left:71px;bottom:139px;width:42px;height:42px;min-height:42px}
+.touch-stick{left:14px;bottom:30px;width:94px;height:94px;background:url('/assets/ui/generated/hud/30.png') center/contain no-repeat;border:0}
+.touch-stick:before{display:none}.touch-stick span{background:url('/assets/ui/generated/hud/31.png') center/contain no-repeat;border:0;box-shadow:none}
+#panel{height:86dvh;max-height:86dvh;border-radius:18px 18px 0 0}
+#panel>header{min-height:154px;padding:78px 18px 16px}#panel h2{font-size:27px}
+#panel-body{max-height:calc(86dvh - 154px);padding:14px 15px 28px}
+#panel-body .world-card[data-world]{min-height:128px;padding:64px 8px 8px}
+.technique-art{width:38px;height:38px}.technique-row{flex-wrap:wrap}.welcome{background-position:65% center}
+}
+@media(prefers-reduced-motion:reduce){.action-dock .action,.action-dock .awaken{transition:none}}
+.action-dock [hidden]{display:none!important}
+.action-dock .awaken:disabled{opacity:.65;filter:saturate(.55)}
+.player-card .bar span{transform:none}
+.player-card .portrait-small{clip-path:none}
+@media(max-width:760px){.player-card .portrait-small{display:none}}
+#panel>header{background:linear-gradient(0deg,#071c35e8,transparent 95%),var(--scene) 70% 48%/cover no-repeat}
+#panel-body .chapter-row[data-world]{background:linear-gradient(90deg,#071d32f5 15%,#071d32a6),var(--card-scene) center/cover}
+@media(max-width:760px){.action-dock .action:before,.action-dock .awaken:before{filter:none}}
+/* Layout owns the space around each illustration. Never crop artwork to a circle. */
+.action-dock{gap:12px;bottom:max(16px,env(safe-area-inset-bottom));overflow:visible}
+.action-dock .action,.action-dock .awaken,.action-dock .action[data-action]{height:98px;min-height:98px;max-height:none;border-radius:0;flex-shrink:0}
+.action-dock .action:before,.action-dock .awaken:before{inset:0 auto auto 0;width:100%;height:auto;aspect-ratio:1;clip-path:none;border-radius:0;background-size:contain}
+.action-dock .action strong,.action-dock .awaken strong,.action-dock .action[data-action] strong{left:0;right:0;bottom:0;width:100%;height:24px;transform:none;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;overflow-wrap:normal;font-size:10px;line-height:1.1}
+.action-dock .action kbd{top:1px;right:0;font-size:7px}
+.action-dock .awaken small{top:1px;right:0;font-size:7px;max-width:100%}
+.action-dock .action>i{inset:0 auto auto 0;width:100%;max-height:72px;border-radius:50%;clip-path:none}
+.bottom-nav{bottom:max(16px,env(safe-area-inset-bottom))}
+.bottom-nav button{height:68px;min-height:68px;border-radius:0}
+.bottom-nav button:before{inset:0 auto auto 0;width:100%;aspect-ratio:1;height:auto;background-size:contain;background-repeat:no-repeat;border:0;border-radius:0;box-shadow:none}
+.bottom-nav button span{bottom:0;height:16px;line-height:16px}
+.player-card .bar,.player-card .xp-bar{height:29px;background:none;border:solid transparent;border-width:8px 12px;border-image-source:var(--gauge-art);border-image-slice:18 26 fill;border-image-width:8px 12px;overflow:visible}
+.player-card .bar i,.player-card .xp-bar i{left:0;top:0;height:100%;transform:none;border-radius:0;clip-path:none}
+.player-card .bar span{inset:-8px -12px;display:flex;align-items:center;justify-content:center;line-height:normal;pointer-events:none}
+.player-card .xp-bar{height:19px;border-width:6px 12px;border-image-width:6px 12px}
+.player-card .portrait-small{flex-shrink:0;width:54px;height:64px;overflow:visible;background-size:54px 54px;background-position:center top}
+.player-card .portrait-small #level{bottom:-3px;right:-3px}
+#panel{background:#08182b;overflow:hidden}
+#panel[open]{display:flex;flex-direction:column}
+#panel:before{display:none}
+#panel>header{display:block;flex:0 0 auto;min-height:0;margin:0;padding:0;background:#0c2136;border-bottom:1px solid #72cbd8}
+#panel>header:before{content:"";display:block;position:static;inset:auto;width:100%;height:auto;aspect-ratio:16/9;border:0;border-radius:0;opacity:1;box-shadow:none;background:var(--scene) center/contain no-repeat}
+#panel>header:after{display:none}
+#panel>header>div{max-width:none;padding:14px 22px 18px;background:#0c2136}
+#panel h2{margin:5px 0 0;font-size:28px;line-height:1.1}
+#panel-body{flex:1 1 auto;min-height:0;max-height:none;overflow:auto}
+#panel-body .world-card[data-world]{display:block;min-height:0;padding:9px;background:#0c253c;overflow:visible}
+#panel-body .world-card[data-world]:before{content:"";display:block;position:static;inset:auto;width:100%;height:auto;aspect-ratio:1;background:var(--card-scene) center/contain no-repeat;margin-bottom:9px}
+#panel-body .world-card[data-world] strong,#panel-body .world-card[data-world] small{position:relative}
+#panel-body .chapter-row[data-world]{background:#102a40;overflow:visible}
+.technique-art{border-radius:0;object-fit:contain;max-width:48px}
+@media(min-width:761px) and (max-width:1200px){.bottom-nav{bottom:128px}.action-dock .action,.action-dock .awaken,.action-dock .action[data-action]{height:90px;min-height:90px}}
+@media(max-width:760px){
+.action-dock{left:auto;right:max(12px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));transform:none;grid-template-columns:repeat(3,54px);gap:8px 7px;overflow:visible}
+.action-dock .action,.action-dock .awaken,.action-dock .action[data-action]{width:54px;height:76px;min-height:76px;max-height:none}
+.action-dock .action strong,.action-dock .awaken strong,.action-dock .action[data-action] strong{width:100%;height:22px;bottom:0;font-size:8px;white-space:normal;line-height:1.1}
+.action-dock .awaken small{top:0;right:0}
+.bottom-nav{bottom:211px;grid-template-columns:repeat(2,36px)}
+.bottom-nav button{width:36px;height:36px;min-height:36px}
+.player-card .bar{height:22px;border-width:6px 9px;border-image-width:6px 9px}
+.player-card .bar span{inset:-6px -9px;line-height:normal}
+.player-card .xp-bar{height:16px;border-width:5px 9px;border-image-width:5px 9px}
+.quest-card{top:190px}
+#panel{height:90dvh;max-height:90dvh;width:100%;max-width:100%;border-radius:12px 12px 0 0}
+#panel>header{min-height:0;padding:0}
+#panel>header:before{max-height:24dvh;background-size:contain;background-color:#091b2d}
+#panel>header>div{padding:10px 16px 12px}
+#panel h2{font-size:23px}
+#panel-body{max-height:none;padding:12px 14px 24px}
+#panel-body .world-card[data-world]{min-height:0;padding:7px}
+.technique-art{max-width:38px}
+}
+@media(max-height:560px){#panel>header:before{max-height:24dvh}#panel>header>div{padding:8px 16px}#panel h2{font-size:21px}}
+#panel[data-kind]>header:before{content:"";display:block;position:static;width:100%;height:auto;aspect-ratio:16/9;max-height:none;border:0;border-radius:0;opacity:1;box-shadow:none;background:var(--scene) center/cover no-repeat}
+#panel[data-kind="atlas"]>header:before,#panel[data-kind="campaigns"]>header:before,#panel[data-kind="character"]>header:before,#panel[data-kind="settings"]>header:before,#panel[data-kind="help"]>header:before{background-image:var(--scene)}
+@media(max-width:760px){#panel[data-kind]>header:before{max-height:24dvh;aspect-ratio:16/9;background-size:contain;background-color:#091b2d}}

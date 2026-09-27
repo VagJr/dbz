@@ -9,7 +9,7 @@ npm install
 npm start
 ```
 
-Abra http://localhost:3000. O catálogo animado fica em http://localhost:3000/models.html e também é acessível pelo menu Guerreiro. `PORT` e `DATA_DIR` permitem executar uma prévia isolada. Os perfis são salvos em `data/profiles.json`; preserve esse arquivo e seus backups.
+Abra http://localhost:25565. O catálogo animado fica em http://localhost:25565/models.html e também é acessível pelo menu Guerreiro. `PORT` e `DATA_DIR` permitem executar uma prévia isolada. O mundo e os perfis são salvos juntos em `data/checkpoint.json`; preserve o diretório e backups verificados. `profiles.json` e `world.json` são espelhos de compatibilidade.
 
 ## Controles
 
@@ -60,3 +60,17 @@ Os testes cobrem combate, progressão, persistência, sincronização entre clie
 - `public/flight-ui.css`: acabamento e adaptação dos controles de navegação.
 
 Esta entrega integra os sistemas acima. A produção de todo o universo e história em escala canônica permanece incompleta; o catálogo e os destinos atuais delimitam o conteúdo realmente presente.
+
+## Atualização: Fronteiras
+
+A composição dos 19 destinos, o combate e a continuação da campanha foram revisados. Consulte [a entrega e seus limites](docs/frontiers-production.md). Execute `npm test`, `node tools/check-sandbox.cjs` e `node tools/check-frontiers.cjs` para verificar regras e fluxos visuais. Os testes de navegador usam dados isolados. Preserve `checkpoint.json` nos backups: ele é a fonte conjunta de personagens e mundo.
+
+## Beta 1.0 — combate e operação
+
+Central → Dojo permite treinar seis identidades inimigas. A IA usa percepção atrasada, energia de ação, guarda, esquiva, contra-ataque e projéteis físicos; o jogador pode devolver ki e romper guarda alternando golpes e técnica.
+
+Consulte [regras e referências de combate](docs/combat-beta.md), [entrega, testes e portões de lançamento](docs/beta-release.md) e [monetização proposta sem vantagem de poder](docs/monetization.md). Compras estão desativadas. Esta versão é candidata local a testes, sem publicação comercial.
+
+## Revisão de ritmo e duelos
+
+Golpes exigem preparação, acerto e recuperação; defesa perfeita exige um novo pressionamento. Central → Dojo inclui duelo por convite com vida/dano equalizados, até três rounds e restauração do personagem. A campanha principal orienta Bulma → pista → primeiro encontro, com um adversário por vez. Consulte [tempos, controles, fontes e limites](docs/combat-beta.md). Reinicie o servidor e recarregue o navegador para usar esta revisão.

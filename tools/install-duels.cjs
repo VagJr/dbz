@@ -1,0 +1,1 @@
+const fs=require('fs');let s=fs.readFileSync('src/engine.js','utf8');s=s.replace('require("./combat-rhythm")(Engine);','require("./combat-rhythm")(Engine);\nrequire("./duels")(Engine);');fs.writeFileSync('src/engine.js',s);

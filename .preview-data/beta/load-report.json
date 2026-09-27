@@ -1,0 +1,16 @@
+{
+  "at": "2026-09-27T17:33:49.371Z",
+  "clients": 12,
+  "seconds": 20,
+  "worlds": 3,
+  "enemies": 94,
+  "snapshots": 3660,
+  "averageSnapshotBytes": 13397,
+  "perClientKBps": 200,
+  "httpP95Ms": 12.84,
+  "loopP95Ms": 25.07,
+  "sampledTickP95Ms": 10.25,
+  "maxTickMs": 13.85,
+  "errors": [],
+  "scope": "Teste local sintético; não certifica escala pública ou latência WAN."
+}

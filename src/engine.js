@@ -18,6 +18,9 @@ const cleanName = (v) =>
         .trim()
         .slice(0, 20)
     : "";
+const EnemyTactics = require("./enemy-tactics");
+const CombatBrain = require("./combat-brain");
+const EnemyMotor = require("./enemy-motor");
 class Engine {
   constructor() {
     this.time = 0;
@@ -30,17 +33,7 @@ class Engine {
     this.maps.space = worldData("space");
     this.eventAt = 90;
     this.event = null;
-    for (const w of WORLDS)
-      for (let i = 0; i < 10; i++) {
-        const a = (i * Math.PI) / 5;
-        this.spawn(
-          w.id,
-          w.enemy,
-          w.enemySkin,
-          1700 + Math.cos(a) * 650,
-          1700 + Math.sin(a) * 650,
-        );
-      }
+    // Stream encounters from world compositions; story encounters own the protected arrival area.
   }
   spawn(world, name, skin, x, y, boss = false, extra = {}) {
     const e = {
@@ -62,8 +55,10 @@ class Engine {
       cooldown: this.time + 1,
       stun: 0,
       dead: false,
+      ai: EnemyTactics.identity(skin, this.serial, world),
       ...extra,
     };
+    e.combatStyle = e.ai?.archetype || "brawler";
     this.enemies.push(e);
     return e;
   }
@@ -218,6 +213,11 @@ class Engine {
       angle = Number(data.angle);
     if (![x, y, angle].every(Number.isFinite)) return;
     const n = Math.max(1, Math.hypot(x, y));
+    if (data.guard === true && !p.input.guard) {
+      p.guardPressedAt =
+        this.time >= (p.nextPerfectGuard || 0) ? this.time : -99;
+      p.nextPerfectGuard = this.time + 0.6;
+    }
     p.input = {
       x: x / n,
       y: y / n,
@@ -225,8 +225,10 @@ class Engine {
       guard: data.guard === true,
       charge: data.charge === true,
       boost: data.boost === true,
+      manualAim:data.manualAim===true,
     };
     p.inputAt = this.time;
+    p.aimReceived = true;
   }
   chapter(p) {
     const c = CAMPAIGNS.find((c) => c.id === p.campaign) || CAMPAIGNS[0];
@@ -329,9 +331,10 @@ class Engine {
       const target = this.target(p, p.heavyStrike ? 360 : 280);
       p.combo = t - p.comboAt < 0.7 ? (p.combo % 3) + 1 : 1;
       p.comboAt = t;
-      p.cooldowns.attack = t + (p.combo === 3 ? 0.42 : 0.22);
+      p.cooldowns.attack =
+        t + (p.heavyStrike ? 0.62 : p.combo === 3 ? 0.5 : 0.28);
       p.state = "attack";
-      p.until = t + 0.18;
+      p.until = t + 0.2;
       if (target) {
         p.angle = Math.atan2(target.y - p.y, target.x - p.x);
         const d = distance(p, target);
@@ -347,13 +350,15 @@ class Engine {
         }
       }
       this.emit("slash", p, { angle: p.angle, combo: p.combo });
-      if (target && distance(p, target) < 115) {
+      if (target && distance(p, target) < 115 && this.clearSight(p, target)) {
         const counter = p.counterUntil > t ? 1.7 : 1;
         p.counterUntil = 0;
         this.damage(
           p,
           target,
-          (p.heavyStrike ? 62 : p.combo === 3 ? 38 : 22) * (p.form ? 1.4 : 1) * counter +
+          (p.heavyStrike ? 62 : p.combo === 3 ? 38 : 22) *
+            (p.form ? 1.4 : 1) *
+            counter +
             (p.level - 1) * 1.2 +
             p.stats.force * 2,
           p.combo === 3 || p.heavyStrike,
@@ -382,6 +387,7 @@ class Engine {
       id: `s${++this.serial}`,
       owner: p.id,
       world: p.world,
+      mode: p.mode,
       originX: p.x,
       originY: p.y,
       x: p.x,
@@ -452,6 +458,13 @@ class Engine {
     e.y = y;
   }
   damage(attacker, target, amount, heavy = false) {
+    if (
+      (target.practiceOwner && attacker.id !== target.practiceOwner) ||
+      (attacker.practiceOwner && target.id !== attacker.practiceOwner)
+    )
+      return;
+    if (attacker.practiceOwner)
+      amount = Math.min(amount, Math.max(0, target.hp - 1));
     if (target.dead || target.state === "dead" || target.invuln > this.time)
       return;
     const t = this.time,
@@ -467,14 +480,19 @@ class Engine {
           ),
         ) < 1.4;
       if (target.state === "guard" && facing && target.ki > 0) {
-        if (t - target.guardAt <= 0.18) {
+        if (t - target.guardAt <= 0.133) {
           target.counterUntil = t + 0.75;
+          target.ki = Math.max(0, target.ki - 8);
           target.focus = clamp(target.focus + 20, 0, 100);
-          attacker.stun = t + 0.65;
+          target.lastParryAt = t;
+          if (!attacker.projectile) attacker.stun = t + 0.65;
           this.emit("parry", target, { text: "PERFEITO" });
           return;
         }
-        target.ki = Math.max(0, target.ki - (heavy ? 42 : 18));
+        target.ki =
+          attacker.heavyStrike || attacker.guardBreak
+            ? 0
+            : Math.max(0, target.ki - (heavy ? 42 : 18));
         amount *= 0.2;
         if (!target.ki) {
           target.stun = t + 0.7;
@@ -500,13 +518,26 @@ class Engine {
     }
     target.dead = true;
     target.respawnAt = t + 18;
+    if (target.practiceOwner) return;
     if (target.ecologyKey) {
       this.worldMemory ??= {};
-      this.worldMemory[target.ecologyKey] = { defeatedUntil: Date.now() + 18000, defeats: (this.worldMemory[target.ecologyKey]?.defeats || 0) + 1 };
+      this.worldMemory[target.ecologyKey] = {
+        defeatedUntil: Date.now() + 18000,
+        defeats: (this.worldMemory[target.ecologyKey]?.defeats || 0) + 1,
+      };
     }
     for (const p of this.players.values()) {
+      if (target.storyEncounter) {
+        if (
+          target.storyParticipants?.has(p.id) &&
+          p.world === target.world &&
+          distance(p, target) <= 850
+        )
+          p.kills++;
+        continue;
+      }
       if (p.world !== target.world || distance(p, target) > 850) continue;
-      this.reward(p, target.rewardXP || (target.boss ? 100 : 28));
+      this.reward(p, target.rewardXP ?? (target.boss ? 100 : 28));
       p.kills++;
       const c = this.chapter(p);
       if (c && p.world === c.world && p.questPhase === 1 && !target.boss) {
@@ -691,6 +722,11 @@ class Engine {
         }
         continue;
       }
+      if (p.clashId) {
+        p.state = "clash";
+        p.vx = p.vy = 0;
+        continue;
+      }
       if (p.training && t > p.training.beat + 0.4) {
         p.training.attempts++;
         p.training.beat = t + 1.4;
@@ -701,6 +737,7 @@ class Engine {
       if (stale) {
         p.input = { x: 0, y: 0, angle: p.angle };
         p.chargeAt = null;
+        p.meleeAt = null;
       }
       this.navigationTick(p, dt);
       if (p.stun > t) {
@@ -708,17 +745,25 @@ class Engine {
         continue;
       }
       const input = p.input,
-        locked = p.until > t && ["attack", "blast", "dash"].includes(p.state);
+        locked =
+          !!p.moveAction ||
+          p.roundLocked ||
+          (p.until > t && ["attack", "blast", "dash"].includes(p.state));
       p.boosting = p.mode === "flight" && input.boost && p.ki > 0;
-      if (!locked || input.guard) {
+      if (!locked) {
         p.angle = input.angle;
         if (input.guard && p.ki > 1) {
-          if (p.state !== "guard") p.guardAt = t;
+          if (p.state !== "guard") p.guardAt = p.guardPressedAt ?? -99;
           p.state = "guard";
           p.ki = Math.max(0, p.ki - dt * 7);
         } else if (input.charge) {
           p.state = "charge";
-          p.ki = Math.min(100, p.ki + dt * 48);
+          p.ki = Math.min(
+            100,
+            p.ki + dt * (t - (p.lastCombatAt || 0) < 4 ? 24 : 38),
+          );
+        } else if (p.meleeAt != null) {
+          p.state = "meleeCharge";
         } else if (p.chargeAt !== null) {
           p.state = "chargeAim";
         } else {
@@ -735,12 +780,9 @@ class Engine {
       if (p.training && Math.hypot(input.x, input.y) > 0.2) p.training = null;
       const airborne = p.mode === "flight";
       const accelerating =
-        (!locked || p.state === "attack" || p.state === "blast") &&
-        p.stun <= t &&
-        !input.guard &&
-        !input.charge;
+        (!locked || (p.moveAction && ["jab","link","finisher"].includes(p.moveAction.key))) && p.stun <= t && !input.guard && !input.charge;
       const intensity =
-        p.state === "chargeAim"
+        p.moveAction && ["jab","link","finisher"].includes(p.moveAction.key) ? .72 : p.state === "chargeAim"
           ? 1
           : p.state === "charge"
             ? 0.2
@@ -779,7 +821,7 @@ class Engine {
         p.vy *= Math.exp(-drag * dt);
       }
       if (p.boosting) p.ki = Math.max(0, p.ki - dt * 16);
-      const maxSpeed =
+      let maxSpeed =
         locked && p.state === "dash"
           ? 1600
           : p.world === "space"
@@ -791,6 +833,12 @@ class Engine {
               : (ORIGINS.find((o) => o.id === p.origin).speed * 1.18 +
                   p.stats.force * 3) *
                 intensity;
+      if (p.duelId || t - (p.lastCombatAt ?? -99) < 5)
+        maxSpeed = Math.min(
+          maxSpeed,
+          p.state === "dash" ? 680 : p.mode === "flight" ? 360 : 300,
+        );
+      if (p.roundLocked) maxSpeed = 0;
       const currentSpeed = Math.hypot(p.vx, p.vy);
       if (currentSpeed > maxSpeed) {
         p.vx *= maxSpeed / currentSpeed;
@@ -802,8 +850,13 @@ class Engine {
         p.mode = "flight";
         this.emit("takeoff", p, { text: "VOO LIVRE" });
       }
-      p.ki = clamp(p.ki + dt * 5, 0, 100);
-      if (t - p.lastHit > 5)
+      if (!p.moveAction && !input.guard && !input.charge && p.stun <= t)
+        p.ki = clamp(
+          p.ki + dt * (t - (p.lastCombatAt ?? -99) < 5 ? 2 : 5),
+          0,
+          100,
+        );
+      if (!p.duelId && t - Math.max(p.lastHit, p.lastCombatAt ?? -99) > 12)
         p.hp = Math.min(p.maxHp, p.hp + dt * (p.origin === "majin" ? 15 : 7));
     }
     if (!this.nextExploration || t >= this.nextExploration) {
@@ -812,65 +865,226 @@ class Engine {
     }
     for (const e of this.enemies) {
       if (e.dead) {
-        if (!e.chapterId && !e.event && t > e.respawnAt) {
+        if (
+          !e.chapterId &&
+          !e.event &&
+          !e.storyEncounter &&
+          !e.nonRespawn &&
+          t > e.respawnAt
+        ) {
           e.dead = false;
           e.hp = e.maxHp;
+          e.returning = false;
+          e.guardUntil = 0;
+          e.recoveryUntil = 0;
+          e.attackCount = 0;
+          e.brain = null;
+          e.motorMove = null;
+          e.confirmedHits = 0;
+          e.chainUntil = 0;
+          e.recentPressure = 0;
+          e.pressureHitAt = -99;
+          e.nextOpening = 0;
+          e.nextGuard = 0;
+          e.nextEvade = 0;
+          e.effort = 100;
+          e.guardMeter = 70;
+          e.counterReadyUntil = 0;
+          e.pressureUntil = 0;
           e.x = e.homeX;
           e.y = e.homeY;
           e.state = "idle";
         }
         continue;
       }
+      if (e.clashId) {
+        e.state = "clash";
+        continue;
+      }
+      CombatBrain.maintain(e, dt);
+      const priorTarget = this.players.get(e.combatTargetId);
+      const target = [...this.players.values()]
+        .filter(
+          (p) =>
+            !(
+              e.cell &&
+              p.world === "earth" &&
+              p.storyState?.questId === "db-paozu" &&
+              e.provokedBy !== p.id
+            ) &&
+            !p.duelId &&
+            (!e.practiceOwner || e.practiceOwner === p.id) &&
+            p.world === e.world &&
+            p.state !== "dead" &&
+            distance(p, e) <
+              (e.world === "space"
+                ? 1100
+                : e.ai?.aggroRange || (e.boss ? 650 : 390)),
+        )
+        .sort(
+          (a, b) =>
+            distance(a, e) -
+            (a === priorTarget ? 140 : 0) -
+            (distance(b, e) - (b === priorTarget ? 140 : 0)),
+        )[0];
+      e.combatTargetId = target?.id || null;
+      const visible = !!target && this.clearSight(e, target);
+      CombatBrain.observe(e, target, t, visible);
       if (e.stun > t) {
         e.state = "stun";
         continue;
       }
-      const target = [...this.players.values()]
-        .filter(
-          (p) =>
-            p.world === e.world &&
-            p.state !== "dead" &&
-            distance(p, e) < (e.world === "space" ? 1100 : e.boss ? 650 : 390),
-        )
-        .sort((a, b) => distance(a, e) - distance(b, e))[0];
+      // A patrol cannot chase a player indefinitely or fire through a reset.
+      if (
+        !e.storyEncounter &&
+        !e.boss &&
+        Math.hypot(e.x - e.homeX, e.y - e.homeY) > 1100
+      )
+        e.returning = true;
+      if (e.returning) {
+        e.state = "return";
+        e.guardUntil = 0;
+        e.observedThreatAt = null;
+        e.pressureUntil = 0;
+        const hx = e.homeX - e.x,
+          hy = e.homeY - e.y,
+          hd = Math.hypot(hx, hy);
+        if (hd < 65) {
+          e.returning = false;
+          e.hp = e.maxHp;
+          e.cooldown = t + 1;
+        } else
+          this.tacticalStep(
+            e,
+            { x: e.homeX, y: e.homeY },
+            { x: hx / hd, y: hy / hd },
+            dt,
+            260,
+          );
+        continue;
+      }
+      if (e.state === "evade" && e.until > t) {
+        this.tacticalStep(
+          e,
+          target || e,
+          { x: Math.cos(e.evadeAngle), y: Math.sin(e.evadeAngle) },
+          dt,
+          e.world === "space" ? 1350 : 500,
+        );
+        continue;
+      }
       if (e.state === "windup") {
         if (t >= e.attackAt) {
+          const m =
+            e.motorMove ||
+            (e.motorMove = EnemyMotor.prepare(e, e.windupAt || t));
           e.state = "attack";
-          e.until = t + 0.3;
-          e.cooldown = t + (e.boss ? 1.4 : 1.8);
-          const attackRange = e.pattern === "beam" ? 920 : e.boss ? 175 : 85;
-          this.emit("enemyAttack", e, {
-            angle: e.angle,
-            radius: attackRange,
-            pattern: e.pattern,
-          });
-          for (const p of this.players.values()) {
-            if (p.world !== e.world || p.state === "dead") continue;
-            const d = distance(p, e),
-              a = Math.abs(
-                angleDiff(Math.atan2(p.y - e.y, p.x - e.x), e.angle),
-              );
-            const dx = p.x - e.x,
-              dy = p.y - e.y;
-            const forward = dx * Math.cos(e.angle) + dy * Math.sin(e.angle);
-            const lateral = Math.abs(
-              -dx * Math.sin(e.angle) + dy * Math.cos(e.angle),
+          e.until = t + m.active;
+          e.recoveryUntil = e.until + m.recovery;
+          e.cooldown = e.nextOpening = e.recoveryUntil;
+          const impactAt = e.attackAt,
+            attackAngle = e.angle,
+            pattern = e.pattern;
+          const attackRange = e.telegraphRadius || e.ai?.meleeRange || 125;
+          const resolve = () => {
+            this.emit("enemyAttack", e, {
+              angle: attackAngle,
+              radius: attackRange,
+              pattern,
+              projectile: pattern === "beam",
+              counter: !!e.counterStrike,
+              combo: m.stage,
+            });
+            if (pattern === "beam") {
+              const speed = e.world === "space" ? 1400 : 760;
+              this.shots.push({
+                id: "s" + ++this.serial,
+                owner: e.id,
+                hostile: true,
+                world: e.world,
+                mode: e.mode,
+                originX: e.x,
+                originY: e.y,
+                x: e.x,
+                y: e.y,
+                angle: attackAngle,
+                speed,
+                r: 14,
+                damage: (e.damage || 24) * (m.charged ? 1.6 : 1),
+                life: attackRange / speed,
+                charged: !!m.charged,
+                initialAngle: attackAngle,
+                steerUntil: 0,
+                pierce: !!m.charged,
+                hits: [],
+                technique: "hostile",
+                skin: e.skin,
+              });
+              e.pressureUntil = t + attackRange / speed;
+              EnemyMotor.finish(e, t, false);
+              return;
+            }
+            // A short physical step closes contact; aim stays locked from startup.
+            this.move(
+              e,
+              Math.cos(attackAngle) * 14,
+              Math.sin(attackAngle) * 14,
             );
-            const beamHit =
-              e.pattern === "beam" &&
-              forward > 0 &&
-              forward < attackRange &&
-              lateral < 55;
-            if (
-              beamHit ||
-              (d < (e.boss ? 175 : 85) && (e.pattern === "ring" || a < 0.85))
-            )
-              this.damage(e, p, e.damage || (e.boss ? 48 : 18), true);
-          }
+            let hit = false;
+            e.attackData = { stun: m.stun, posture: m.heavy ? 30 : 12 };
+            for (const p of this.players.values()) {
+              if (
+                p.world !== e.world ||
+                p.state === "dead" ||
+                !this.clearSight(e, p)
+              )
+                continue;
+              const d = distance(p, e),
+                a = Math.abs(
+                  angleDiff(Math.atan2(p.y - e.y, p.x - e.x), attackAngle),
+                );
+              if (
+                d < attackRange &&
+                (pattern === "ring" || a < (pattern === "rush" ? 0.55 : 0.85))
+              ) {
+                const hp = p.hp,
+                  guarded =
+                    p.state === "guard" &&
+                    Math.cos(Math.atan2(e.y - p.y, e.x - p.x) - p.angle) > 0.35;
+                this.damage(
+                  e,
+                  p,
+                  (e.damage || (e.boss ? 48 : 18)) *
+                    (e.counterStrike ? 1.15 : 1) *
+                    (m.finisher ? 1.2 : 1),
+                  m.heavy,
+                );
+                hit ||= p.hp < hp && !guarded;
+              }
+            }
+            e.attackData = null;
+            EnemyMotor.finish(e, t, hit);
+          };
+          if (this.combatIntents)
+            this.combatIntents.push({
+              source: e,
+              at: impactAt,
+              melee: pattern === "cone" && !m.heavy,
+              resolve,
+            });
+          else resolve();
         }
         continue;
       }
       if (e.state === "attack" && e.until > t) continue;
+      if (e.recoveryUntil > t) {
+        e.state = "recover";
+        continue;
+      }
+      if (e.guardUntil > t) {
+        e.state = "guard";
+        continue;
+      }
       if (!target) {
         e.state = "idle";
         const a = t * 0.3 + Number(e.id.slice(1));
@@ -882,50 +1096,109 @@ class Engine {
         continue;
       }
       const d = distance(e, target);
+      const canAttack =
+        (t >= e.cooldown || e.counterReadyUntil > t) &&
+        EnemyTactics.canCommit(e, this.enemies, target, t);
+      const choice = CombatBrain.decide(e, target, t, canAttack, visible);
       e.angle = Math.atan2(target.y - e.y, target.x - e.x);
-      if (
-        t >= e.cooldown &&
-        (d < (e.boss ? 175 : 82) ||
-          ((e.world === "space" || e.boss && e.hp / e.maxHp < 0.72) && d < 840))
-      ) {
+      if (choice === "guard") {
+        e.state = "guard";
+        e.guardUntil = t + (e.ai?.guardDuration || 0.55);
+        e.nextGuard = t + EnemyMotor.profile(e).guardRetry;
+        e.effort -= 8;
+        continue;
+      }
+      if (choice === "evade") {
+        e.state = "evade";
+        e.until = t + 0.26;
+        e.evadeAngle = e.angle + ((e.ai?.orbit || 1) * Math.PI) / 2;
+        e.nextEvade = t + EnemyMotor.profile(e).evadeRetry;
+        e.effort -= 26;
+        this.emit("dash", e, { angle: e.evadeAngle, text: "PASSO LATERAL" });
+        continue;
+      }
+      if (["strike", "projectile", "counter"].includes(choice)) {
         e.state = "windup";
-        e.attackAt = t + (e.boss ? 0.52 : 0.38);
+        e.counterStrike = choice === "counter";
+        if (e.counterStrike) e.counterReadyUntil = 0;
         e.windupAt = t;
-        e.pattern = e.world === "space" && d > 150 ? "beam" : !e.boss
-          ? "cone"
-          : e.hp / e.maxHp < 0.3
-            ? "ring"
-            : d > 215 && e.hp / e.maxHp < 0.72
-              ? "beam"
-              : "cone";
+        e.attackCount = (e.attackCount || 0) + 1;
+        e.pattern =
+          choice === "projectile"
+            ? "beam"
+            : e.counterStrike
+              ? "cone"
+              : EnemyTactics.attackPattern(e, d);
+        // A ranged archetype in contact still uses a short, readable melee strike.
+        if (choice === "strike" && e.pattern === "beam") e.pattern = "cone";
+        e.motorMove = EnemyMotor.prepare(e, t);
+        e.motorMove.motion=require("./combat-motion")(e,e.motorMove.finisher?"finisher":"jab",e.attackCount,{x:Math.cos(e.angle),y:Math.sin(e.angle),boost:EnemyMotor.profile(e).pace>.75});
+        e.effort -= e.motorMove.cost;
+        e.attackAt = t + e.motorMove.startup;
+        e.nextOpening = e.attackAt + e.motorMove.active + e.motorMove.recovery;
+        e.telegraphRadius =
+          e.pattern === "beam"
+            ? e.ai?.rangedRange || 920
+            : e.pattern === "rush"
+              ? e.ai?.rushRange || 225
+              : e.ai?.meleeRange || (e.boss ? 175 : 125);
+        e.pressureUntil = e.attackAt + 0.3;
       } else {
-        e.state = "run";
-        if (d > 55)
-          this.move(
-            e,
-            Math.cos(e.angle) * dt * (e.world === "space" ? 1250 : e.mode === "flight" ? 580 : e.boss ? 135 : 155),
-            Math.sin(e.angle) * dt * (e.world === "space" ? 1250 : e.mode === "flight" ? 580 : e.boss ? 135 : 155),
-          );
+        e.state = choice === "breathe" ? "breathe" : "run";
+        let steering = EnemyTactics.steering(e, target, this.enemies, t);
+        if (choice === "retreat" || choice === "breathe")
+          steering = {
+            x: -Math.cos(e.angle) * 0.7,
+            y: -Math.sin(e.angle) * 0.7,
+          };
+        const speed =
+          (e.world === "space"
+            ? 1250
+            : e.mode === "flight"
+              ? 580
+              : e.boss
+                ? 230
+                : 250) * (e.ai?.moveSpeed || 1);
+        this.tacticalStep(e, target, steering, dt, speed);
       }
     }
+    this.advanceBeams?.(dt);
     for (const s of this.shots) {
+      if (s.life <= 0) continue;
       const ox = s.x,
         oy = s.y;
       s.x += Math.cos(s.angle) * s.speed * dt;
       s.y += Math.sin(s.angle) * s.speed * dt;
       s.life -= dt;
-      const owner = this.players.get(s.owner);
+      const owner = s.hostile
+        ? this.enemies.find((e) => e.id === s.owner && !e.dead && !e.returning)
+        : this.players.get(s.owner);
       if (!owner) {
         s.life = 0;
         continue;
       }
-      const targets = this.enemies.concat(
-        [...this.players.values()].filter(
-          (p) => p.id !== owner.id && p.pvp && owner.pvp,
-        ),
-      );
+      if (
+        !this.clearSight(
+          { world: s.world, x: ox, y: oy, mode: s.mode },
+          { world: s.world, x: s.x, y: s.y, mode: s.mode },
+        )
+      ) {
+        s.life = 0;
+        this.emit("impact", s, { tier: "low" });
+        continue;
+      }
+      const targets = s.hostile
+        ? [...this.players.values()]
+        : this.enemies.concat(
+            [...this.players.values()].filter(
+              (p) => p.id !== owner.id && p.pvp && owner.pvp,
+            ),
+          );
       for (const e of targets) {
         if (
+          ((owner.duelId || e.duelId) && owner.duelId !== e.duelId) ||
+          (e.practiceOwner && e.practiceOwner !== owner.id) ||
+          (owner.practiceOwner && owner.practiceOwner !== e.id) ||
           e.world !== s.world ||
           e.dead ||
           s.hits.includes(e.id) ||
@@ -941,7 +1214,45 @@ class Engine {
         );
         if (Math.hypot(e.x - (ox + vx * f), e.y - (oy + vy * f)) < s.r + 20) {
           s.hits.push(e.id);
-          this.damage(owner, e, s.damage, s.pierce);
+          const priorParry = e.lastParryAt;
+          this.damage(
+            {
+              ...owner,
+              x: ox,
+              y: oy,
+              projectile: true,
+              kiWeave: !!s.weave,
+              guardBreak: !!s.charged,
+              attackData: {
+                posture: s.charged ? 80 : s.posture || 15,
+                stun: 0.2,
+              },
+            },
+            e,
+            s.damage,
+            s.pierce,
+          );
+          if (
+            (s.reflections || 0) < 3 &&
+            e.lastParryAt !== priorParry &&
+            e.lastParryAt === t
+          ) {
+            s.reflections = (s.reflections || 0) + 1;
+            s.owner = e.id;
+            s.hostile = false;
+            s.angle += Math.PI;
+            s.steerUntil = 0;
+            s.trail = [];
+            s.initialAngle = s.angle;
+            s.life = 0.75;
+            s.speed *= 1.15;
+            s.damage *= 0.8;
+            s.hits = [];
+            s.technique = "divine";
+            s.pressureUntil = 0;
+            this.emit("parry", e, { text: "DEVOLUÇÃO DE KI" });
+            break;
+          }
           if (!s.pierce) {
             s.life = 0;
             break;
@@ -951,10 +1262,21 @@ class Engine {
     }
     this.shots = this.shots.filter((s) => s.life > 0);
     this.enemies = this.enemies.filter(
-      (e) => !e.dead || (!e.chapterId && !e.event) || t < e.respawnAt,
+      (e) =>
+        !e.dead ||
+        (!e.chapterId && !e.event && !e.storyEncounter) ||
+        t < e.respawnAt,
     );
-    if (!this.event && t > this.eventAt && this.players.size) {
-      const p = [...this.players.values()][0],
+    if (
+      !this.event &&
+      t > this.eventAt &&
+      [...this.players.values()].some(
+        (p) => p.storyState?.completedQuests.length >= 3 && !p.duelId,
+      )
+    ) {
+      const p = [...this.players.values()].find(
+          (p) => p.storyState?.completedQuests.length >= 3 && !p.duelId,
+        ),
         e = this.spawn(p.world, "Invasor de elite", "ginyu", 2400, 1950, true, {
           event: true,
           maxHp: 950,
@@ -1094,9 +1416,9 @@ class Engine {
       players: [...this.players.values()]
         .filter((q) => q.world === p.world && distance(p, q) < 1450)
         .map(publicPlayer),
-      enemies: this.enemies.filter(
-        (e) => !e.dead && e.world === p.world && distance(p, e) < 1450,
-      ),
+      enemies: this.enemies
+        .filter((e) => !e.dead && e.world === p.world && distance(p, e) < 1450)
+        .map(({ brain, ...e }) => e),
       shots: this.shots.filter(
         (s) => s.world === p.world && distance(p, s) < 1700,
       ),
@@ -1114,4 +1436,12 @@ require("./navigation")(Engine);
 require("./open-world")(Engine);
 require("./lore")(Engine);
 require("./combat-flow")(Engine);
+require("./quests")(Engine);
+require("./sandbox")(Engine);
+require("./beta")(Engine);
+require("./combat-space")(Engine);
+require("./combat-rhythm")(Engine);
+require("./combat-clash")(Engine);
+require("./duels")(Engine);
+require("./story-guide")(Engine);
 module.exports = { Engine, cleanName, distance };

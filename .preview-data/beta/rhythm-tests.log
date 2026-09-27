@@ -1,0 +1,664 @@
+
+> universe-z-destroy-the-galaxy@1.0.0-beta.1 test
+> node --test tests/*.test.js
+
+TAP version 13
+# Subtest: production refuses missing HTTPS origins and exact origin matching rejects suffix tricks
+ok 1 - production refuses missing HTTPS origins and exact origin matching rejects suffix tricks
+  ---
+  duration_ms: 1.21
+  ...
+# Subtest: coalesced checkpoint flush remains readable, preserves previous recovery point, detects corruption
+ok 2 - coalesced checkpoint flush remains readable, preserves previous recovery point, detects corruption
+  ---
+  duration_ms: 96.9247
+  ...
+# Subtest: single writer lock prevents concurrent server ownership
+ok 3 - single writer lock prevents concurrent server ownership
+  ---
+  duration_ms: 4.3968
+  ...
+# Subtest: cosmetic entitlement is authoritative, persisted and never modifies gameplay stats
+ok 4 - cosmetic entitlement is authoritative, persisted and never modifies gameplay stats
+  ---
+  duration_ms: 8.1354
+  ...
+# Subtest: expedition enforces location and level, advances two waves and rewards once
+ok 5 - expedition enforces location and level, advances two waves and rewards once
+  ---
+  duration_ms: 8.8928
+  ...
+# Subtest: ground cover blocks movement and sight until destroyed while flight traverses it
+ok 6 - ground cover blocks movement and sight until destroyed while flight traverses it
+  ---
+  duration_ms: 4.9373
+  ...
+# Subtest: account recovery rotates access, preserves recent progress and cannot be replayed
+ok 7 - account recovery rotates access, preserves recent progress and cannot be replayed
+  ---
+  duration_ms: 186.0093
+  ...
+# Subtest: cross-origin websocket and invalid resume tokens are denied without account creation
+ok 8 - cross-origin websocket and invalid resume tokens are denied without account creation
+  ---
+  duration_ms: 42.9431
+  ...
+# Subtest: a checkpoint failure pauses simulation and health fails closed until persistence resumes
+ok 9 - a checkpoint failure pauses simulation and health fails closed until persistence resumes
+  ---
+  duration_ms: 187.3248
+  ...
+# Subtest: community reports are bounded and blocking removes delivery without changing gameplay
+ok 10 - community reports are bounded and blocking removes delivery without changing gameplay
+  ---
+  duration_ms: 259.0213
+  ...
+# Subtest: trusted proxy address is explicit and spoofed client IP headers are ignored
+ok 11 - trusted proxy address is explicit and spoofed client IP headers are ignored
+  ---
+  duration_ms: 0.4066
+  ...
+# Subtest: operator backup, report resolution and suspension use an offline lock and preserve private credentials
+ok 12 - operator backup, report resolution and suspension use an offline lock and preserve private credentials
+  ---
+  duration_ms: 128.6291
+  ...
+# Subtest: every catalogue character, world encounter and player origin has an explicit model sheet
+ok 13 - every catalogue character, world encounter and player origin has an explicit model sheet
+  ---
+  duration_ms: 2.4483
+  ...
+# Subtest: all models and animations produce finite drawing geometry and balanced canvas states
+ok 14 - all models and animations produce finite drawing geometry and balanced canvas states
+  ---
+  duration_ms: 436.0449
+  ...
+# Subtest: perception retains visible attack history but never reacts before rank reaction time
+ok 15 - perception retains visible attack history but never reacts before rank reaction time
+  ---
+  duration_ms: 13.3795
+  ...
+# Subtest: energy shortage denies attack and recovering restores the action budget
+ok 16 - energy shortage denies attack and recovering restores the action budget
+  ---
+  duration_ms: 11.3424
+  ...
+# Subtest: identities choose a lateral dodge or a planted guard from the same delayed threat
+ok 17 - identities choose a lateral dodge or a planted guard from the same delayed threat
+  ---
+  duration_ms: 7.2968
+  ...
+# Subtest: a real block earns one telegraphed counter with room to move away
+ok 18 - a real block earns one telegraphed counter with room to move away
+  ---
+  duration_ms: 14.7024
+  ...
+# Subtest: enemy ki has travel time, is dodgeable, and a precise guard returns it
+ok 19 - enemy ki has travel time, is dodgeable, and a precise guard returns it
+  ---
+  duration_ms: 20.6839
+  ...
+# Subtest: a missed enemy projectile cannot hit players outside its actual trajectory
+ok 20 - a missed enemy projectile cannot hit players outside its actual trajectory
+  ---
+  duration_ms: 9.6965
+  ...
+# Subtest: active projectile pressure reserves introductory group attack capacity
+ok 21 - active projectile pressure reserves introductory group attack capacity
+  ---
+  duration_ms: 7.1849
+  ...
+# Subtest: quick ki after two punches consumes extra ki and damages frontal posture
+ok 22 - quick ki after two punches consumes extra ki and damages frontal posture
+  ---
+  duration_ms: 9.1761
+  ...
+# Subtest: snapshots exclude private AI observations and keep effort visible
+ok 23 - snapshots exclude private AI observations and keep effort visible
+  ---
+  duration_ms: 30.9125
+  ...
+# Subtest: dojo enforces proximity, private opponent, no economic reward, and stops before KO
+ok 24 - dojo enforces proximity, private opponent, no economic reward, and stops before KO
+  ---
+  duration_ms: 14.0743
+  ...
+# Subtest: only late input buffers one followup and distant targets are not magnetized
+ok 25 - only late input buffers one followup and distant targets are not magnetized
+  ---
+  duration_ms: 36.9124
+  ...
+# Subtest: ki aiming allows movement but the committed release has recovery
+ok 26 - ki aiming allows movement but the committed release has recovery
+  ---
+  duration_ms: 10.421
+  ...
+# Subtest: holding melee prepares one heavy attack and precise defense prevents launch
+ok 27 - holding melee prepares one heavy attack and precise defense prevents launch
+  ---
+  duration_ms: 12.3173
+  ...
+# Subtest: high impact destroys shared terrain once and snapshots synchronize debris
+ok 28 - high impact destroys shared terrain once and snapshots synchronize debris
+  ---
+  duration_ms: 44.9583
+  ...
+# Subtest: release commits a strike; startup deals no damage and early clicking does not queue ghost attacks
+ok 29 - release commits a strike; startup deals no damage and early clicking does not queue ghost attacks
+  ---
+  duration_ms: 26.5376
+  ...
+# Subtest: whiff cannot teleport to a rival or confirm a combo
+ok 30 - whiff cannot teleport to a rival or confirm a combo
+  ---
+  duration_ms: 11.0393
+  ...
+# Subtest: only one input in the final 120 ms of recovery is retained
+ok 31 - only one input in the final 120 ms of recovery is retained
+  ---
+  duration_ms: 10.177
+  ...
+# Subtest: committed attacks cannot be cancelled by dash or guard
+ok 32 - committed attacks cannot be cancelled by dash or guard
+  ---
+  duration_ms: 10.2985
+  ...
+# Subtest: a held guard does not renew perfect defense after block stun
+ok 33 - a held guard does not renew perfect defense after block stun
+  ---
+  duration_ms: 10.1115
+  ...
+# Subtest: guard tapping has a retry interval and consumes ki on a perfect block
+ok 34 - guard tapping has a retry interval and consumes ki on a perfect block
+  ---
+  duration_ms: 7.7206
+  ...
+# Subtest: defensive burst costs 45 ki and cannot be repeated before cooldown
+ok 35 - defensive burst costs 45 ki and cannot be repeated before cooldown
+  ---
+  duration_ms: 7.0784
+  ...
+# Subtest: four consecutive hits scale damage and grant a short escape window
+ok 36 - four consecutive hits scale damage and grant a short escape window
+  ---
+  duration_ms: 7.2517
+  ...
+# Subtest: simultaneous committed melee hits trade instead of favoring player insertion order
+ok 37 - simultaneous committed melee hits trade instead of favoring player insertion order
+  ---
+  duration_ms: 8.1106
+  ...
+# Subtest: duel countdown prevents attacks, movement and world consumables
+ok 38 - duel countdown prevents attacks, movement and world consumables
+  ---
+  duration_ms: 3.5781
+  ...
+# Subtest: duel normalizes damage across levels, attributes and transformation
+ok 39 - duel normalizes damage across levels, attributes and transformation
+  ---
+  duration_ms: 8.4694
+  ...
+# Subtest: equal lethal hits draw a round and reset both players without granting an insertion advantage
+ok 40 - equal lethal hits draw a round and reset both players without granting an insertion advantage
+  ---
+  duration_ms: 8.3664
+  ...
+# Subtest: best of three restores original profile and does not persist temporary duel life
+ok 41 - best of three restores original profile and does not persist temporary duel life
+  ---
+  duration_ms: 21.7903
+  ...
+# Subtest: duel cannot damage spectators or absorb their projectiles
+ok 42 - duel cannot damage spectators or absorb their projectiles
+  ---
+  duration_ms: 7.4272
+  ...
+# Subtest: three timed draws end the duel, and disconnect also restores the survivor
+ok 43 - three timed draws end the duel, and disconnect also restores the survivor
+  ---
+  duration_ms: 8.8773
+  ...
+# Subtest: the opening stays calm and all story guidance points to the active persistent objective
+ok 44 - the opening stays calm and all story guidance points to the active persistent objective
+  ---
+  duration_ms: 26.6015
+  ...
+# Subtest: introductory patrol respawns for a late player after the previous player completed it
+ok 45 - introductory patrol respawns for a late player after the previous player completed it
+  ---
+  duration_ms: 7.3235
+  ...
+# Subtest: enemy punishes observed recovery only after its reaction delay
+ok 46 - enemy punishes observed recovery only after its reaction delay
+  ---
+  duration_ms: 7.0378
+  ...
+# Subtest: PvP perfect guard can return a projectile without unavoidable instant damage
+ok 47 - PvP perfect guard can return a projectile without unavoidable instant damage
+  ---
+  duration_ms: 13.101
+  ...
+# Subtest: enemy identities produce distinct readable combat roles
+ok 48 - enemy identities produce distinct readable combat roles
+  ---
+  duration_ms: 1.2637
+  ...
+# Subtest: introductory enemies leave a single attack opening and avoid converging on one point
+ok 49 - introductory enemies leave a single attack opening and avoid converging on one point
+  ---
+  duration_ms: 34.896
+  ...
+# Subtest: a telegraph uses the same range and pattern as the authoritative hit
+ok 50 - a telegraph uses the same range and pattern as the authoritative hit
+  ---
+  duration_ms: 28.6028
+  ...
+# Subtest: movement is normalized, clock-based, and insensitive to packet spam
+ok 51 - movement is normalized, clock-based, and insensitive to packet spam
+  ---
+  duration_ms: 43.4293
+  ...
+# Subtest: malformed inputs never poison the authoritative state
+ok 52 - malformed inputs never poison the authoritative state
+  ---
+  duration_ms: 8.2101
+  ...
+# Subtest: three-hit combo requires impacts and recovery, with real ki costs
+ok 53 - three-hit combo requires impacts and recovery, with real ki costs
+  ---
+  duration_ms: 24.9026
+  ...
+# Subtest: perfect guard prevents damage and enables a timed counter
+ok 54 - perfect guard prevents damage and enables a timed counter
+  ---
+  duration_ms: 15.4974
+  ...
+# Subtest: guard facing matters; delayed guard reduces damage and costs ki
+ok 55 - guard facing matters; delayed guard reduces damage and costs ki
+  ---
+  duration_ms: 9.5957
+  ...
+# Subtest: dash grants a short invulnerability window and cannot be spammed
+ok 56 - dash grants a short invulnerability window and cannot be spammed
+  ---
+  duration_ms: 8.0711
+  ...
+# Subtest: charged blast requires hold and startup then collides along its path
+ok 57 - charged blast requires hold and startup then collides along its path
+  ---
+  duration_ms: 13.1448
+  ...
+# Subtest: PvP damage requires mutual consent
+ok 58 - PvP damage requires mutual consent
+  ---
+  duration_ms: 13.0283
+  ...
+# Subtest: campaign has acceptance, three patrol kills, a boss, one completion reward
+ok 59 - campaign has acceptance, three patrol kills, a boss, one completion reward
+  ---
+  duration_ms: 11.3038
+  ...
+# Subtest: every campaign chapter resolves to a world and can spawn its unique boss
+ok 60 - every campaign chapter resolves to a world and can spawn its unique boss
+  ---
+  duration_ms: 6.9403
+  ...
+# Subtest: technique learning requires mentor proximity, level, and currency
+ok 61 - technique learning requires mentor proximity, level, and currency
+  ---
+  duration_ms: 22.2846
+  ...
+# Subtest: training rewards precise actions and ends after eight attempts
+ok 62 - training rewards precise actions and ends after eight attempts
+  ---
+  duration_ms: 5.6411
+  ...
+# Subtest: attributes consume earned points and cannot be forged by property names
+ok 63 - attributes consume earned points and cannot be forged by property names
+  ---
+  duration_ms: 1.9503
+  ...
+# Subtest: power uses arbitrary precision; progression survives profile serialization
+ok 64 - power uses arbitrary precision; progression survives profile serialization
+  ---
+  duration_ms: 5.6165
+  ...
+# Subtest: procedural travel is deterministic and bounded in resident memory
+ok 65 - procedural travel is deterministic and bounded in resident memory
+  ---
+  duration_ms: 40.3295
+  ...
+# Subtest: snapshots never expose another player profile or session information
+ok 66 - snapshots never expose another player profile or session information
+  ---
+  duration_ms: 12.3827
+  ...
+# Subtest: seven distinct spheres grant one wish then reset the collection
+ok 67 - seven distinct spheres grant one wish then reset the collection
+  ---
+  duration_ms: 9.6718
+  ...
+# Subtest: defeat revives at the village, without input movement during defeat
+ok 68 - defeat revives at the village, without input movement during defeat
+  ---
+  duration_ms: 3.5252
+  ...
+# Subtest: all planetary landscapes render at boundaries and distant coordinates with finite geometry
+ok 69 - all planetary landscapes render at boundaries and distant coordinates with finite geometry
+  ---
+  duration_ms: 266.8559
+  ...
+# Subtest: frontier compositions include peaceful spaces, formations, varied counts and safe starts
+ok 70 - frontier compositions include peaceful spaces, formations, varied counts and safe starts
+  ---
+  duration_ms: 34.4299
+  ...
+# Subtest: committed attacks expose recovery and a patrol returns after exceeding its leash
+ok 71 - committed attacks expose recovery and a patrol returns after exceeding its leash
+  ---
+  duration_ms: 32.272
+  ...
+# Subtest: enemy frontal guard absorbs hits without launching and breaks on heavy pressure
+ok 72 - enemy frontal guard absorbs hits without launching and breaks on heavy pressure
+  ---
+  duration_ms: 12.6806
+  ...
+# Subtest: a confirmed launcher permits paid pursuit with a shared dodge cooldown
+ok 73 - a confirmed launcher permits paid pursuit with a shared dodge cooldown
+  ---
+  duration_ms: 8.6188
+  ...
+# Subtest: post-Namek story completes all six chapters with encounters, interactions and one-time rewards
+ok 74 - post-Namek story completes all six chapters with encounters, interactions and one-time rewards
+  ---
+  duration_ms: 23.3406
+  ...
+# Subtest: Kaio requires ordered Snake Way traversal and Bubbles before granting combat skills
+ok 75 - Kaio requires ordered Snake Way traversal and Bubbles before granting combat skills
+  ---
+  duration_ms: 58.0647
+  ...
+# Subtest: landmark progression grants once, rejects remote training and cannot be purchased around
+ok 76 - landmark progression grants once, rejects remote training and cannot be purchased around
+  ---
+  duration_ms: 8.6531
+  ...
+# Subtest: missed final beat still completes a successful five-hit session, movement cancels
+ok 77 - missed final beat still completes a successful five-hit session, movement cancels
+  ---
+  duration_ms: 8.8072
+  ...
+# Subtest: surface, orbit, actual flight to another planet, descent and landing share one player
+ok 78 - surface, orbit, actual flight to another planet, descent and landing share one player
+  ---
+  duration_ms: 158.5628
+  ...
+# Subtest: surface has no former arena walls; movement is fast and reverses promptly
+ok 79 - surface has no former arena walls; movement is fast and reverses promptly
+  ---
+  duration_ms: 15.856
+  ...
+# Subtest: teleport requires skill, discovery and ki; rejection never consumes resources
+ok 80 - teleport requires skill, discovery and ki; rejection never consumes resources
+  ---
+  duration_ms: 7.2347
+  ...
+# Subtest: ascent cancels on fresh damage and cannot be used to escape combat
+ok 81 - ascent cancels on fresh damage and cannot be used to escape combat
+  ---
+  duration_ms: 8.6239
+  ...
+# Subtest: untrusted routes and remote landings are rejected; space persistence stays finite
+ok 82 - untrusted routes and remote landings are rejected; space persistence stays finite
+  ---
+  duration_ms: 7.6918
+  ...
+# Subtest: charged animation synchronizes, and cancelled or abandoned charge cannot remain stuck
+ok 83 - charged animation synchronizes, and cancelled or abandoned charge cannot remain stuck
+  ---
+  duration_ms: 11.3561
+  ...
+# Subtest: exploration is deterministic across negative and distant coordinates
+ok 84 - exploration is deterministic across negative and distant coordinates
+  ---
+  duration_ms: 7.109
+  ...
+# Subtest: players share streamed encounters, remote cells retire, and space contains aerial enemies
+ok 85 - players share streamed encounters, remote cells retire, and space contains aerial enemies
+  ---
+  duration_ms: 18.6541
+  ...
+# Subtest: planet proximity enters atmosphere automatically without replacing player
+ok 86 - planet proximity enters atmosphere automatically without replacing player
+  ---
+  duration_ms: 13.4163
+  ...
+# Subtest: space patrol telegraphs and lands a ranged attack
+ok 87 - space patrol telegraphs and lands a ranged attack
+  ---
+  duration_ms: 31.7332
+  ...
+# Subtest: defeated streamed encounter remains defeated when loaded by a new engine
+ok 88 - defeated streamed encounter remains defeated when loaded by a new engine
+  ---
+  duration_ms: 15.7442
+  ...
+# Subtest: world memory survives an atomic disk save and reload
+ok 89 - world memory survives an atomic disk save and reload
+  ---
+  duration_ms: 95.2027
+  ...
+# Subtest: new and legacy profiles initialize campaign state without losing old progress
+ok 90 - new and legacy profiles initialize campaign state without losing old progress
+  ---
+  duration_ms: 19.0656
+  ...
+# Subtest: story snapshot is compact and exposes the active objective, not private profile data
+ok 91 - story snapshot is compact and exposes the active objective, not private profile data
+  ---
+  duration_ms: 31.0832
+  ...
+# Subtest: campaign catalog covers the ordered Earth, Saiyan and Namek story arcs
+ok 92 - campaign catalog covers the ordered Earth, Saiyan and Namek story arcs
+  ---
+  duration_ms: 0.8109
+  ...
+# Subtest: ordinary or wrong-objective enemies cannot advance a story kill count
+ok 93 - ordinary or wrong-objective enemies cannot advance a story kill count
+  ---
+  duration_ms: 9.6371
+  ...
+# Subtest: a story enemy in the wrong world cannot satisfy the current Namek objective
+ok 94 - a story enemy in the wrong world cannot satisfy the current Namek objective
+  ---
+  duration_ms: 9.2147
+  ...
+# Subtest: reach and region objectives complete only at their authoritative locations
+ok 95 - reach and region objectives complete only at their authoritative locations
+  ---
+  duration_ms: 12.2141
+  ...
+# Subtest: the Paozu patrol is a server-spawned killCount wave and advances exactly once
+ok 96 - the Paozu patrol is a server-spawned killCount wave and advances exactly once
+  ---
+  duration_ms: 10.6007
+  ...
+# Subtest: collectibles are per-profile, persistent and do not mutate Earth's Dragon Balls
+ok 97 - collectibles are per-profile, persistent and do not mutate Earth's Dragon Balls
+  ---
+  duration_ms: 8.2196
+  ...
+# Subtest: duplicate objective and boss completion calls never grant rewards twice
+ok 98 - duplicate objective and boss completion calls never grant rewards twice
+  ---
+  duration_ms: 4.6132
+  ...
+# Subtest: story boss spawn is shared and one nearby eligible teammate receives credit
+ok 99 - story boss spawn is shared and one nearby eligible teammate receives credit
+  ---
+  duration_ms: 5.2009
+  ...
+# Subtest: boss phase thresholds advance only once for Vegeta
+ok 100 - boss phase thresholds advance only once for Vegeta
+  ---
+  duration_ms: 3.286
+  ...
+# Subtest: Zarbon changes phase and the same encounter continues into his defeat objective
+ok 101 - Zarbon changes phase and the same encounter continues into his defeat objective
+  ---
+  duration_ms: 4.728
+  ...
+# Subtest: Freeza's five phases share one encounter and alter the AI profile
+ok 102 - Freeza's five phases share one encounter and alter the AI profile
+  ---
+  duration_ms: 2.6119
+  ...
+# Subtest: Ginyu Force appears in order and never stacks duplicate bosses
+ok 103 - Ginyu Force appears in order and never stacks duplicate bosses
+  ---
+  duration_ms: 4.219
+  ...
+# Subtest: the ordered Kaio quest recognizes the existing Snake Way, Bubbles and training state
+ok 104 - the ordered Kaio quest recognizes the existing Snake Way, Bubbles and training state
+  ---
+  duration_ms: 1.9873
+  ...
+# Subtest: the Snake Way sequence resumes at its saved checkpoint after reload
+ok 105 - the Snake Way sequence resumes at its saved checkpoint after reload
+  ---
+  duration_ms: 4.6918
+  ...
+# Subtest: Namek travel uses the existing atlas destination and planetary entry flow
+ok 106 - Namek travel uses the existing atlas destination and planetary entry flow
+  ---
+  duration_ms: 3.6176
+  ...
+# Subtest: Namek escape advances only when the player reaches the existing space layer
+ok 107 - Namek escape advances only when the player reaches the existing space layer
+  ---
+  duration_ms: 2.0548
+  ...
+# Subtest: story profile serialization restores flags, phase records, rewards, collectibles and legacy campaigns
+ok 108 - story profile serialization restores flags, phase records, rewards, collectibles and legacy campaigns
+  ---
+  duration_ms: 5.5781
+  ...
+# Subtest: legacy campaign selection remains functional beside the new persistent saga
+ok 109 - legacy campaign selection remains functional beside the new persistent saga
+  ---
+  duration_ms: 1.2265
+  ...
+# Subtest: killing a story boss twice cannot repeat its XP, items or quest reward
+ok 110 - killing a story boss twice cannot repeat its XP, items or quest reward
+  ---
+  duration_ms: 1.2226
+  ...
+# Subtest: players on different story objectives keep independent progress in the same world
+ok 111 - players on different story objectives keep independent progress in the same world
+  ---
+  duration_ms: 1.3535
+  ...
+# Subtest: survive timers and returnTo checkpoints are checked by the server clock and coordinates
+ok 112 - survive timers and returnTo checkpoints are checked by the server clock and coordinates
+  ---
+  duration_ms: 1.3011
+  ...
+# Subtest: wrong-quest and distant players do not receive shared boss progress
+ok 113 - wrong-quest and distant players do not receive shared boss progress
+  ---
+  duration_ms: 2.0991
+  ...
+# Subtest: loading a saved quest clamps progress and ignores unknown flags, items and boss IDs
+ok 114 - loading a saved quest clamps progress and ignores unknown flags, items and boss IDs
+  ---
+  duration_ms: 5.5946
+  ...
+# Subtest: shared deposits grant resources to one finisher only
+ok 115 - shared deposits grant resources to one finisher only
+  ---
+  duration_ms: 34.4525
+  ...
+# Subtest: movement interrupts crafting without consuming ingredients
+ok 116 - movement interrupts crafting without consuming ingredients
+  ---
+  duration_ms: 9.2857
+  ...
+# Subtest: crafting completes once and consumes the exact ingredients
+ok 117 - crafting completes once and consumes the exact ingredients
+  ---
+  duration_ms: 18.1005
+  ...
+# Subtest: consumable cooldown survives profile restoration
+ok 118 - consumable cooldown survives profile restoration
+  ---
+  duration_ms: 10.7016
+  ...
+# Subtest: one market offer cannot be purchased twice and offline proceeds are durable
+ok 119 - one market offer cannot be purchased twice and offline proceeds are durable
+  ---
+  duration_ms: 8.7463
+  ...
+# Subtest: malformed and remote interactions cannot alter the economy
+ok 120 - malformed and remote interactions cannot alter the economy
+  ---
+  duration_ms: 4.7951
+  ...
+# Subtest: capacity failure preserves escrow and buyer currency
+ok 121 - capacity failure preserves escrow and buyer currency
+  ---
+  duration_ms: 4.0634
+  ...
+# Subtest: construction ownership prevents dismantling another player structure
+ok 122 - construction ownership prevents dismantling another player structure
+  ---
+  duration_ms: 6.9843
+  ...
+# Subtest: survey pays only once per region and saves discoveries
+ok 123 - survey pays only once per region and saves discoveries
+  ---
+  duration_ms: 5.9788
+  ...
+# Subtest: account and world checkpoint wins over stale compatibility files
+ok 124 - account and world checkpoint wins over stale compatibility files
+  ---
+  duration_ms: 62.2686
+  ...
+# Subtest: creation validates appearance and applies a chosen background only once
+ok 125 - creation validates appearance and applies a chosen background only once
+  ---
+  duration_ms: 2.5198
+  ...
+# Subtest: equipment bonuses do not accumulate across repeated profile loads
+ok 126 - equipment bonuses do not accumulate across repeated profile loads
+  ---
+  duration_ms: 3.7599
+  ...
+# Subtest: unequipping into a full inventory preserves gear and bonuses
+ok 127 - unequipping into a full inventory preserves gear and bonuses
+  ---
+  duration_ms: 4.6454
+  ...
+# Subtest: decorative furniture builds, persists and returns to its owner inventory
+ok 128 - decorative furniture builds, persists and returns to its owner inventory
+  ---
+  duration_ms: 2.2109
+  ...
+# Subtest: two clients join, synchronize, isolate worlds, and restore a persisted profile
+ok 129 - two clients join, synchronize, isolate worlds, and restore a persisted profile
+  ---
+  duration_ms: 508.9218
+  ...
+# Subtest: malformed socket payloads do not crash the process
+ok 130 - malformed socket payloads do not crash the process
+  ---
+  duration_ms: 4054.1153
+  ...
+1..130
+# tests 130
+# suites 0
+# pass 130
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5188.4677

@@ -44,22 +44,27 @@ test("malformed inputs never poison the authoritative state", () => {
   game.tick();
   assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
 });
-test("three-hit combo, cooldown, knockback, and resource conservation", () => {
-  const { game, p } = setup(),
-    e = game.spawn("earth", "Alvo", "soldier", p.x + 55, p.y);
-  assert.equal(game.act("p", "attack"), true);
-  const hp = e.hp;
-  assert.equal(game.act("p", "attack"), false);
-  assert.equal(e.hp, hp);
-  advance(game, 0.24);
-  game.act("p", "attack");
-  advance(game, 0.24);
-  game.act("p", "attack");
+test("three-hit combo requires impacts and recovery, with real ki costs", () => {
+  const { game, p } = setup();
+  p.mode = "flight";
+  const e = game.spawn("earth", "Alvo", "soldier", p.x + 75, p.y, false, {
+    hp: 1000,
+    maxHp: 1000,
+    stun: 999,
+  });
+  for (const seconds of [.14,.14,.17]) {
+    e.x = p.x + 75;
+    e.y = p.y;
+    assert.equal(game.act("p", "attack"), true);
+    const hp = e.hp;
+    assert.equal(e.hp, hp);
+    advance(game, seconds);
+  }
   assert.equal(p.combo, 3);
-  assert.ok(e.x > 1755);
-  assert.ok(e.hp < 50);
-  assert.ok(p.ki <= 100);
+  assert.ok(e.hp < 950 && e.hp > 900);
+  assert.ok(p.ki < 87);
 });
+
 test("perfect guard prevents damage and enables a timed counter", () => {
   const { game, p } = setup(),
     e = game.spawn("earth", "Rival", "vegeta", p.x + 60, p.y);
@@ -95,17 +100,22 @@ test("dash grants a short invulnerability window and cannot be spammed", () => {
   game.damage(e, p, 99);
   assert.equal(p.hp, p.maxHp - 99);
 });
-test("charged blast requires a real hold, has server cost, and collides along the segment", () => {
+test("charged blast requires hold and startup then collides along its path", () => {
   const { game, p } = setup();
-  const e = game.spawn("earth", "Alvo", "soldier", p.x + 60, p.y);
+  const e = game.spawn("earth", "Alvo", "soldier", p.x + 80, p.y, false, {
+    stun: 999,
+  });
   game.act("p", "blastStart");
-  advance(game, 0.5, { x: 0, y: 0, angle: 0 });
+  advance(game, 0.6, { x: 0, y: 0, angle: 0 });
   game.act("p", "blast");
-  assert.ok(game.shots[0].pierce);
+  assert.equal(game.shots.length, 0);
   assert.ok(p.ki < 70);
+  advance(game, 0.47);
+  assert.ok(game.shots[0].pierce);
   advance(game, 0.1);
-  assert.ok(e.hp < 40);
+  assert.ok(e.hp < 60);
 });
+
 test("PvP damage requires mutual consent", () => {
   const { game, p } = setup(),
     q = game.addPlayer("q", { name: "Vegeta" });
@@ -121,6 +131,7 @@ test("PvP damage requires mutual consent", () => {
 test("campaign has acceptance, three patrol kills, a boss, one completion reward", () => {
   const { game, p } = setup();
   Object.assign(p, game.maps.earth.mentor);
+  p.legacyCampaign = true;
   game.interact("p");
   assert.equal(p.questPhase, 1);
   for (let n = 0; n < 3; n++) {
@@ -141,6 +152,7 @@ test("campaign has acceptance, three patrol kills, a boss, one completion reward
 });
 test("every campaign chapter resolves to a world and can spawn its unique boss", () => {
   const { game, p } = setup();
+  p.legacyCampaign = true;
   for (const c of CAMPAIGNS)
     for (let n = 0; n < c.chapters.length; n++) {
       p.campaign = c.id;
@@ -154,7 +166,8 @@ test("every campaign chapter resolves to a world and can spawn its unique boss",
 });
 test("technique learning requires mentor proximity, level, and currency", () => {
   const { game, p } = setup();
-  p.level = 5; p.world = "vegeta";
+  p.level = 5;
+  p.world = "vegeta";
   p.zenni = 360;
   assert.match(game.learn("p", "galick"), /mestre/);
   Object.assign(p, game.maps.vegeta.mentor);

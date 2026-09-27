@@ -1,0 +1,57 @@
+[
+  {
+    "name": "landscape",
+    "kind": "atlas",
+    "metrics": {
+      "width": 613,
+      "scrollWidth": 613,
+      "height": 364,
+      "scrollHeight": 4313
+    }
+  },
+  {
+    "name": "landscape",
+    "kind": "campaigns",
+    "metrics": {
+      "width": 613,
+      "scrollWidth": 613,
+      "height": 364,
+      "scrollHeight": 999
+    }
+  },
+  {
+    "name": "landscape",
+    "kind": "character",
+    "metrics": {
+      "width": 613,
+      "scrollWidth": 613,
+      "height": 364,
+      "scrollHeight": 1367
+    }
+  },
+  {
+    "name": "landscape",
+    "kind": "settings",
+    "metrics": {
+      "width": 613,
+      "scrollWidth": 613,
+      "height": 364,
+      "scrollHeight": 568
+    }
+  },
+  {
+    "name": "landscape",
+    "errors": [],
+    "vitals": [
+      {
+        "h": 10,
+        "text": 10
+      },
+      {
+        "h": 10,
+        "text": 10
+      }
+    ],
+    "visibleButtons": 11
+  }
+]

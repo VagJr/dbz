@@ -1,0 +1,1 @@
+const fs=require('fs');let s=fs.readFileSync('tools/check-combat.cjs','utf8');s=s.replace('["mobile", 390, 844],','["mobile", 390, 844],\n      ["landscape", 844, 390],\n      ["compact", 360, 640],');s=s.replaceAll('name === "mobile"','name !== "desktop"');fs.writeFileSync('tools/check-combat.cjs',s);

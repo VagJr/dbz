@@ -1,0 +1,57 @@
+[
+  {
+    "name": "compact",
+    "kind": "atlas",
+    "metrics": {
+      "width": 358,
+      "scrollWidth": 358,
+      "height": 450,
+      "scrollHeight": 3305
+    }
+  },
+  {
+    "name": "compact",
+    "kind": "campaigns",
+    "metrics": {
+      "width": 358,
+      "scrollWidth": 358,
+      "height": 450,
+      "scrollHeight": 1167
+    }
+  },
+  {
+    "name": "compact",
+    "kind": "character",
+    "metrics": {
+      "width": 358,
+      "scrollWidth": 358,
+      "height": 450,
+      "scrollHeight": 1700
+    }
+  },
+  {
+    "name": "compact",
+    "kind": "settings",
+    "metrics": {
+      "width": 358,
+      "scrollWidth": 358,
+      "height": 450,
+      "scrollHeight": 602
+    }
+  },
+  {
+    "name": "compact",
+    "errors": [],
+    "vitals": [
+      {
+        "h": 13,
+        "text": 13
+      },
+      {
+        "h": 13,
+        "text": 13
+      }
+    ],
+    "visibleButtons": 11
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "desktop",
+    "tabs": 7,
+    "claim": true,
+    "equip": true,
+    "recovery": true,
+    "report": true,
+    "navigation": true,
+    "errors": []
+  },
+  {
+    "name": "mobile",
+    "tabs": 7,
+    "claim": true,
+    "equip": true,
+    "recovery": true,
+    "report": true,
+    "navigation": true,
+    "errors": []
+  },
+  {
+    "name": "landscape",
+    "tabs": 7,
+    "claim": true,
+    "equip": true,
+    "recovery": true,
+    "report": true,
+    "navigation": true,
+    "errors": []
+  },
+  {
+    "name": "compact",
+    "tabs": 7,
+    "claim": true,
+    "equip": true,
+    "recovery": true,
+    "report": true,
+    "navigation": true,
+    "errors": []
+  }
+]

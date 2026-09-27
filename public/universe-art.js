@@ -405,7 +405,7 @@
         H / 2 + (s.y - this.cam.y) * z,
       );
       c.rotate(s.angle);
-      c.strokeStyle = "#80ecff";
+      c.strokeStyle = s.hostile?"#ff8079":"#80ecff";
       c.lineWidth = s.r * z;
       c.shadowColor = "#4ee8ff";
       c.shadowBlur = 14;
@@ -421,7 +421,7 @@
       c.globalAlpha=Math.max(0,1-e.age/.65);c.rotate(e.angle||0);
       c.strokeStyle=e.type==='enemyAttack'?'#ff809d':'#9cefff';c.shadowColor=c.strokeStyle;c.shadowBlur=this.reduced?0:12;
       c.lineWidth=e.type==='enemyAttack'?8:3;c.beginPath();
-      if(e.pattern==='beam'){c.moveTo(0,0);c.lineTo(e.radius||920,0);}
+      if(e.pattern==='beam'){c.moveTo(0,0);c.lineTo(e.projectile?55:(e.radius||920),0);}
       else if(e.type==='dash'){c.moveTo(0,0);c.lineTo(-140,0);}
       else c.arc(0,0,12+e.age*100,e.type==='slash'?-.9:0,e.type==='slash'?.9:Math.PI*2);
       c.stroke();c.restore();

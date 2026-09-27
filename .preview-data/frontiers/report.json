@@ -1,0 +1,14 @@
+[
+  {
+    "name": "desktop",
+    "compositions": 5,
+    "dialogue": true,
+    "errors": []
+  },
+  {
+    "name": "mobile",
+    "compositions": 5,
+    "dialogue": true,
+    "errors": []
+  }
+]

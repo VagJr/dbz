@@ -10,7 +10,11 @@
     <title>UNIVERSE Z — DESTROY THE GALAXY</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/flight-ui.css" />
+    <link rel="stylesheet" href="/universe-ui.css?v=celestial1" />
+    <link rel="stylesheet" href="/creator.css" />
+    <link rel="stylesheet" href="/sandbox-ui.css" />
+  <link rel="stylesheet" href="/frontiers.css">
+  <link rel="stylesheet" href="/beta-ui.css">
   </head>
   <body>
     <canvas
@@ -47,8 +51,8 @@
     </header>
     <section id="welcome" class="welcome">
       <div class="intro">
-        <div class="eyebrow"><span></span> ACTION RPG MULTIPLAYER</div>
-        <h1>Um universo inteiro.<br /><em>Poder sem limites.</em></h1>
+        <div class="eyebrow"><span></span> SANDBOX MULTIPLAYER · BETA 1.0</div>
+        <h1>Desperte.<br />Supere.<em>Domine.</em></h1>
         <p>
           Encontre seu mestre. Domine seu ki.<br />Escreva sua própria história
           no universo Dragon Ball.
@@ -65,14 +69,14 @@
       </div>
       <form id="join-form" class="creation-panel">
         <div class="eyebrow">SUA HISTÓRIA COMEÇA AQUI</div>
-        <h2>Um novo guerreiro.</h2>
+        <h2>Escolha sua origem.</h2>
         <p class="muted">A origem é só o começo. O resto é treino.</p>
         <div id="origin-options" class="origins"></div>
         <div class="origin-preview">
           <canvas
             id="portrait"
-            width="160"
-            height="140"
+            width="320"
+            height="280"
             aria-label="Prévia do personagem"
           ></canvas>
           <div>
@@ -95,7 +99,7 @@
         ><button class="resume-button" id="resume-button" type="button" hidden>
           Continuar minha jornada →</button
         ><small class="save-note"
-          >Seu progresso fica salvo neste navegador e servidor.</small
+          >Progresso salvo no servidor. Guarde uma chave de recuperação em Conta.</small
         >
       </form>
     </section>
@@ -129,8 +133,18 @@
           <button id="campaign-button" aria-label="Ver campanhas">↗</button>
         </div>
         <h3 id="quest-title">O começo da aventura</h3>
-        <p id="quest-description">Encontre Mestre Kame no dojo.</p>
+        <p id="quest-description">Siga o marcador dourado da sua história.</p>
         <div class="quest-progress" id="quest-progress"></div>
+      </section>
+      <section id="target-card" class="target-card" aria-label="Adversário selecionado" hidden>
+        <div class="target-portrait"><canvas id="target-portrait" width="84" height="84"></canvas></div>
+        <div class="target-readout">
+          <small id="target-role">ALVO FIXADO</small>
+          <strong id="target-name">Adversário</strong>
+          <div class="target-health"><i id="target-hp-fill"></i></div>
+          <span id="target-advice">Observe a postura e responda no tempo certo.</span>
+        </div>
+        <div id="target-telegraph" class="target-telegraph" hidden>PREPARE A DEFESA</div>
       </section>
       <button id="event-banner" class="event-banner" hidden>
         ✦ Invasão em andamento
@@ -176,18 +190,15 @@
         <span id="training-score"></span>
       </section>
       <div class="action-dock">
-        <button class="action" data-action="cycleTarget" title="Tab no PC · toque no inimigo para selecionar">Alvo</button><button class="action" data-action="attack" title="Clique para combo; segure e solte para golpe pesado">
-          <kbd>J / CLIQUE</kbd><span class="skill-icon">✦</span
-          ><strong>Golpe</strong><small>Combo de 3</small><i></i></button
+        <button class="action" data-action="cycleTarget" title="Tab no PC · toque no inimigo para selecionar"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#target"></use></svg><strong>Alvo</strong></button><button class="action" data-action="attack" title="Clique para combo; segure e solte para golpe pesado">
+          <kbd>J / CLIQUE</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#strike"></use></svg></span><strong>Golpe</strong><small>Combo de 3</small><i></i></button
         ><button class="action" data-action="blast">
-          <kbd>K / DIREITO</kbd><span class="skill-icon">◉</span
-          ><strong id="technique-name">Disparo de ki</strong
+          <kbd>K / DIREITO</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#ki"></use></svg></span><strong id="technique-name">Disparo de ki</strong
           ><small>Segure: concentrar</small><i></i></button
         ><button class="action" data-action="dash">
-          <kbd>ESPAÇO</kbd><span class="skill-icon">»</span
-          ><strong>Esquiva</strong><small>Cancela o golpe</small><i></i></button
+          <kbd>ESPAÇO</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#dash"></use></svg></span><strong>Esquiva</strong><small>Cancela o golpe</small><i></i></button
         ><button class="action" data-action="guard">
-          <kbd>L</kbd><span class="skill-icon">◇</span><strong>Defesa</strong
+          <kbd>Ctrl</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#guard"></use></svg></span><strong>Defesa</strong
           ><small>No tempo: parry</small><i></i></button
         ><button class="action" data-action="kaioken" title="Requer treinamento do Senhor Kaio">Kaioken <small>X</small></button><button class="awaken" id="awaken-button">
           <span>✧</span><strong>Despertar</strong
@@ -232,10 +243,10 @@
         </form>
       </section>
       <nav class="bottom-nav">
-        <button data-panel="atlas">◎ <span>Atlas</span></button
-        ><button data-panel="campaigns">▤ <span>Crônicas</span></button
-        ><button data-panel="character">♙ <span>Guerreiro</span></button
-        ><button data-panel="settings">☷ <span>Ajustes</span></button>
+        <button data-panel="atlas"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#atlas"></use></svg><span>Atlas</span></button
+        ><button data-panel="campaigns"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#chronicle"></use></svg><span>Crônicas</span></button
+        ><button data-panel="character"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#warrior"></use></svg><span>Guerreiro</span></button
+        ><button data-panel="settings"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#settings"></use></svg><span>Ajustes</span></button>
       </nav>
       <div id="death-screen" hidden>
         <span>O treino continua.</span><strong>Recuperando suas forças…</strong
@@ -257,7 +268,7 @@
     </dialog>
     <footer id="welcome-footer">
       <span>UM FAN GAME · EM DESENVOLVIMENTO</span
-      ><span>PC + MOBILE <span class="footer-dot">●</span> V.03</span>
+      ><span>PC + MOBILE <span class="footer-dot">●</span> BETA 1.0</span>
     </footer>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/shared/content.js"></script>
@@ -267,12 +278,23 @@
     <script src="/renderer.js"></script>
     <script src="/combat-art.js"></script>
     <script src="/shared/character-designs.js"></script>
+    <script src="/shared/avatar.js"></script>
     <script src="/character-art.js"></script>
     <script src="/miniature-art.js"></script>
     <script src="/universe-art.js"></script>
     <script src="/open-world-art.js"></script>
     <script src="/lore-art.js"></script>
     <script src="/audio.js"></script>
+    <script src="/portraits.js"></script>
+    <script src="/illustrated-ui.js?v=celestial1"></script>
+    <script src="/shared/sandbox.js"></script>
+    <script src="/sandbox-ui.js"></script>
+    <script src="/creator.js"></script>
+    <script src="/world-kit.js"></script>
+    <script src="/shared/beta.js"></script>
+    <script src="/beta-ui.js"></script>
+    <script src="/shared/combat.js"></script>
+    <script src="/combat-hud.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>

@@ -1,0 +1,8 @@
+const fs=require('fs');let s=fs.readFileSync('public/app.js','utf8');s=s.replace('    const card = $("target-card");','    document.body.classList.toggle("combat-focus",!!enemy||state.enemies.some(e=>e.combatTargetId===p.id&&Math.hypot(e.x-p.x,e.y-p.y)<650));\n    const card = $("target-card");');fs.writeFileSync('public/app.js',s);
+s=fs.readFileSync('public/combat-art.js','utf8');s=s.replace('e.pattern === "ring" ? 0 : -0.85,','e.pattern === "ring" ? 0 : e.pattern === "rush" ? -.55 : -.85,').replace('e.pattern === "ring" ? Math.PI * 2 : 0.85,','e.pattern === "ring" ? Math.PI * 2 : e.pattern === "rush" ? .55 : .85,');s=s.replace('      this.radar(state);',`      // Warn about committed attackers outside the camera, without moving their aim.
+      for(const e of state?.enemies||[])if(e.state==='windup'){
+        const sx=W/2+(e.x-this.cam.x)*zoom,sy=H/2+(e.y-this.cam.y)*zoom;
+        if(sx<22||sx>W-22||sy<35||sy>H-35){const x=Math.max(22,Math.min(W-22,sx)),y=Math.max(140,Math.min(H-170,sy)),a=Math.atan2(sy-H/2,sx-W/2);c.save();c.translate(x,y);c.rotate(a);c.fillStyle='#ffbd87';c.beginPath();c.moveTo(12,0);c.lineTo(-7,-8);c.lineTo(-7,8);c.closePath();c.fill();c.rotate(-a);c.font='bold 11px sans-serif';c.textAlign='center';c.fillText(Math.max(0,e.attackAt-state.time).toFixed(1)+'s',0,22);c.restore();}
+      }
+      this.radar(state);`);fs.writeFileSync('public/combat-art.js',s);
+s=fs.readFileSync('package.json','utf8');const pkg=JSON.parse(s);pkg.scripts['check:combat']='node tools/check-combat.cjs';pkg.scripts['test:combat']='node --test tests/combat-brain.test.js tests/combat-flow.test.js tests/enemy-tactics.test.js';fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\n');

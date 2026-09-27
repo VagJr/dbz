@@ -405,9 +405,15 @@
     }
     c.restore();
   }
+  function personalDesign(base,e){
+    if(!e.appearance||typeof UZAvatar==='undefined')return base;const a=UZAvatar.clean(e.appearance),p=UZAvatar.palettes;
+    const flags=base.flags.filter(f=>!['slim','wide','large','small'].includes(f));if(a.body==='slim')flags.push('slim');if(a.body==='broad')flags.push('wide');
+    return {...base,flags,skin:p.skin[a.skin],hair:base.hair?p.hair[a.hair]:base.hair,cut:a.cut,cloth:p.cloth[a.cloth],trim:p.trim[a.trim]};
+  }
+  Art.personalDesign=personalDesign;
   function fighter(c, e, t, scale = 1) {
     const meta = UZ.CHARACTERS.find((ch) => ch.id === e.skin),
-      d = UZDesigns[e.skin] || UZDesigns[meta?.skin] || UZDesigns.soldier;
+      d = personalDesign(UZDesigns[e.skin] || UZDesigns[meta?.skin] || UZDesigns.soldier,e);
     const f = new Set(d.flags),
       form = e.form || meta?.form,
       hair = form && d.hair ? (forms[form] || forms.gold)[0] : d.hair;
@@ -1460,7 +1466,7 @@
   }
   // Illustrated dialogue portraits use the same model sheet as the overhead rig.
   function portrait(c, e, t = 0, scale = 1) {
-    const d = UZDesigns[e.skin] || UZDesigns.goku,
+    const d = personalDesign(UZDesigns[e.skin] || UZDesigns.goku,e),
       f = new Set(d.flags),
       broad = f.has("wide") ? 1.25 : f.has("slim") ? 0.88 : 1;
     const hair = e.form && d.hair ? (forms[e.form] || forms.gold)[0] : d.hair,

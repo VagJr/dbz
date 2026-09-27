@@ -1011,6 +1011,9 @@
       { x: 1420, y: 1990, type: "house", label: "POUSADA" },
       { x: 1880, y: 1980, type: "dome", label: "PATRULHA" },
     ];
+    const layouts={earth:[[1430,1510,168],[1980,1460,154],[1260,1900,140],[2070,1850,88]],namek:[[1360,1420,188],[1510,2210,145],[2220,2050,140],[2300,1450,177]],vegeta:[[1300,1470,155],[1980,1330,156],[2180,1960,153],[1320,2030,167]],future:[[1170,1440,187],[2090,1400,154],[1330,2100,145],[2260,1950,118]]};
+    const layout=layouts[id]||([[1320,1430,188],[2160,1590,177],[2050,2180,140],[1250,2050,165]].map(([x,y,sprite],i)=>[x+(world.seed%3)*50,y-(world.seed%5)*30,sprite]));
+    buildings.forEach((b,i)=>{[b.x,b.y,b.sprite]=layout[i];});
     if (id !== "earth") {
       const labels = id === "namek" ? ["ALDEIA NAMEKUSEIJIN", "CÚPULA DO ANCIÃO", "ABRIGO", "PATRULHA"] :
         id === "yardrat" ? ["DOJO DE YARDRAT", "SANTUÁRIO", "REFÚGIO", "PATRULHA"] :
@@ -1036,7 +1039,7 @@
     attack: { name: "Golpe", key: "J", cost: 0, cooldown: 0.24 },
     blast: { name: "Técnica", key: "K", cost: 22, cooldown: 0.65 },
     dash: { name: "Esquiva", key: "Espaço", cost: 14, cooldown: 0.75 },
-    guard: { name: "Defesa", key: "L", cost: 0, cooldown: 0 },
+    guard: { name: "Defesa", key: "Ctrl", cost: 0, cooldown: 0 },
   };
   return {
     WORLDS,

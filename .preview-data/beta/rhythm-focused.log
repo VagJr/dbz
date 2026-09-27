@@ -1,0 +1,117 @@
+TAP version 13
+# Subtest: release commits a strike; startup deals no damage and early clicking does not queue ghost attacks
+ok 1 - release commits a strike; startup deals no damage and early clicking does not queue ghost attacks
+  ---
+  duration_ms: 12.1539
+  ...
+# Subtest: whiff cannot teleport to a rival or confirm a combo
+ok 2 - whiff cannot teleport to a rival or confirm a combo
+  ---
+  duration_ms: 4.9609
+  ...
+# Subtest: only one input in the final 120 ms of recovery is retained
+ok 3 - only one input in the final 120 ms of recovery is retained
+  ---
+  duration_ms: 4.1
+  ...
+# Subtest: committed attacks cannot be cancelled by dash or guard
+ok 4 - committed attacks cannot be cancelled by dash or guard
+  ---
+  duration_ms: 3.5053
+  ...
+# Subtest: a held guard does not renew perfect defense after block stun
+ok 5 - a held guard does not renew perfect defense after block stun
+  ---
+  duration_ms: 4.0604
+  ...
+# Subtest: guard tapping has a retry interval and consumes ki on a perfect block
+ok 6 - guard tapping has a retry interval and consumes ki on a perfect block
+  ---
+  duration_ms: 2.8072
+  ...
+# Subtest: defensive burst costs 45 ki and cannot be repeated before cooldown
+ok 7 - defensive burst costs 45 ki and cannot be repeated before cooldown
+  ---
+  duration_ms: 2.4554
+  ...
+# Subtest: four consecutive hits scale damage and grant a short escape window
+ok 8 - four consecutive hits scale damage and grant a short escape window
+  ---
+  duration_ms: 2.8066
+  ...
+# Subtest: simultaneous committed melee hits trade instead of favoring player insertion order
+ok 9 - simultaneous committed melee hits trade instead of favoring player insertion order
+  ---
+  duration_ms: 2.8425
+  ...
+# Subtest: duel countdown prevents attacks, movement and world consumables
+ok 10 - duel countdown prevents attacks, movement and world consumables
+  ---
+  duration_ms: 1.7911
+  ...
+# Subtest: duel normalizes damage across levels, attributes and transformation
+ok 11 - duel normalizes damage across levels, attributes and transformation
+  ---
+  duration_ms: 2.8204
+  ...
+# Subtest: equal lethal hits draw a round and reset both players without granting an insertion advantage
+ok 12 - equal lethal hits draw a round and reset both players without granting an insertion advantage
+  ---
+  duration_ms: 2.9863
+  ...
+# Subtest: best of three restores original profile and does not persist temporary duel life
+ok 13 - best of three restores original profile and does not persist temporary duel life
+  ---
+  duration_ms: 4.3459
+  ...
+# Subtest: duel cannot damage spectators or absorb their projectiles
+ok 14 - duel cannot damage spectators or absorb their projectiles
+  ---
+  duration_ms: 3.53
+  ...
+# Subtest: three timed draws end the duel, and disconnect also restores the survivor
+ok 15 - three timed draws end the duel, and disconnect also restores the survivor
+  ---
+  duration_ms: 1.9365
+  ...
+# Subtest: the opening stays calm and all story guidance points to the active persistent objective
+not ok 16 - the opening stays calm and all story guidance points to the active persistent objective
+  ---
+  duration_ms: 12.9905
+  location: 'C:\\dbz\\tests\\combat-rhythm.test.js:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'boolean'
+    - 'string'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'string'
+  actual: 'boolean'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\dbz\tests\combat-rhythm.test.js:22:436)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:979:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:677:18)
+    Test.postRun (node:internal/test_runner/test:1090:19)
+    Test.run (node:internal/test_runner/test:1018:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:677:7)
+  ...
+# Subtest: introductory patrol respawns for a late player after the previous player completed it
+ok 17 - introductory patrol respawns for a late player after the previous player completed it
+  ---
+  duration_ms: 2.5453
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 16
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 172.3784

@@ -1,0 +1,54 @@
+[
+  {
+    "name": "desktop",
+    "states": [
+      "run",
+      "windup",
+      "attack",
+      "recover"
+    ],
+    "windup": true,
+    "projectile": true,
+    "dojo": true,
+    "errors": []
+  },
+  {
+    "name": "mobile",
+    "states": [
+      "run",
+      "windup",
+      "attack",
+      "recover"
+    ],
+    "windup": true,
+    "projectile": true,
+    "dojo": true,
+    "errors": []
+  },
+  {
+    "name": "landscape",
+    "states": [
+      "run",
+      "windup",
+      "attack",
+      "recover"
+    ],
+    "windup": true,
+    "projectile": true,
+    "dojo": true,
+    "errors": []
+  },
+  {
+    "name": "compact",
+    "states": [
+      "run",
+      "windup",
+      "attack",
+      "recover"
+    ],
+    "windup": true,
+    "projectile": true,
+    "dojo": true,
+    "errors": []
+  }
+]

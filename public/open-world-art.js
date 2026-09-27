@@ -24,8 +24,8 @@
   };
   function ellipse(c,x,y,rx,ry,color){c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();}
   function poly(c,points,color){c.fillStyle=color;c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();}
-  function riverX(y){return 4100+Math.sin(y/1700)*1100+Math.sin(y/620)*180;}
-  function dry(x,y){return Math.abs(x-riverX(y))>160;}
+  function riverX(y,id){return UZOpenWorld.profile(id).river?UZOpenWorld.riverX(id,y):1e9;}
+  function dry(x,y,id){return Math.abs(x-riverX(y,id))>160;}
   function relief(c,o,p){
     const {x,y,r,h,phase}=o,points=[];
     for(let i=0;i<18;i++){const a=i/18*TAU,k=1+.1*Math.sin(i*2.6+phase);points.push([x+Math.cos(a)*r*k,y+Math.sin(a)*r*.55*k]);}
@@ -75,9 +75,9 @@
     const chunk=UZOpenWorld.chunk(id,cx,cy),rand=UZ.rng(UZOpenWorld.hash(id,cx,cy)^7813),p=themes[id]||themes.demon;
     const mountains=[],houses=[],grass=[];
     for(let i=0;i<7;i++){const x=chunk.x+rand()*S,y=chunk.y+rand()*S,r=85+rand()*100;
-      if(Math.hypot(x-1700,y-1740)>650&&Math.hypot(x-chunk.site.x,y-chunk.site.y)>330&&Math.abs(x-riverX(y))>r+170)mountains.push({x,y,r,h:35+rand()*85,phase:rand()*6,snow:id==='earth'&&rand()<.22});}
-    for(let i=0;i<6;i++){const a=i*2.399,x=chunk.site.x+Math.cos(a)*(90+i*20),y=chunk.site.y+Math.sin(a)*(90+i*20);if(dry(x,y))houses.push({x,y,size:35+rand()*20});}
-    for(let i=0;i<100;i++){const x=chunk.x+rand()*S,y=chunk.y+rand()*S;if(dry(x,y))grass.push({x,y,size:3+rand()*6});}
+      if(Math.hypot(x-1700,y-1740)>650&&Math.hypot(x-chunk.site.x,y-chunk.site.y)>750&&Math.abs(x-riverX(y,id))>r+170)mountains.push({x,y,r,h:35+rand()*85,phase:rand()*6,snow:id==='earth'&&rand()<.22});}
+    for(const prop of chunk.props)houses.push({...prop,kind:"prop"});
+    for(let i=0;i<100;i++){const x=chunk.x+rand()*S,y=chunk.y+rand()*S;if(dry(x,y,id))grass.push({x,y,size:3+rand()*6});}
     const canvas=document.createElement('canvas');canvas.width=canvas.height=(S+PAD*2)/2;const g=canvas.getContext('2d');g.scale(.5,.5);g.translate(PAD-chunk.x,PAD-chunk.y);
     for(let i=0;i<24;i++){const x=chunk.x+rand()*S,y=chunk.y+rand()*S,r=100+rand()*210,grad=g.createRadialGradient(x,y,0,x,y,r);grad.addColorStop(0,p[1]+'40');grad.addColorStop(1,p[1]+'00');g.fillStyle=grad;g.fillRect(x-r,y-r,r*2,r*2);}
     return {chunk,p,canvas,mountains,houses,grass};
@@ -93,32 +93,43 @@
     }
     // A world-coordinate river never terminates at streaming boundaries.
     c.lineJoin='round';c.lineCap='round';const start=Math.floor((y-height/2-400)/70)*70,end=y+height/2+400;
-    for(const [color,w]of [[p[3],156],[p[4],128],['#b7ead427',95]]){c.strokeStyle=color;c.lineWidth=w;c.beginPath();for(let py=start;py<end;py+=70){const px=riverX(py);py===start?c.moveTo(px,py):c.lineTo(px,py);}c.stroke();}
+    for(const [color,w]of [[p[3],156],[p[4],128],['#b7ead427',95]]){c.strokeStyle=color;c.lineWidth=w;c.beginPath();for(let py=start;py<end;py+=70){const px=riverX(py,id);py===start?c.moveTo(px,py):c.lineTo(px,py);}c.stroke();}
     c.lineWidth=1.5;c.strokeStyle='#c4eee675';
-    for(let py=start;py<end;py+=58){const fy=py+(clock*30)%58,rx=riverX(fy);if(Math.abs(rx-x)>width/2+100)continue;c.beginPath();c.ellipse(rx+Math.sin(py)*28,fy,12,3,0,0,Math.PI);c.stroke();}
+    for(let py=start;py<end;py+=58){const fy=py+(clock*30)%58,rx=riverX(fy,id);if(Math.abs(rx-x)>width/2+100)continue;c.beginPath();c.ellipse(rx+Math.sin(py)*28,fy,12,3,0,0,Math.PI);c.stroke();}
     for(const e of entries){
       for(const g of e.grass)if(visible(g,20)){const sway=Math.sin(clock*2+g.x*.018+g.y*.01)*3;c.strokeStyle=p[1];c.lineWidth=1;c.beginPath();c.moveTo(g.x-3,g.y);c.quadraticCurveTo(g.x-5+sway,g.y-5,g.x-3+sway,g.y-g.size);c.moveTo(g.x,g.y);c.lineTo(g.x+sway+2,g.y-g.size-2);c.stroke();if((g.x|0)%7===0){ellipse(c,g.x+4,g.y-g.size,2,2,id==='namek'?'#d3e9b2':'#e3cc8d');}}
-      const site=e.chunk.site;if(visible(site,350)){c.strokeStyle=p[3]+'70';c.lineWidth=12;c.beginPath();e.houses.forEach(h=>{c.moveTo(site.x,site.y);c.quadraticCurveTo(site.x+(h.x-site.x)*.7,site.y,h.x,h.y+20)});c.stroke();
-        ellipse(c,site.x,site.y,22,13,p[2]);ellipse(c,site.x,site.y-3,17,10,p[4]);
-        for(const h of e.houses){c.strokeStyle=p[3]+'88';c.lineWidth=2;c.beginPath();c.ellipse(h.x,h.y,h.size+18,h.size*.9,0,0,TAU);c.stroke();
-          for(let j=0;j<4;j++){const bx=h.x+h.size+14,by=h.y-12+j*8;c.fillStyle=p[2];c.fillRect(bx,by,17,4);ellipse(c,bx+4,by-1,3,2,p[1]);}
-        }}
+      const site=e.chunk.site;if(visible(site,650)&&e.houses.length){
+        c.save();c.translate(site.x,site.y);c.strokeStyle=p[3]+'90';c.lineWidth=38;
+        c.beginPath();
+        if(site.formation==='street'){c.moveTo(0,-510);c.lineTo(0,480);c.moveTo(-300,90);c.lineTo(310,90);}
+        else if(site.formation==='line'){c.moveTo(-500,40);c.lineTo(500,40);}
+        else if(site.formation==='pincer'){c.moveTo(-90,-510);c.bezierCurveTo(230,-190,-180,120,70,450);}
+        else if(site.formation==='depth'){c.rect(-330,-450,660,690);c.moveTo(0,240);c.lineTo(0,430);}
+        else if(site.formation==='duel'){c.rect(-270,-250,540,490);}
+        else{c.moveTo(-300,330);c.quadraticCurveTo(-80,-160,360,-290);}
+        c.stroke();
+        if(site.mood==='military'){c.strokeStyle='#d8c46970';c.lineWidth=3;c.setLineDash([20,16]);c.stroke();}
+        if(site.mood==='ancient'||site.mood==='trial'){c.lineWidth=2;c.strokeStyle='#eae4c977';c.beginPath();c.moveTo(-100,-70);c.lineTo(0,-160);c.lineTo(100,-70);c.lineTo(0,20);c.closePath();c.stroke();}
+        c.restore();
+      }
     }
     const objects=[];
-    for(const e of entries){for(const o of e.mountains)if(visible(o,320))objects.push({...o,kind:'mountain'});for(const o of e.houses)if(visible(o))objects.push({...o,kind:'house'});for(const o of e.chunk.objects)if(visible(o)&&dry(o.x,o.y)&&!e.mountains.some(m=>Math.hypot(o.x-m.x,(o.y-m.y)*1.5)<m.r+20)&&!e.houses.some(h=>Math.hypot(o.x-h.x,o.y-h.y)<90))objects.push(o);}
+    for(const e of entries){for(const o of e.mountains)if(visible(o,320))objects.push({...o,kind:'mountain'});for(const o of e.houses)if(visible(o))objects.push({...o,kind:o.kind||'house'});for(const o of e.chunk.objects)if(visible(o)&&dry(o.x,o.y,id)&&!e.mountains.some(m=>Math.hypot(o.x-m.x,(o.y-m.y)*1.5)<m.r+20)&&!e.houses.some(h=>Math.hypot(o.x-h.x,o.y-h.y)<90))objects.push(o);}
     const ruined=new Set((me?.debris||[]).map(o=>o.id));
     for(let i=objects.length-1;i>=0;i--){const o=objects[i],key=id+':'+o.kind+':'+Math.round(o.x)+':'+Math.round(o.y);if(ruined.has(key))objects.splice(i,1);}
     for(const d of me?.debris||[]){if(!visible(d))continue;ellipse(c,d.x,d.y,d.radius,d.radius*.6,'#29343b77');for(let i=0;i<7;i++){const a=i*2.4,rx=d.x+Math.cos(a)*d.radius*.7,ry=d.y+Math.sin(a)*d.radius*.4;poly(c,[[rx-9,ry+5],[rx-4,ry-8],[rx+12,ry+3]],p[2]);}}
     objects.sort((a,b)=>a.y-b.y);
-    for(const o of objects){if(o.kind==='mountain')relief(c,o,p);else if(o.kind==='house')house(c,o,p);else if(o.kind==='tree')tree(c,o,p,clock,id);else {ellipse(c,o.x+4,o.y+5,o.size,o.size*.55,'#20333b30');poly(c,[[o.x-o.size,o.y],[o.x-o.size*.4,o.y-o.size*.7],[o.x+o.size*.4,o.y-o.size*.5],[o.x+o.size,o.y+7]],p[2]);}}
+    for(const o of objects){if(globalThis.UZWorldKit?.terrain(c,o,id,clock))continue;if(o.kind==='mountain')relief(c,o,p);else if(o.kind==='house')house(c,o,p);else if(o.kind==='tree')tree(c,o,p,clock,id);else {ellipse(c,o.x+4,o.y+5,o.size,o.size*.55,'#20333b30');poly(c,[[o.x-o.size,o.y],[o.x-o.size*.4,o.y-o.size*.7],[o.x+o.size*.4,o.y-o.size*.5],[o.x+o.size,o.y+7]],p[2]);}}
+    globalThis.UZWorldKit?.dress(c,entries,id,clock,visible,me);
     // Cascades repeat along the continuous river, with flowing streaks and spray.
     for(let k=Math.floor(start/2200);k<=Math.ceil(end/2200);k++){
-      const fy=k*2200+600,fx=riverX(fy);if(!visible({x:fx,y:fy},180))continue;
+      const fy=k*2200+600,fx=riverX(fy,id);if(!visible({x:fx,y:fy},180))continue;
       poly(c,[[fx-76,fy-28],[fx+76,fy-28],[fx+88,fy+68],[fx-88,fy+68]],p[2]);
       c.fillStyle='#b0e1d7';c.fillRect(fx-53,fy-25,106,94);c.fillStyle='#76b4bc';c.fillRect(fx-44,fy-25,30,94);
       for(let j=0;j<16;j++){const yy=fy-25+((j*19+clock*95)%94);c.strokeStyle=j%2?'#efffefaa':'#d2fff070';c.lineWidth=2;c.beginPath();c.moveTo(fx-48+j*6,yy);c.lineTo(fx-48+j*6,Math.min(fy+69,yy+18));c.stroke();}
       for(let j=0;j<7;j++)ellipse(c,fx-55+j*18,fy+70+Math.sin(clock*3+j)*4,18,7,'#dff5e478');
     }
+    for(const e of entries){const site=e.chunk.site;if(e.chunk.props.length&&visible(site,180)){c.fillStyle='#e8e0c4b0';c.textAlign='center';c.font='600 12px system-ui';c.fillText(site.name,site.x,site.y-260);}}
     for(const r of UZOpenWorld.regions(id))if(visible(r,200)){c.fillStyle='#f4efcaaa';c.font='600 14px system-ui';c.textAlign='center';c.fillText(r.name,r.x,r.y-210);}
     c.restore();
   };

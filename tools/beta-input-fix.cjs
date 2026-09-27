@@ -1,0 +1,1 @@
+const fs=require('fs');let p='public/app.js',s=fs.readFileSync(p,'utf8');s=s.replaceAll('document.getElementById("sandbox-panel")?.open',"document.querySelector('dialog[open]')");fs.writeFileSync(p,s);p='public/sandbox-ui.js';s=fs.readFileSync(p,'utf8').replace('window.UZSandboxUI = {','window.UZSandboxUI = {\n    open,');fs.writeFileSync(p,s);

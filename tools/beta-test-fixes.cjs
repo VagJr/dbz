@@ -1,0 +1,3 @@
+const fs=require('fs');let p='tests/beta.test.js',s=fs.readFileSync(p,'utf8');s=s.replace("e.worldMemory['debris:'+o.id]={};","e.worldMemory??={};e.worldMemory['debris:'+o.id]={};const c={world:'earth',x:o.x-80,y:o.y,mode:'ground'},d={world:'earth',x:o.x+80,y:o.y,mode:'ground'};assert.equal(e.clearSight(c,d),true);");fs.writeFileSync(p,s);
+p='src/combat-space.js';s=fs.readFileSync(p,'utf8').replace('const look=75;','const strength=Math.min(1,Math.hypot(desired.x,desired.y));if(strength<.04)return;speed*=strength;const look=75;');fs.writeFileSync(p,s);
+p='src/engine.js';s=fs.readFileSync(p,'utf8').replace('else this.move(e,hx/hd*dt*260,hy/hd*dt*260);','else this.tacticalStep(e,{x:e.homeX,y:e.homeY},{x:hx/hd,y:hy/hd},dt,260);');fs.writeFileSync(p,s);
