@@ -1,0 +1,227 @@
+.bottom-nav .party-launcher {
+  --nav-art: url("/assets/ui/generated/menu/46.png");
+}
+.bottom-nav .party-launcher.party-alert {
+  border-color: #e7bb69 !important;
+  box-shadow: 0 0 0 2px #e7bb6940, 0 0 18px #e7bb6940;
+}
+.party-presence {
+  position: fixed;
+  z-index: 24;
+  right: 27px;
+  top: 354px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 178px;
+  max-width: calc(100vw - 32px);
+  max-height: 156px;
+  overflow: hidden;
+  padding: 7px 9px;
+  text-align: left;
+  color: #f4f4eb;
+  background: linear-gradient(120deg, #0b2433ee, #102e36dd);
+  border: 1px solid #a0c9c066;
+  border-left: 3px solid #d6b875;
+  border-radius: 7px;
+  box-shadow: 0 6px 20px #0006;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.party-presence[hidden] { display: none; }
+.party-presence > strong {
+  color: #e9cf91;
+  font: 700 9px/1.2 system-ui;
+  letter-spacing: 1px;
+}
+.party-presence > span { font: 600 10px/1.25 system-ui; }
+.party-presence-row {
+  display: grid;
+  grid-template-columns: minmax(0, 63px) 1fr;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.party-presence-row > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+dialog#party-panel.mmo-window {
+  width: 296px !important;
+  max-height: min(475px, calc(100dvh - 90px)) !important;
+}
+dialog#party-panel.mmo-window .party-body {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #66989b #091c29;
+}
+.party-body .party-status {
+  margin: 0 0 6px;
+  padding: 5px 7px;
+  color: #e5d8a8;
+  background: #927e4430;
+  border-left: 2px solid #d5b66b;
+  font: 500 9px/1.35 system-ui;
+}
+.party-body section { margin: 7px 0 11px; }
+.party-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0 0 5px;
+  color: #d8c38d;
+  font: 700 8px/1.25 system-ui;
+  letter-spacing: 1.15px;
+}
+.party-body .party-action {
+  flex: none;
+  min-height: 22px;
+  padding: 3px 6px;
+  color: #f4f3df;
+  border: 1px solid #9bbbc45c;
+  border-radius: 4px;
+  background: #204153;
+  font: 700 9px system-ui;
+  cursor: pointer;
+}
+.party-body .party-action:hover:not(:disabled) {
+  border-color: #f0d298;
+  background: #315668;
+}
+.party-body .party-action:disabled { opacity: .35; cursor: default; }
+.party-invite {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 4px;
+  background: #92673326;
+  border: 1px solid #e9c27b57;
+  border-radius: 5px;
+  font: 500 10px/1.25 system-ui;
+}
+.party-invite > span { flex: 1; }
+.party-member {
+  display: flex;
+  gap: 6px;
+  padding: 6px 5px;
+  margin-bottom: 4px;
+  background: linear-gradient(100deg, #1a3a47bb, #102632aa);
+  border: 1px solid #8cafb43a;
+  border-radius: 5px;
+}
+.party-member-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 4px;
+  color: #f8dfa3;
+  border: 1px solid #d4ae6b66;
+  background: #0a2430;
+  font: 700 14px var(--display, system-ui);
+}
+.party-member-info { min-width: 0; flex: 1; }
+.party-member-identity { display: flex; align-items: baseline; gap: 5px; }
+.party-member-identity strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 11px system-ui;
+}
+.party-member-identity small { flex: none; color: #e6c78e; font: 700 7px system-ui; }
+.party-member-place {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: #a6c9cd;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 8px system-ui;
+}
+.party-meter {
+  display: block;
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  margin-top: 3px;
+  border: 1px solid #0008;
+  border-radius: 2px;
+  background: #071521;
+}
+.party-meter i {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  background: linear-gradient(90deg, #2c9d54, #a8e560);
+  transition: width .15s linear;
+}
+.party-meter.ki i { background: linear-gradient(90deg, #2373c9, #53d9e2); }
+.party-member-actions { display: flex; flex-direction: column; gap: 3px; }
+.party-member-actions .party-action { width: 24px; padding: 0; }
+.party-assist-note { display: block; color: #b8d0ca; font: 500 8px/1.35 system-ui; }
+.party-peer { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.party-peer > span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 10px system-ui;
+}
+.party-empty { color: #aec7c5; font: 500 9px/1.35 system-ui; }
+.party-messages {
+  min-height: 50px;
+  max-height: 106px;
+  overflow-y: auto;
+  padding: 4px 5px;
+  background: #071926a8;
+  border: 1px solid #8eafb526;
+  border-radius: 4px;
+  scrollbar-width: thin;
+}
+.party-message { margin-bottom: 3px; color: #e2f1e9; font: 500 10px/1.35 system-ui; }
+.party-message strong { color: #f1d596; }
+.party-message.is-system { color: #a9c8ce; font-style: italic; }
+.party-message.is-assist { color: #aee0ae; }
+.party-chat-form { display: flex; gap: 4px; margin-top: 5px; }
+.party-chat-form input {
+  min-width: 0;
+  flex: 1;
+  height: 27px;
+  padding: 4px 7px;
+  color: #e5f0ee;
+  border: 1px solid #729fa74b;
+  border-radius: 4px;
+  background: #0a1f2c;
+  font: 500 10px system-ui;
+}
+.party-chat-form button {
+  width: 28px;
+  height: 27px;
+  color: #112a31;
+  background: #d9bc78;
+  border: none;
+  border-radius: 4px;
+  font-weight: 800;
+  cursor: pointer;
+}
+@media (max-width: 680px) {
+  .party-presence {
+    top: auto;
+    right: 8px;
+    bottom: 168px;
+    width: 145px;
+    max-height: 115px;
+    padding: 5px 7px;
+  }
+  .party-presence-row:nth-of-type(n+4) { display: none; }
+  dialog#party-panel.mmo-window { width: min(296px, calc(100vw - 16px)) !important; }
+}

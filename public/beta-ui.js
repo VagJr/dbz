@@ -59,11 +59,10 @@
   document.body.append(dialog);
   const open = (which) => {
     tab = which || "journey";
-    for (const d of document.querySelectorAll("dialog[open]"))
-      if (d !== dialog) d.close();
     document.dispatchEvent(new Event("beta-open"));
     render();
-    if (!dialog.open) dialog.showModal();
+    if (state) window.UZWindows.open(dialog, "left");
+    else if (!dialog.open) dialog.showModal();
   };
   const launch = btn("✦ Central", () => {}, "beta-launcher");
   launch.id = "beta-launcher";
@@ -132,6 +131,9 @@
     router?.(type);
   }
   function render() {
+    dialog.dataset.presentation = tab;
+    title.querySelector("h2").textContent = tabs[tab];
+    requestAnimationFrame(() => window.UZProduction?.decorate(dialog));
     body.replaceChildren();
     status.textContent = "";
     for (const b of nav.children)

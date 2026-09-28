@@ -2,7 +2,8 @@
 (()=>{const sheets={};for(const name of ['items','equipment','nature','furniture']){const image=new Image();image.src='/assets/world-kit/'+name+'-14x14.png';sheets[name]=image;}const TAU=Math.PI*2;
 function sprite(c,sheet,index,x,y,size=80,angle=0,alpha=1){const im=sheets[sheet];if(!im?.complete||!im.naturalWidth)return false;c.save();c.translate(x,y);c.rotate(angle);c.globalAlpha*=alpha;c.drawImage(im,(index%14)*128,Math.floor(index/14)*128,128,128,-size/2,-size*.84,size,size);c.restore();return true;}
 function hash(x,y){let n=Math.imul(Math.round(x),374761393)^Math.imul(Math.round(y),668265263);n=Math.imul(n^(n>>>13),1274126177);return(n^(n>>>16))>>>0;}
-function glow(c,x,y,r,color){const g=c.createRadialGradient(x,y,1,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'#00000000');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);}
+const glowCache=new Map();
+function glow(c,x,y,r,color){if(!glowCache.has(color)){const cv=document.createElement('canvas');cv.width=cv.height=192;const gnd=cv.getContext('2d'),g=gnd.createRadialGradient(96,96,1,96,96,96);g.addColorStop(0,color);g.addColorStop(1,'#00000000');gnd.fillStyle=g;gnd.fillRect(0,0,192,192);glowCache.set(color,cv);}c.drawImage(glowCache.get(color),x-r,y-r,r*2,r*2);}
 const alien=new Set(['namek','kanassa','yardrat','divine','sacred','zeno','champa']);
 const landmark=Art.landmark;
 Art.landmark=(c,b,world,t)=>{if(b.sprite!=null&&sprite(c,'furniture',b.sprite,b.x,b.y,215)){c.save();c.fillStyle='#ecf2df';c.font='600 10px system-ui';c.textAlign='center';c.shadowColor='#001018';c.shadowBlur=4;c.fillText(b.label,b.x,b.y+46);c.restore();return;}landmark(c,b,world,t);};

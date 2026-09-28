@@ -4,10 +4,11 @@
     $ = (id) => document.getElementById(id);
   let socket,
     state,
-    tab = "explore",
+    tab = "inventory",
     pending = false,
     refresh = false,
     lastJournal = "",
+    lastInventorySignature = "",
     lastRender = 0,
     tracked = null,
     selectedItem = null, craftCategory = "basic", craftPage = 0;
@@ -42,7 +43,7 @@
   const close = button("×", () => dialog.close());
   close.setAttribute("aria-label", "Fechar vida no universo");
   head.append(heading, close);
-  const nav = el("nav"),
+  const nav = el("nav", undefined, "sandbox-tabs"),
     body = el("div", undefined, "sandbox-body"),
     status = el("p", "", "sandbox-status");
   status.setAttribute("role", "status");
@@ -103,8 +104,7 @@
     if (!state || document.querySelector(".cinematic:not([hidden])")) return;
     document.dispatchEvent(new Event("sandbox-open"));
     tab = which;
-    for(const d of document.querySelectorAll("dialog[open]"))if(d!==dialog)d.close();
-    dialog.showModal();
+    window.UZWindows.open(dialog, "right");
     render();
   }
   function send(data) {
@@ -151,8 +151,7 @@
     b.title=label||C.items[key]?.name||'Slot livre';b.dataset.item=key||'';b.setAttribute('aria-pressed',String(!!key&&selectedItem===key));return b;
   }
   function inventoryView(p,s){
-    const layout=el('div',undefined,'inventory-layout'),equipment=el('section',undefined,'equipment-column');equipment.append(el('h3','Seu equipamento'));
-    const slots=el('div',undefined,'equipment-slots');for(const [key,label] of Object.entries(C.slots)){const item=s.equipment[key];const wrap=el('div',undefined,'equipment-place');wrap.append(el('small',label),slotButton(item,1,()=>{if(item){selectedItem=item;render();}},label+(item?' · '+C.items[item].name:' · Vazio')));slots.append(wrap);}equipment.append(slots);layout.append(equipment);
+    const layout=el('div',undefined,'inventory-layout');
     const bag=el('section',undefined,'inventory-bag');bag.append(el('h3','Mochila'),el('p','Selecione um item para ver uso, equipamento ou instalação.','inventory-hint'));const grid=el('div',undefined,'inventory-grid');const owned=Object.entries(s.inventory).filter(([,n])=>n>0);for(const [key,n]of owned)grid.append(slotButton(key,n,()=>{selectedItem=key;render();}));for(let i=owned.length;i<Math.max(30,Math.ceil(owned.length/6)*6);i++){const empty=slotButton(null,0,()=>{});empty.disabled=true;grid.append(empty);}bag.append(grid);layout.append(bag);body.append(layout);
     const item=C.items[selectedItem];if(item){const detail=el('section',undefined,'item-detail');detail.append(art(selectedItem),el('h3',item.name));const equipped=Object.values(s.equipment).includes(selectedItem);detail.append(el('p',item.slot?C.slots[item.slot]+' · +'+item.bonus+' '+({force:'força',spirit:'espírito',vitality:'vitalidade'})[item.stat]+' · '+(equipped?'Equipado':'Na mochila'):item.category==='furniture'?'Decoração instalável, persistente e recolhível pelo proprietário.':selectedItem==='medicine'?'Recupera 40% de vida. Intervalo compartilhado de 20 segundos.':selectedItem==='battery'?'Recupera 50 ki. Intervalo compartilhado de 20 segundos.':C.structures[selectedItem]?'Cápsula de construção: instale no terreno à sua frente.':'Material de fabricação. Pode ser negociado no mercado.'));
     if(equipped)detail.append(button('Guardar equipamento',()=>send({action:'unwear',slot:item.slot})));else if(item.slot&&s.inventory[selectedItem])detail.append(button('Equipar',()=>send({action:'wear',item:selectedItem})));
@@ -161,6 +160,9 @@
   }
   function render() {
     if (!state) return;
+    dialog.dataset.presentation = tab;
+    h.textContent = tabs[tab];
+    requestAnimationFrame(() => window.UZProduction?.decorate(dialog));
     lastRender = performance.now();
     body.replaceChildren();
     const p = state.self,
@@ -511,9 +513,18 @@
             : C.structures[n.kind].action + " · ") +
           n.name +
           " · N";
+      if (dialog.open && tab === "inventory") {
+        const inventorySignature = JSON.stringify([
+          next.self.sandbox.inventory,
+          next.self.sandbox.equipment,
+          next.self.zenni,
+        ]);
+        if (inventorySignature !== lastInventorySignature) refresh = true;
+        lastInventorySignature = inventorySignature;
+      }
       if (
         dialog.open &&
-        (refresh || performance.now() - lastRender > 1500) &&
+        (refresh || (tab !== "inventory" && performance.now() - lastRender > 1500)) &&
         !["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName) &&
         !pending
       ) { refresh = false; render(); }
@@ -534,8 +545,7 @@
     }
     if (
       e.code === "KeyN" &&
-      !dialog.open &&
-      !$("panel").open &&
+      !window.UZWindows.blocksPlay() &&
       !document.querySelector(".cinematic:not([hidden])")
     ) {
       e.preventDefault();

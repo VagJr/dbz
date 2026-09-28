@@ -86,9 +86,7 @@
       im.src=UZPortrait.origin(origin)||im.src;
       node.prepend(im);
     },
-    panel(type) {
-      const panel = document.getElementById("panel");
-      panel.append(document.getElementById("close-panel"));
+    panel(type, panel = document.getElementById("panel")) {
       let im = panel.querySelector(".panel-emblem");
       if (!im) {
         im = picture("menu", 44, "panel-emblem");
@@ -103,7 +101,9 @@
       };
       const [group, index, label] = entries[type] || entries.help;
       im.src = asset(group, index);
-      document.getElementById("panel-eyebrow").textContent = label;
+      panel.dataset.presentation = type;
+      requestAnimationFrame(() => window.UZProduction?.decorate(panel));
+      panel.querySelector(".eyebrow").textContent = label;
     },
     state(p) {
       document.body.classList.toggle("in-combat", !!p.targetId);
@@ -128,7 +128,7 @@
     }
     if (action === "cycleTarget") {
       const k = document.createElement("kbd");
-      k.textContent = "TAB";
+      k.textContent = "Y";
       b.prepend(k);
     }
     if (action === "kaioken") {

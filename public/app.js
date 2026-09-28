@@ -5,10 +5,33 @@
       autoConnect: true,
       reconnection: true,
       transports: ["websocket"],
+      auth: { protocol: "uz-2" },
     }),
-    renderer = new Art.Renderer($("world"));
+    renderer = new Art.Renderer($("world")),
+    realtime = new UZRealtime.Presentation();
+  let wireState = null;
+  let lastInputAt = 0;
+  renderer.canvas.tabIndex = 0;
+  document.addEventListener("close", e => {
+    if (e.target.tagName === "DIALOG" && state) renderer.canvas.focus({ preventScroll: true });
+  }, true);
+  const latencyBadge = document.createElement("small");
+  latencyBadge.className = "latency-badge";
+  $("connection").parentElement.append(latencyBadge);
+  function measureLatency() {
+    if (!socket.connected) return;
+    const start = performance.now();
+    socket.timeout(2500).emit("latency", (err) => {
+      if (err) { latencyBadge.textContent = "Rede instável"; return; }
+      realtime.rtt = performance.now() - start;
+      latencyBadge.textContent = `${Math.round(realtime.rtt)} ms`;
+      latencyBadge.dataset.quality = realtime.rtt < 100 ? "good" : realtime.rtt < 200 ? "fair" : "slow";
+    });
+  }
+  setInterval(measureLatency, 5000);
   window.UZSandboxUI?.connect(socket);
   window.UZBetaUI?.connect(socket,type=>openPanel(type));
+  window.UZPartyUI?.connect(socket);
   let seenDialogue=null;
   let state = null,
     id = null,
@@ -146,11 +169,15 @@
   };
   $("resume-button").onclick = () => join(true);
   socket.on("connect", () => {
+    wireState = null;
+    realtime.connected = true;
+    measureLatency();
     $("connection-dot").classList.add("online");
     $("connection").textContent = "Servidor conectado";
     if (id && savedToken) socket.emit("join", { token: savedToken });
   });
   socket.on("disconnect", () => {
+    realtime.connected = false;
     $("connection-dot").classList.remove("online");
     $("connection").textContent = "Reconectando…";
     resetInput();
@@ -186,11 +213,31 @@
     $("chat-messages").scrollTop = 10000;
   });
   socket.on("snapshot", (next) => {
+    if (next.actorsDelta) {
+      const mergeActors = (list,old) => {
+        const byId = new Map((old || []).map(e=>[e.id,e]));
+        return list.map(e=>({ ...byId.get(e.id), ...e }));
+      };
+      next.players = mergeActors(next.players,wireState?.players);
+      next.enemies = mergeActors(next.enemies,wireState?.enemies);
+    }
+    if (next.delta) next = { ...wireState, ...next,
+      self: { ...wireState?.self, ...next.self },
+      sandbox: { ...wireState?.sandbox, ...next.sandbox } };
+    wireState = next;
     state = next;
     window.UZSandboxUI?.update(next);
     window.UZBetaUI?.update(next);
+    window.UZPartyUI?.update(next);
     const p = state.self;
-    if(p.dialogue&&p.dialogue.id!==seenDialogue&&!scene&&!$('panel').open&&!document.querySelector('dialog[open]')){seenDialogue=p.dialogue.id;playScene([p.dialogue]);}
+    if (panels.get("character")?.open) {
+      const signature = JSON.stringify([p.stats, p.points, p.power, p.level, p.zenni, p.sandbox?.equipment, p.sandbox?.inventory, p.techniques, p.equipped, p.appearance]);
+      if (signature !== characterSignature) {
+        characterSignature = signature;
+        openPanel("character");
+      }
+    }
+    if(p.dialogue&&p.dialogue.id!==seenDialogue&&!scene&&!window.UZWindows.blocksPlay()){seenDialogue=p.dialogue.id;playScene([p.dialogue]);}
     if (lastWorld !== p.world) {
       lastWorld = p.world;
       renderer.setWorld(p.world);
@@ -200,6 +247,7 @@
       $("region-name").textContent = world.region;
       resetInput();
     }
+    realtime.receive(next, performance.now() / 1000);
     for (const fx of next.effects) {
       renderer.effect(fx);
       Sound.play(fx.type);
@@ -379,11 +427,31 @@
       : Number(s).toLocaleString("pt-BR");
   }
   const dialog = $("panel");
+  const panels = new Map();
+  const panelTemplate = dialog.cloneNode(true);
+  function utilityPanel(type) {
+    if (panels.has(type)) return panels.get(type);
+    const panel = panels.size ? panelTemplate.cloneNode(true) : dialog;
+    panel.id = `game-panel-${type}`;
+    for (const child of panel.querySelectorAll("[id]")) child.removeAttribute("id");
+    panel.querySelector("h2").id = `${panel.id}-title`;
+    panel.setAttribute("aria-labelledby", `${panel.id}-title`);
+    panel.lastElementChild.classList.add("panel-body");
+    panel.querySelector("header button").onclick = () => panel.close();
+    if (panel !== dialog) document.body.append(panel);
+    window.UZWindows.register(panel, "left");
+    panels.set(type, panel);
+    return panel;
+  }
+  function togglePanel(type) {
+    const panel = panels.get(type);
+    if (panel?.open) panel.close();
+    else openPanel(type);
+  }
   function closePanel() {
     dialog.close();
     document.activeElement?.blur();
     panelType = "";
-    resetInput();
   }
   $("close-panel").onclick = closePanel;
   dialog.addEventListener("click", (e) => {
@@ -400,7 +468,6 @@
   });
   dialog.addEventListener("close", () => {
     panelType = "";
-    resetInput();
   });
   function el(tag, text, cls) {
     const e = document.createElement(tag);
@@ -412,6 +479,120 @@
     const b = el("button", text, cls);
     b.onclick = fn;
     return b;
+  }
+  let selectedGearSlot = null;
+  let characterSignature = "";
+  let modelAngleOffset = 0;
+  let warriorPreview = null;
+  let lastWarriorFrame = 0;
+  function renderWarrior(body, p) {
+    const C = UZSandbox;
+    const identity = el("div", undefined, "warrior-identity");
+    identity.append(el("strong", p.name), el("small", `Nível ${p.level} · ${compact(p.power)} BP`));
+    const doll = el("section", undefined, "paper-doll");
+    doll.setAttribute("aria-label", "Personagem e slots de equipamento");
+    const canvas = document.createElement("canvas");
+    canvas.width = 540; canvas.height = 560;
+    canvas.className = "paper-doll-art";
+    canvas.setAttribute("aria-label", "Ilustração do seu guerreiro");
+    const c = canvas.getContext("2d");
+    const drawModel = (actor = p, clock = 0) => {
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, canvas.width, canvas.height);
+      c.scale(2, 2);
+      // This is the very same live rig the map draws, at the actor's current
+      // direction and animation state. The camera rotation is optional.
+      Art.fighter(c, { ...actor, x: 135, y: 133,
+        angle: (actor.angle || 0) + modelAngleOffset,
+        combatClock: actor.combatClock ?? clock }, clock, 3.15);
+      c.fillStyle = "#e8f5ef";
+      c.font = "700 8px system-ui";
+      c.textAlign = "center";
+      const label = actor.mode === "flight" ? "EM VOO" :
+        actor.state === "run" ? "EM MOVIMENTO" :
+        actor.state === "guard" ? "EM DEFESA" :
+        ["attack", "windup"].includes(actor.state) ? "EM COMBATE" : "NO MUNDO";
+      c.fillText(label, 135, 263);
+    };
+    warriorPreview = { canvas, draw: drawModel };
+    drawModel();
+    doll.append(canvas);
+    const turn = button("↻", () => {
+      modelAngleOffset = (modelAngleOffset + Math.PI / 2) % (Math.PI * 2);
+      turn.title = "Girar câmera ao redor do personagem";
+      turn.setAttribute("aria-label", turn.title);
+      drawModel(state?.self || p, performance.now() / 1000);
+    }, "doll-turn");
+    turn.title = "Girar câmera ao redor do personagem";
+    turn.setAttribute("aria-label", turn.title);
+    doll.append(turn);
+    const ghosts = { head: 0, body: 14, legs: 42, feet: 56, hands: 70, waist: 84, back: 98, weapon: 112, accessory: 140, device: 126 };
+    const order = ["head", "body", "hands", "legs", "feet", "back", "weapon", "waist", "accessory", "device"];
+    for (const [index, slot] of order.entries()) {
+      const item = p.sandbox.equipment[slot];
+      const cell = button("", () => { selectedGearSlot = selectedGearSlot === slot ? null : slot; openPanel("character"); }, "gear-cell");
+      cell.dataset.slot = slot;
+      cell.dataset.empty = String(!item);
+      cell.style.setProperty("--slot-row", index % 5);
+      cell.style.setProperty("--slot-side", index < 5 ? 0 : 1);
+      cell.setAttribute("aria-pressed", String(selectedGearSlot === slot));
+      cell.setAttribute("aria-label", `${C.slots[slot]} · ${item ? C.items[item].name : "Vazio"}`);
+      cell.title = cell.getAttribute("aria-label");
+      const im = new Image();
+      im.alt = "";
+      const sprite = C.items[item]?.sprite;
+      im.src = `/assets/world-kit/equipment/${String(sprite?.index ?? ghosts[slot]).padStart(3, "0")}.png`;
+      cell.append(im, el("small", C.slots[slot]));
+      doll.append(cell);
+    }
+    body.append(identity, doll);
+    if (selectedGearSlot) {
+      const tray = el("section", undefined, "gear-picker");
+      const current = p.sandbox.equipment[selectedGearSlot];
+      tray.append(el("strong", C.slots[selectedGearSlot]));
+      const sendGear = data => socket.timeout(6000).emit("sandbox", data, (err, result) => {
+        if (err || !result?.ok) notice(err ? "Sem confirmação. Aguarde antes de repetir." : result?.message || "Não foi possível trocar o equipamento.");
+      });
+      if (current) tray.append(button("Guardar", () => sendGear({ action: "unwear", slot: selectedGearSlot })));
+      const owned = Object.keys(p.sandbox.inventory).filter(id => p.sandbox.inventory[id] > 0 && C.items[id]?.slot === selectedGearSlot);
+      const grid = el("div", undefined, "gear-options");
+      for (const id of owned) {
+        const item = C.items[id];
+        const b = button("", () => sendGear({ action: "wear", item: id }), "gear-choice");
+        b.title = `${item.name} · +${item.bonus} ${item.stat}`;
+        b.setAttribute("aria-label", `Equipar ${item.name}`);
+        const im = new Image(); im.alt = "";
+        im.src = `/assets/world-kit/equipment/${String(item.sprite.index).padStart(3, "0")}.png`;
+        b.append(im); grid.append(b);
+      }
+      tray.append(grid);
+      if (!owned.length) tray.append(el("small", "Nenhum item compatível na mochila."));
+      body.append(tray);
+    }
+    const stats = el("div", undefined, "warrior-stats");
+    for (const [key, name] of [["force", "Força"], ["spirit", "Espírito"], ["vitality", "Vitalidade"]]) {
+      const tile = el("div");
+      const add = button("+", () => socket.emit("attribute", key));
+      add.disabled = p.points < 1;
+      add.setAttribute("aria-label", `Aumentar ${name}`);
+      tile.append(el("small", name), el("strong", String(p.stats[key])), add);
+      stats.append(tile);
+    }
+    body.append(stats, el("small", `${p.points} pontos disponíveis · ${p.zenni} zenni`, "warrior-wallet"));
+    const techniques = el("details", undefined, "warrior-techniques");
+    techniques.append(el("summary", "Técnicas & mestres"));
+    const grid = el("div", undefined, "technique-grid");
+    for (const t of UZ.TECHNIQUES) {
+      const learned = p.techniques.includes(t.id), equipped = p.equipped === t.id;
+      const b = button("", () => socket.emit(learned ? "equip" : "learn", t.id), "technique-tile");
+      b.title = `${t.name} · ${t.description} · Nível ${t.level} · ${t.cost} zenni · ${UZ.getWorld(t.world).mentor}`;
+      b.setAttribute("aria-label", `${equipped ? "Equipada" : learned ? "Equipar" : "Aprender"} ${t.name}`);
+      b.disabled = equipped || (t.id === "teleport" && learned);
+      window.UZUI?.technique(b, t.id);
+      b.append(el("strong", t.name), el("small", equipped ? "Equipada" : learned ? "Equipar" : "Aprender"));
+      grid.append(b);
+    }
+    techniques.append(grid); body.append(techniques);
   }
   function planetEmblem(canvas, world, index) {
     const c = canvas.getContext("2d"), x = 40, y = 40, r = 25;
@@ -439,21 +620,24 @@
     c.restore();
     c.fillStyle = "#fff5c7"; c.fillRect(6, 9, 2, 2); c.fillRect(67, 17, 1.5, 1.5);
   }  function openPanel(type) {
-    resetInput();
+    const dialog = utilityPanel(type);
+    const closePanel = () => dialog.close();
     panelType = type;
     dialog.dataset.kind = type;
-    window.UZUI?.panel(type);
+    window.UZUI?.panel(type, dialog);
     const p = state?.self,
-      body = $("panel-body");
+      body = dialog.querySelector(".panel-body");
+    const scrollTop = body.scrollTop;
     body.replaceChildren();
-    $("panel-title").textContent = {
-      atlas: "O universo espera.",
-      campaigns: "Crônicas de uma lenda.",
-      character: "Seu poder. Seu caminho.",
-      settings: "Do seu jeito.",
-      help: "Poucos comandos. Muitas possibilidades.",
+    dialog.querySelector("h2").textContent = {
+      atlas: "Atlas estelar",
+      campaigns: "Crônicas",
+      character: "Guerreiro",
+      settings: "Ajustes",
+      help: "Controles",
     }[type];
-    if (!dialog.open) dialog.showModal();
+    window.UZWindows.open(dialog, "left");
+    requestAnimationFrame(() => { body.scrollTop = scrollTop; });
     if (type === "atlas") {
       body.append(
         el(
@@ -692,127 +876,7 @@
         body.append(row);
       });
     }
-    if (type === "character" && p) {
-      const hero = el("div", undefined, "character-hero");
-      const heroPortrait = document.createElement("canvas");
-      heroPortrait.width = 126; heroPortrait.height = 112;
-      portrait(heroPortrait, p.skin, 1.05, p.form, true);
-      hero.append(heroPortrait, el("div", undefined, "character-hero-copy"));
-      hero.lastChild.append(
-        el("small", UZ.ORIGINS.find((o) => o.id === p.origin).name.toUpperCase() + " · NÍVEL " + p.level),
-        el("strong", p.name),
-        el("span", compact(p.power) + " BP · " + p.zenni + " zenni"),
-        el("span", p.xp + " / " + (p.level * 130) + " XP"),
-      );
-      window.UZUI?.hero(hero,p.origin,p.form);
-      body.append(hero);
-      body.append(
-        el(
-          "p",
-          `${p.points} pontos de atributo disponíveis. O poder cresce com treino e combate; técnica e timing continuam decisivos.`,
-        ),
-      );
-      const stats = el("div", undefined, "build-stats");
-      for (const [key, name] of [
-        ["force", "FORÇA"],
-        ["spirit", "ESPÍRITO"],
-        ["vitality", "VITALIDADE"],
-      ]) {
-        const d = el("div", undefined, "build-stat"),
-          add = button("+", () => {
-            socket.emit("attribute", key);
-            setTimeout(() => openPanel("character"), 130);
-          });
-        add.disabled = p.points < 1;
-        d.append(el("small", name), el("strong", String(p.stats[key])), add);
-        stats.append(d);
-      }
-      body.append(stats, el("h3", "Técnicas & mestres"));
-      for (const t of UZ.TECHNIQUES) {
-        const row = el("div", undefined, "technique-row"),
-          copy = el("div");
-        copy.append(
-          el("strong", t.name),
-          el("p", t.description),
-          el(
-            "small",
-            `Nível ${t.level} · ${UZ.getWorld(t.world).mentor} · ${UZ.getWorld(t.world).name} · ${t.cost} zenni`,
-          ),
-        );
-        const learned = p.techniques.includes(t.id),
-          b = button(
-            t.id === "teleport" && learned
-              ? "Desbloqueada"
-              : p.equipped === t.id
-                ? "Equipada"
-                : learned
-                  ? "Equipar"
-                  : "Aprender",
-            () => {
-              socket.emit(learned ? "equip" : "learn", t.id);
-              setTimeout(() => openPanel("character"), 150);
-            },
-          );
-        b.disabled = p.equipped === t.id || (t.id === "teleport" && learned);
-        row.append(copy, b);
-        window.UZUI?.technique(row, t.id);
-        body.append(row);
-      }
-      body.append(
-        el(
-          "p",
-          "Treine perto dos mestres com T. Aprender exige nível, zenni e presença junto ao mestre. Usar uma técnica desenvolve seu domínio até +30% de dano.",
-          "panel-note",
-        ),
-      );
-      const gallery = el("details", undefined, "character-gallery"),
-        summary = el(
-          "summary",
-          `Modelos das crônicas · ${UZ.CHARACTERS.length} personagens`,
-        ),
-        models = el("div", undefined, "character-model-grid");
-      gallery.append(
-        summary,
-        el(
-          "p",
-          "Retratos vetoriais compactos, com paletas e silhuetas por personagem. Formas e energia mudam durante os combates das sagas.",
-        ),
-      );
-      for (const ch of UZ.CHARACTERS) {
-        const figure = el("div", undefined, "character-model"),
-          cv = document.createElement("canvas");
-        cv.width = 72;
-        cv.height = 48;
-        Art.fighter(
-          cv.getContext("2d"),
-          {
-            x: 36,
-            y: 27,
-            skin: ch.skin,
-            angle: -0.1,
-            state: "idle",
-            form: ch.form,
-          },
-          performance.now() / 1000,
-          0.9,
-        );
-        figure.append(cv, el("strong", ch.name), el("small", ch.kind));
-        models.append(figure);
-      }
-      gallery.append(models);
-      body.append(gallery);
-      const studio = el(
-        "a",
-        "Abrir estúdio de personagens e animações ↗",
-        "panel-intro",
-      );
-      studio.href = "/models.html";
-      studio.target = "_blank";
-      studio.rel = "noopener";
-      const artLibrary=el('a','Explorar o acervo ilustrado · 147 peças ↗','art-library-link');
-      artLibrary.href='/art-kit.html';artLibrary.target='_blank';artLibrary.rel='noopener';
-      body.append(studio,artLibrary);
-    }
+    if (type === "character" && p) renderWarrior(body, p);
     if (type === "settings") {
       const row = (name, control) => {
         const r = el("div", undefined, "settings-row");
@@ -876,7 +940,7 @@
     if (type === "help") {
       const grid = el("div", undefined, "help-grid");
       for (const [key, title, description] of [
-        ["TAB / botão Alvo", "Selecionar adversário", "Alterne alvos próximos ou clique/toque no inimigo. O anel dourado mostra a seleção. Aproxime-se pelo movimento; cada golpe só avança um passo."],
+        ["Y / botão Alvo", "Selecionar adversário", "Alterne alvos próximos ou clique/toque no inimigo. O anel dourado mostra a seleção. Aproxime-se pelo movimento; cada golpe só avança um passo."],
         [
           "WASD / joystick",
           "Movimento livre",
@@ -885,7 +949,7 @@
         [
           "J / clique / toque",
           "Combo de três",
-          "Toque e solte para golpear. Confirme o acerto antes de continuar; errar ou bater na guarda quebra a sequência. Segure 450 ms para pesado (20 ki).",
+          "Acertos confirmados devolvem parte do Ki gasto; o finalizador dá um bônus pequeno. Derrotar inimigos recupera um pouco de vida e Ki. Errar ou bater na guarda quebra a sequência. Segure 450 ms para um golpe pesado (18 Ki).",
         ],
         [
           "K / clique direito",
@@ -898,9 +962,9 @@
           "Em posição neutra, esquive por 20 ki. Durante atordoamento, rompa a sequência por 45 ki (recarga de 12 s). Golpes comprometidos precisam terminar.",
         ],
         [
-          "CTRL ESQUERDO · SHIFT",
+          "G · SHIFT",
           "Defesa & contra-ataque",
-          "Ctrl esquerdo defende; SHIFT acelera o voo. Uma defesa nos primeiros 133 ms devolve projéteis e abre contra-ataque. Treine seis tipos de rival em Central → Dojo.",
+          "G defende; SHIFT acelera o voo. Uma defesa nos primeiros 133 ms devolve projéteis e abre contra-ataque. Treine seis tipos de rival em Central → Dojo.",
         ],
         [
           "Q / botão KI",
@@ -923,7 +987,7 @@
           "Converse, treine, desenvolva o personagem e abra o atlas.",
         ],
       ]) {
-        const d = el("div");
+        const d = el("div", undefined, "help-item");
         d.append(el("kbd", key), el("strong", title), el("p", description));
         grid.append(d);
       }
@@ -960,16 +1024,23 @@
     );
   }
   $("audio-button").onclick = toggleSound;
-  document.addEventListener("sandbox-open", resetInput);
-  document.addEventListener("beta-open",resetInput);
+  const typing = () => document.activeElement.matches('input:not([type="range"]):not([type="checkbox"]),textarea,select,[contenteditable="true"]');
+  document.addEventListener("focusin", e => {
+    if (state && e.target.matches('input:not([type="range"]):not([type="checkbox"]),textarea,select,[contenteditable="true"]')) resetInput();
+  });
   function action(a) {
-    if (!state || dialog.open || document.querySelector('dialog[open]') || scene || !socket.connected) return;
-    sendCombatInput();
+    if (!state || window.UZWindows.blocksPlay() || scene || !socket.connected || typing()) return;
+    sendCombatInput(true);
+    realtime.intent(a, performance.now() / 1000, UZCombat.moves);
+    window.UZVFX?.intent(a, state.self, renderer);
     socket.emit("action", a);
   }
   function resetInput() {
     if (id) socket.emit("action", "cancelCharge");
     keys.clear();
+    realtime.input = { x: 0, y: 0, angle: state?.self.angle || 0 };
+    realtime.hold = null;
+    realtime.pending = null;
     touch.x = touch.y = 0;
     held.guard = held.charge = held.boost = false;
     pointer.used = false;
@@ -987,7 +1058,7 @@
       });
   }
   function interact() {
-    if (scene || dialog.open || document.querySelector('dialog[open]') || !state) return;
+    if (scene || window.UZWindows.blocksPlay() || !state) return;
     const p = state.self,
       map = renderer.data;
     if(!p.legacyCampaign){socket.emit('interact');return;}
@@ -1027,10 +1098,13 @@
   $("train-button").onclick = () => socket.emit("train");
   $("awaken-button").onclick = () => action("form");
   window.addEventListener("keydown", (e) => {
-    if (e.target.matches("input,textarea")) {
+    if (e.target.matches('input:not([type="range"]):not([type="checkbox"]),textarea,select,[contenteditable="true"]')) {
       if (e.code === "Escape") e.target.blur();
       return;
     }
+    if (e.target.closest("button,a,select,summary") && ["Enter","Space"].includes(e.code)) return;
+    // Keep browser-reserved modifier shortcuts out of the game's control map.
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (scene) {
       if (["Space", "Enter"].includes(e.code)) {
         e.preventDefault();
@@ -1039,38 +1113,28 @@
       return;
     }
     if (e.code === "Escape") {
-      if (dialog.open) closePanel();
+      if (window.UZWindows.blocksPlay()) return;
+      if (!window.UZWindows.closeTop() && state) window.UZBetaUI?.open("journey");
       return;
     }
-    if (dialog.open || document.querySelector('dialog[open]')) return;
-    if (
-      [
-        "Space",
-        "ControlLeft",
-        "Tab",
-        "ArrowUp",
-        "ArrowDown",
-        "ArrowLeft",
-        "ArrowRight",
-      ].includes(e.code)
-    )
+    if (window.UZWindows.blocksPlay()) return;
+    if (["Space", "KeyG", "KeyY"].includes(e.code))
       e.preventDefault();
-    if(keys.has("ControlLeft"))e.preventDefault();
     keys.add(e.code);
-    if (e.code === "ControlLeft") sendCombatInput();
+    sendCombatInput();
     if (e.repeat) return;
     if (e.code === "KeyJ") action("attackStart");
-    if (e.code === "Tab") action("cycleTarget");
+    if (e.code === "KeyY") action("cycleTarget");
     if (e.code === "KeyK") action("blastStart");
     if (e.code === "Space") action("dash");
     if (e.code === "KeyR") action("form");
     if (e.code === "KeyX") action("kaioken");
     if (e.code === "KeyE") interact();
     if (e.code === "KeyT") socket.emit("train");
-    if (e.code === "KeyM") openPanel("atlas");
+    if (e.code === "KeyM") togglePanel("atlas");
     if (e.code === "KeyF") action("flight");
     if (e.code === "KeyV") action("orbit");
-    if (e.code === "KeyC") openPanel("character");
+    if (e.code === "KeyC") togglePanel("character");
     if (e.code === "Enter") {
       $("chat-input").focus();
       resetInput();
@@ -1078,7 +1142,7 @@
   });
   window.addEventListener("keyup", (e) => {
     keys.delete(e.code);
-    if(e.code === "ControlLeft"){e.preventDefault();sendCombatInput();}
+    sendCombatInput();
     if (e.code === "KeyJ") action("attackRelease");
     if (e.code === "KeyK" && !e.target.matches("input")) action("blast");
   });
@@ -1091,6 +1155,7 @@
     pointer.x = e.clientX;
     pointer.y = e.clientY;
     pointer.used = true;
+    sendCombatInput();
   });
   $("world").addEventListener("contextmenu", (e) => e.preventDefault());
   $("world").addEventListener("pointerdown", (e) => {
@@ -1115,12 +1180,14 @@
       b.classList.add("pressed");
       if (a === "guard") held.guard = true;
       else action(a === "blast" ? "blastStart" : a === "attack" ? "attackStart" : a);
+      if (a === "guard") sendCombatInput();
     });
     const release = (e) => {
       b.classList.remove("pressed");
       if (a === "guard") held.guard = false;
       else if (a === "blast" && e.type === "pointerup") action("blast");
       else if(a === "attack") action(e.type === "pointerup" ? "attackRelease" : "cancelCharge");
+      if (a === "guard") sendCombatInput();
     };
     b.addEventListener("pointerup", release);
     b.addEventListener("pointercancel", release);
@@ -1140,6 +1207,7 @@
     touch.x = dx / n;
     touch.y = dy / n;
     stick.firstElementChild.style.transform = `translate(${touch.x * 30}px,${touch.y * 30}px)`;
+    sendCombatInput();
   }
   stick.onpointerdown = (e) => {
     if (stickPointer !== null) return;
@@ -1152,6 +1220,7 @@
     stickPointer = null;
     touch.x = touch.y = 0;
     stick.firstElementChild.style.transform = "";
+    sendCombatInput();
   };
   stick.onpointerup = releaseStick;
   stick.onpointercancel = releaseStick;
@@ -1159,34 +1228,34 @@
   $("touch-charge").onpointerdown = (e) => {
     held.charge = true;
     e.target.setPointerCapture(e.pointerId);
+    sendCombatInput();
   };
   $("touch-charge").onpointerup =
     $("touch-charge").onpointercancel =
     $("touch-charge").onlostpointercapture =
-      () => (held.charge = false);
+      () => { held.charge = false;sendCombatInput(); };
   $("touch-boost").onpointerdown = (e) => {
     held.boost = true;
     e.target.setPointerCapture(e.pointerId);
+    sendCombatInput();
   };
   $("touch-boost").onpointerup =
     $("touch-boost").onpointercancel =
     $("touch-boost").onlostpointercapture =
-      () => (held.boost = false);
-  function sendCombatInput() {
+      () => { held.boost = false;sendCombatInput(); };
+  function sendCombatInput(reliable = false) {
     if (!state || !socket.connected) return;
     const disabled =
-      dialog.open ||
-      !!scene ||
-      document.activeElement.matches("input,textarea");
+      !!scene || window.UZWindows.blocksPlay() || typing();
     let x = disabled
         ? 0
-        : (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) -
-          (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0) +
+        : (keys.has("KeyD") ? 1 : 0) -
+          (keys.has("KeyA") ? 1 : 0) +
           touch.x,
       y = disabled
         ? 0
-        : (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0) -
-          (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) +
+        : (keys.has("KeyS") ? 1 : 0) -
+          (keys.has("KeyW") ? 1 : 0) +
           touch.y;
     let angle = state.self.angle;
     if (!disabled) {
@@ -1197,13 +1266,14 @@
         );
       else if (Math.hypot(x, y) > 0.1) angle = Math.atan2(y, x);
       else {
-        const target = state.enemies
-          .slice()
-          .sort(
-            (a, b) =>
-              Math.hypot(a.x - state.self.x, a.y - state.self.y) -
-              Math.hypot(b.x - state.self.x, b.y - state.self.y),
-          )[0];
+        let target = state.enemies.find(e => e.id === state.self.targetId);
+        if (!target) {
+          let nearest = Infinity;
+          for(const e of state.enemies) {
+            const d=Math.hypot(e.x-state.self.x,e.y-state.self.y);
+            if(d<nearest){nearest=d;target=e;}
+          }
+        }
         if (
           target &&
           Math.hypot(target.x - state.self.x, target.y - state.self.y) < 500
@@ -1211,17 +1281,24 @@
           angle = Math.atan2(target.y - state.self.y, target.x - state.self.x);
       }
     }
-    socket.emit("input", {
-      x,
-      y,
+    const magnitude = Math.max(1, Math.hypot(x, y));
+    const input = {
+      x: x / magnitude,
+      y: y / magnitude,
       angle,
-      guard: !disabled && (keys.has("ControlLeft") || held.guard),
+      guard: !disabled && (keys.has("KeyG") || held.guard),
       manualAim:!disabled&&pointer.used,
       charge: !disabled && (keys.has("KeyQ") || held.charge),
       boost:
         !disabled &&
         (keys.has("ShiftLeft") || keys.has("ShiftRight") || held.boost),
-    });
+    };
+    realtime.input = input;
+    const now = performance.now();
+    if (reliable || now - lastInputAt >= 16) {
+      lastInputAt = now;
+      (reliable ? socket : socket.volatile).emit("input", input);
+    }
   }
   setInterval(sendCombatInput,33);
   $("chat-form").onsubmit = (e) => {
@@ -1235,23 +1312,29 @@
   const cinematic = el("section", undefined, "cinematic");
   cinematic.hidden = true;
   cinematic.innerHTML =
-    '<canvas id="scene-art" width="1000" height="600"></canvas><div class="cinema-top"><span>UNIVERSE Z · CRÔNICAS</span><button id="skip-scene">Pular cena ↗</button></div><div class="scene-caption"><small id="scene-title"></small><h2 id="scene-speaker"></h2><p id="scene-text"></p><button id="next-scene">Continuar <span>→</span></button><small id="scene-count"></small></div>';
+    '<canvas id="scene-art" width="1000" height="600"></canvas><div class="cinema-top"><span>UNIVERSE Z · CRÔNICAS</span><div><button id="pause-scene" hidden>Pausar</button><button id="skip-scene">Pular cena ↗</button></div></div><div class="scene-caption"><small id="scene-title"></small><h2 id="scene-speaker"></h2><p id="scene-text"></p><button id="next-scene">Continuar <span>→</span></button><small id="scene-count"></small></div>';
   document.body.append(cinematic);
   let sceneCallback = null;
+  let sceneTimer = null, scenePaused = false;
   function playScene(frames, callback) {
     resetInput();
     scene = frames;
     sceneIndex = 0;
     sceneCallback = callback;
+    scenePaused = false;
+    cinematic.classList.remove("paused");
+    $("pause-scene").textContent = "Pausar";
     cinematic.hidden = false;
     drawScene();
     $("next-scene").focus();
   }
   function nextScene() {
     if (!scene) return;
+    clearTimeout(sceneTimer);
     sceneIndex++;
     if (sceneIndex >= scene.length) {
       cinematic.hidden = true;
+      renderer.canvas.focus({ preventScroll: true });
       scene = null;
       const cb = sceneCallback;
       sceneCallback = null;
@@ -1261,71 +1344,42 @@
     drawScene();
   }
   $("next-scene").onclick = nextScene;
+  $("pause-scene").onclick = () => {
+    scenePaused = !scenePaused;
+    cinematic.classList.toggle("paused",scenePaused);
+    $("pause-scene").textContent = scenePaused ? "Reproduzir" : "Pausar";
+    clearTimeout(sceneTimer);
+    if (!scenePaused && scene?.[sceneIndex]?.autoplay) sceneTimer=setTimeout(nextScene,9000);
+  };
   $("skip-scene").onclick = () => {
     if (scene) {
       sceneIndex = scene.length - 1;
       nextScene();
     }
   };
+  const sceneImages = new Map();
   function drawScene() {
     const frame = scene[sceneIndex];
+    clearTimeout(sceneTimer);
+    $("pause-scene").hidden = !frame.autoplay;
+    if (frame.autoplay && !scenePaused) sceneTimer=setTimeout(nextScene,Math.max(7500,frame.text.length*47));
     $("scene-title").textContent = frame.title;
     $("scene-speaker").textContent = frame.speaker;
     $("scene-text").textContent = frame.text;
     $("scene-count").textContent =
       `${sceneIndex + 1} / ${scene.length} · ENTER PARA CONTINUAR`;
+    window.UZProduction?.scene(frame, sceneIndex, state?.self.world || "earth");
     const c = $("scene-art").getContext("2d");
-    const gradient = c.createLinearGradient(0, 0, 0, 600);
-    gradient.addColorStop(0, "#b1c3b0");
-    gradient.addColorStop(1, "#e2d5ad");
-    c.fillStyle = gradient;
-    c.fillRect(0, 0, 1000, 600);
-    Art.ellipse(c, 720, 145, 80, 80, "#f4e4b5");
-    for (let i = 0; i < 7; i++) {
-      const x = i * 190 - 100;
-      Art.poly(
-        c,
-        [
-          [x, 450],
-          [x + 110, 140 + (i % 3) * 40],
-          [x + 175, 200],
-          [x + 220, 470],
-        ],
-        i % 2 ? "#769183" : "#8ca491",
-      );
-    }
-    Art.poly(
-      c,
-      [
-        [0, 470],
-        [250, 350],
-        [540, 390],
-        [750, 325],
-        [1000, 420],
-        [1000, 600],
-        [0, 600],
-      ],
-      "#547464",
-    );
-    for (let i = 0; i < 12; i++)
-      Art.line(
-        c,
-        [
-          [i * 100, 450],
-          [i * 100 + 60, 440],
-        ],
-        "#ffffff12",
-        2,
-      );
-    Art.character(
-      c,
-      { x: 700, y: 570, skin: frame.skin, state: "idle", angle: Math.PI },
-      0,
-      5.7,
-    );
-    window.UZPortrait?.draw(c,frame.skin,460,20,540,540);
-    c.fillStyle = "#172b2740";
-    c.fillRect(0, 0, 1000, 600);
+    c.clearRect(0,0,1000,600);
+    const source=window.UZPortrait?.source(frame.skin);
+    if (source) {
+      const im = sceneImages.get(source) || new Image();
+      if (!sceneImages.has(source)) {
+        sceneImages.set(source,im);
+        im.onload=()=>{if(scene&&scene[sceneIndex]===frame)drawScene();}; im.src=source;
+      }
+      if(im.naturalWidth)c.drawImage(im,300,15,580,580);
+    } else Art.character(c,{x:700,y:420,skin:frame.skin,state:"idle",angle:Math.PI},0,5.7);
   }
   window.addEventListener('portrait-ready',()=>{if(scene)drawScene();});
   function intro() {
@@ -1333,18 +1387,21 @@
       [
         {
           title: "PRÓLOGO · UMA NOVA JORNADA",
+          autoplay: true,
           speaker: "Cada lenda começa com um passo.",
           skin: "goku",
           text: "Entre montanhas, cidades e estrelas, existem guerreiros capazes de mudar o destino de um universo. Mas antes do poder, vem a escolha de começar.",
         },
         {
           title: "MONTE PAOZU · TERRA",
+          autoplay: true,
           speaker: "Bulma",
           skin: "bulma",
           text: "Meu radar captou um sinal nestas montanhas. Antes de procurar confusão, venha conversar comigo. Podemos investigar juntos a trilha ao norte.",
         },
         {
           title: "SUA HISTÓRIA",
+          autoplay: true,
           speaker: state?.self.name || "Guerreiro",
           skin: state?.self.skin || "goku",
           text: "Vou conhecer esse mundo, encontrar novos mestres e construir meu próprio caminho. Um combate de cada vez.",
@@ -1383,7 +1440,16 @@
   }
   $("tutorial-dismiss").onclick = () => (tutorialCard.hidden = true);
   function frame(now) {
-    renderer.draw(state, { keys, touch }, now / 1000);
+    if (!document.hidden && !scene && (!window.UZProduction?.titleVisible() || state)) {
+      const present = realtime.sample(now / 1000) || state;
+      renderer.draw(present, { keys, touch }, now / 1000);
+      window.UZVFX?.draw(renderer, now / 1000);
+      if (warriorPreview?.canvas.isConnected &&
+          now - lastWarriorFrame >= 40 && present?.self) {
+        warriorPreview.draw(present.self, now / 1000);
+        lastWarriorFrame = now;
+      }
+    }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

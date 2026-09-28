@@ -44,7 +44,7 @@ test("malformed inputs never poison the authoritative state", () => {
   game.tick();
   assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
 });
-test("three-hit combo requires impacts and recovery, with real ki costs", () => {
+test("three-hit combo requires impacts and confirmed hits recover ki", () => {
   const { game, p } = setup();
   p.mode = "flight";
   const e = game.spawn("earth", "Alvo", "soldier", p.x + 75, p.y, false, {
@@ -62,7 +62,7 @@ test("three-hit combo requires impacts and recovery, with real ki costs", () => 
   }
   assert.equal(p.combo, 3);
   assert.ok(e.hp < 950 && e.hp > 900);
-  assert.ok(p.ki < 87);
+  assert.ok(p.ki > 95 && p.ki <= 100);
 });
 
 test("perfect guard prevents damage and enables a timed counter", () => {

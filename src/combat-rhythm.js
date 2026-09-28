@@ -1,5 +1,6 @@
 "use strict";
 const C = require("../shared/combat");
+const { TECHNIQUES } = require("../shared/content");
 const Motion = require("./combat-motion");
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y),
   front = (a, b) => Math.cos(Math.atan2(b.y - a.y, b.x - a.x) - a.angle) > 0.35;
@@ -273,7 +274,13 @@ module.exports = (Engine) => {
       p.comboConfirmed = 0;
       if (!p.duelId)
         p.mastery[p.equipped] = Math.min(100, (p.mastery[p.equipped] || 0) + 1);
-      this.emit("cast", p, { angle: move.angle, charged: !!m.heavy });
+      const technique = move.key === "weave" ? null : TECHNIQUES.find((item) => item.id === p.equipped);
+      this.emit("cast", p, {
+        angle: move.angle,
+        charged: !!m.heavy,
+        technique: move.key === "weave" ? "weave" : p.equipped,
+        techniqueName: move.key === "weave" ? "Ruptura de ki" : technique?.name || "Disparo de ki",
+      });
       return;
     }
     if (!move.stepped) {
@@ -307,6 +314,19 @@ module.exports = (Engine) => {
       p.comboTargetId = e.id;
       p.targetId = e.id;
       p.focus = Math.min(100, p.focus + 4);
+      if (!move.exhausted) {
+        const kiRecovery =
+          move.key === "jab"
+            ? 3
+            : move.key === "link"
+              ? 4
+              : move.key === "finisher"
+                ? 9
+                : move.key === "heavy"
+                  ? 4
+                  : 0;
+        p.ki = Math.min(100, p.ki + kiRecovery);
+      }
       if (move.key === "finisher") e.chaseUntil = t + 0.8;
     } else {
       p.comboConfirmed = 0;
@@ -321,6 +341,7 @@ module.exports = (Engine) => {
           (p.form ? 0.15 : 0);
   };
   Engine.prototype.damage = function (a, b, amount, heavy) {
+    if (this.players.has(b.id) && !this.players.has(a.id) && this.onboardingProtected(b,a)) return;
     if (a.duelId || b.duelId) {
       if (!a.duelId || a.duelId !== b.duelId || a.roundLocked || b.roundLocked)
         return;
@@ -348,7 +369,7 @@ module.exports = (Engine) => {
       isPlayer = this.players.has(b.id);
     a.lastCombatAt = t;
     b.lastCombatAt = t;
-    if (b.cell) b.provokedBy = a.id;
+    if (!this.players.has(b.id) && this.players.has(a.id)) b.provokedBy = a.id;
     // Consecutive hits scale down; defense and invulnerability remain authoritative.
     if (
       (a.attackData || a.projectile) &&
@@ -529,8 +550,9 @@ module.exports = (Engine) => {
     s.self.combatAction = expose(p);
     s.self.comboConfirmed = p.comboConfirmed || 0;
     s.self.counterUntil = p.counterUntil || 0;
+    const enemyById = new Map(this.enemies.map(e => [e.id, e]));
     for (const e of s.enemies) {
-      const original = this.enemies.find((q) => q.id === e.id);
+      const original = enemyById.get(e.id);
       e.combo = original?.motorMove?.stage || 1;
       if (
         original?.motorMove &&

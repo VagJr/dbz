@@ -76,6 +76,10 @@ function maintain(e, dt) {
             ? 0
             : 7),
   );
+  e.guardMeter = Math.min(100, (e.guardMeter ?? 70) +
+    (e.state === "guard" ? 2 : 18) * dt);
+  if ((e.pressureHitAt ?? -99) < (e.brain?.seen?.at ?? 0) - 1.1)
+    e.recentPressure = 0;
 }
 function observe(e, target, t, visible) {
   if (!e.brain || e.brain.target !== target?.id)
@@ -89,10 +93,19 @@ function observe(e, target, t, visible) {
   const b = e.brain;
   if (t >= b.nextSample) {
     b.nextSample = t + 2 / 30;
+    const attacking =
+      !!target && visible &&
+      ["windup", "meleeCharge", "attack"].includes(target.state);
     b.samples.push({
       ready: t + reaction(e),
       at: t,
       visible,
+      attacking,
+      // A started move is visible through its animation. Its sequence number
+      // only distinguishes successive moves; no queued or raw input is read.
+      attackId: attacking && target.moveAction
+        ? target.attackSequence || null
+        : null,
       threat:
         !!target &&
         visible &&
@@ -110,6 +123,24 @@ function observe(e, target, t, visible) {
   while (b.samples.length && b.samples[0].ready <= t) {
     b.seen = b.samples.shift();
     if (b.seen.threat) b.threatAt = b.seen.at;
+    const s = b.seen;
+    const newStrike = s.attacking &&
+      (s.attackId != null
+        ? s.attackId !== b.lastAttackId
+        : !b.lastAttacking);
+    if (newStrike) {
+      b.attackTimes = (b.attackTimes || []).filter((at) => at > s.at - 1.7);
+      b.attackTimes.push(s.at);
+      // A repeated string teaches this opponent to change the flank, but only
+      // after the normal visual reaction delay and at most once per second.
+      if (b.attackTimes.length >= 3 && s.at > (b.lastFlankAt || -99) + 1.15) {
+        b.flankSide = -(b.flankSide || e.ai?.orbit || 1);
+        b.flankUntil = s.at + 2.1;
+        b.lastFlankAt = s.at;
+      }
+    }
+    if (s.attackId != null) b.lastAttackId = s.attackId;
+    b.lastAttacking = s.attacking;
   }
 }
 function decide(e, target, t, canAttack, visible) {
@@ -129,8 +160,14 @@ function decide(e, target, t, canAttack, visible) {
       ? Math.min(3, e.recentPressure || 0)
       : 0;
   const seen = b.seen,
+    repeated = seen?.visible
+      ? Math.min(3, (b.attackTimes || []).filter((at) => at > t - 1.7).length)
+      : 0,
+    expectingAnother =
+      repeated >= 3 && t - (b.attackTimes?.at(-1) ?? -99) < 0.8,
     threat =
-      (seen?.visible && t - (b.threatAt ?? -99) < 0.65) || pressure ? 1 : 0,
+      (seen?.visible && t - (b.threatAt ?? -99) < 0.65) ||
+      expectingAnother || pressure ? 1 : 0,
     charge = seen?.visible && seen.charging ? 1 : 0,
     recovery = seen?.visible && seen.recovering ? 1 : 0,
     guard = seen?.visible && seen.guarding ? 1 : 0;
@@ -142,6 +179,15 @@ function decide(e, target, t, canAttack, visible) {
     breathe: energy < 0.32 ? 0.75 + (1 - energy) * 0.4 : 0,
   };
   const allowed = canAttack && visible;
+  // A successful timed block creates a single counter opportunity. It still
+  // waits for the regular think interval and attack startup.
+  if (allowed && energy >= 0.22 &&
+      (e.counterReadyUntil || 0) > t && d < melee + 40) {
+    e.decision = "counter";
+    b.scores = { counter: 1 };
+    b.nextThink = t + Motor.profile(e).think;
+    return "counter";
+  }
   if (allowed && energy >= 0.2 && d < melee)
     scores.strike =
       p.aggression *
@@ -159,13 +205,6 @@ function decide(e, target, t, canAttack, visible) {
         0.24 * charge +
         0.16 * recovery);
   if (
-    allowed &&
-    energy >= 0.22 &&
-    (e.counterReadyUntil || 0) > t &&
-    d < melee + 40
-  )
-    scores.counter = 1.4 * p.counter;
-  if (
     visible &&
     threat &&
     d < 360 &&
@@ -175,10 +214,14 @@ function decide(e, target, t, canAttack, visible) {
     (e.guardMeter ?? 70) > 20
   )
     scores.guard =
-      p.guard * (0.8 + 0.24 * near + 0.12 * injured + 0.4 * pressure);
+      p.guard *
+      (0.8 + 0.24 * near + 0.12 * injured + 0.4 * pressure +
+        0.14 * repeated);
   if (visible && threat && d < 620 && energy >= 0.26 && (e.nextEvade || 0) <= t)
     scores.evade =
-      p.evade * (0.68 + 0.45 * charge + 0.18 * injured + 0.3 * pressure);
+      p.evade *
+      (0.68 + 0.45 * charge + 0.18 * injured + 0.3 * pressure +
+        0.12 * repeated);
   if (range && d < melee + 80) scores.retreat = 0.5 + p.caution * 0.45;
   if (energy < 0.2)
     scores.retreat = Math.max(scores.retreat || 0, 0.7 + p.caution * 0.25);

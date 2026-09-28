@@ -405,10 +405,17 @@
     }
     c.restore();
   }
+  const designCache=new WeakMap(), appearanceCache=new WeakMap();
   function personalDesign(base,e){
-    if(!e.appearance||typeof UZAvatar==='undefined')return base;const a=UZAvatar.clean(e.appearance),p=UZAvatar.palettes;
+    if(!e.appearance||typeof UZAvatar==='undefined')return base;
+    if(!appearanceCache.has(e.appearance))appearanceCache.set(e.appearance,UZAvatar.clean(e.appearance));
+    const a=appearanceCache.get(e.appearance),p=UZAvatar.palettes;
+    if(!designCache.has(base))designCache.set(base,new Map());
+    const variants=designCache.get(base),key=Object.values(a).join('|');
+    if(variants.has(key))return variants.get(key);
     const flags=base.flags.filter(f=>!['slim','wide','large','small'].includes(f));if(a.body==='slim')flags.push('slim');if(a.body==='broad')flags.push('wide');
-    return {...base,flags,skin:p.skin[a.skin],hair:base.hair?p.hair[a.hair]:base.hair,cut:a.cut,cloth:p.cloth[a.cloth],trim:p.trim[a.trim]};
+    const result={...base,flags,skin:p.skin[a.skin],hair:base.hair?p.hair[a.hair]:base.hair,cut:a.cut,cloth:p.cloth[a.cloth],trim:p.trim[a.trim]};
+    if(variants.size>64)variants.delete(variants.keys().next().value);variants.set(key,result);return result;
   }
   Art.personalDesign=personalDesign;
   function fighter(c, e, t, scale = 1) {
@@ -1930,6 +1937,103 @@
     c.restore();
     c.restore();
   }
+  // Front-facing character sheet for equipment and creation. The palette and
+  // species details are taken from the same personalDesign used by the world rig.
+  function profile(c, e, scale = 1) {
+    const base = UZDesigns[e.skin] || UZDesigns.soldier;
+    const d = personalDesign(base, e), flags = new Set(d.flags);
+    const broad = flags.has("wide") ? 1.16 : flags.has("slim") ? .88 : 1;
+    const hair = e.form && d.hair ? (forms[e.form] || forms.gold)[0] : d.hair;
+    const dark = "#132231", shade = "#00000032", light = "#ffffff65";
+    const stroke = (pts, color = dark, width = 2) => line(c, pts, color, width);
+    c.save();
+    c.translate(e.x || 0, e.y || 0);
+    c.scale(scale * broad, scale);
+    c.lineJoin = "round";
+    c.lineCap = "round";
+    // Full-length stance: head 44 units, shoulders 82, legs 75.
+    for (const side of [-1, 1]) {
+      const bx = side * 13;
+      path(c, [[bx - 8, 103], [bx + 9, 103], [bx + 10, 169], [bx + 6, 174], [bx - 12, 174]], d.cloth, dark, 2.5);
+      path(c, [[bx - 11, 153], [bx + 10, 153], [bx + 11, 174], [bx - 14, 174]],
+        flags.has("armor") ? "#d9e3e5" : d.trim, dark, 2.5);
+      stroke([[bx - 9, 157], [bx + 7, 157]], light, 1.3);
+      path(c, [[bx - 15, 171], [bx + 11, 171], [bx + 16, 182], [bx - 19, 182]],
+        flags.has("armor") ? d.cloth : "#243c55", dark, 2.5);
+      stroke([[bx - 8, 173], [bx + 8, 173]], "#829ea766", 1);
+    }
+    // Waist and gi/armor upper body use broad shoulders and a narrow belt.
+    path(c, [[-20, 91], [20, 91], [24, 112], [15, 125], [-15, 125], [-24, 112]], d.cloth, dark, 3);
+    path(c, [[-36, 39], [-20, 29], [20, 29], [36, 39], [28, 83], [23, 102], [-23, 102], [-28, 83]],
+      flags.has("namek") ? d.skin : d.cloth, dark, 3);
+    path(c, [[-30, 40], [-16, 35], [0, 55], [17, 35], [30, 41], [20, 59], [0, 73], [-20, 59]],
+      flags.has("armor") ? "#dce4dc" : d.trim, dark, 2);
+    path(c, [[-21, 57], [-6, 67], [0, 96], [-20, 91]], shade);
+    stroke([[-17, 83], [-12, 99]], light, 1.5);
+    if (flags.has("armor")) {
+      path(c, [[-27, 42], [27, 42], [22, 87], [-22, 87]], "#e3e9dd", dark, 2.5);
+      path(c, [[-19, 65], [19, 65], [18, 83], [-18, 83]], d.trim, dark, 2);
+      stroke([[-19, 68], [19, 68]], light, 1);
+    }
+    path(c, [[-25, 96], [25, 96], [25, 105], [-25, 105]], d.trim, dark, 2.5);
+    stroke([[-18, 99], [18, 99]], light, 1);
+    for (const side of [-1, 1]) {
+      path(c, [[side * 26, 37], [side * 37, 36], [side * 43, 51], [side * 41, 78],
+        [side * 35, 106], [side * 23, 105], [side * 28, 73]], d.skin, dark, 3);
+      path(c, [[side * 27, 38], [side * 37, 38], [side * 39, 62], [side * 28, 62]], d.cloth, dark, 2);
+      path(c, [[side * 25, 95], [side * 37, 95], [side * 36, 107], [side * 24, 107]],
+        flags.has("armor") ? "#f0ede2" : d.trim, dark, 2);
+      path(c, [[side * 24, 106], [side * 37, 106], [side * 38, 119],
+        [side * 31, 124], [side * 23, 117]], d.skin, dark, 2.5);
+      stroke([[side * 29, 111], [side * 32, 119]], "#784a4166", 1);
+    }
+    // Neck and face: tapered jaw, visible eyes, eyebrows and clean nose.
+    path(c, [[-9, 25], [-9, 41], [0, 49], [9, 41], [9, 25]], d.skin, dark, 2);
+    path(c, [[-19, -22], [-25, -8], [-23, 11], [-13, 28], [0, 34],
+      [13, 28], [23, 11], [25, -8], [19, -22]], d.skin, dark, 3);
+    for (const side of [-1, 1]) {
+      path(c, [[side * 21, -3], [side * 28, -6], [side * 27, 8], [side * 22, 11]], d.skin, dark, 1.5);
+      path(c, [[side * 3, -2], [side * 18, -4], [side * 17, 5], [side * 5, 6]], "#f5f3e9", dark, 1.4);
+      stroke([[side * 4, -7], [side * 17, -10]], hair || dark, 2.8);
+      oval(c, side * 10, 1, 2.6, 3.8, flags.has("namek") ? "#752f57" : "#213e50");
+      oval(c, side * 9.3, -.3, .7, 1, "#ffffff");
+      stroke([[side * 8, 13], [side * 12, 14]], "#96615a66", 1);
+    }
+    stroke([[0, 4], [-2, 13], [2, 14]], "#714943aa", 1.2);
+    stroke([[-5, 22], [0, 23], [5, 22]], "#713f3f", 1.3);
+    stroke([[-7, 27], [7, 27]], "#b2786166", 1);
+    if (hair) {
+      const cut = d.cut || "spike";
+      if (cut === "spike" || cut === "part")
+        path(c, [[-23, 3], [-29, -19], [-38, -22], [-24, -30], [-20, -49],
+          [-11, -37], [-3, -57], [6, -40], [17, -52], [18, -35], [31, -35],
+          [23, -18], [23, 0], [15, -17], [0, -20], [-11, -15]], hair, dark, 3);
+      else
+        path(c, [[-26, 10], [-27, -24], [-18, -42], [0, -46], [20, -39],
+          [27, -23], [25, 11], [18, -8], [0, -15], [-18, -6]], hair, dark, 3);
+      stroke([[-19, -25], [-8, -34], [5, -29]], light, 1.2);
+      stroke([[6, -36], [16, -30]], light, 1.2);
+      if (["pony", "braid"].includes(cut))
+        path(c, [[18, -23], [30, -18], [29, 45], [20, 52]], hair, dark, 2);
+      if (cut === "bun") oval(c, 24, -25, 11, 12, hair, dark, 2);
+    } else if (flags.has("antenna") || flags.has("namek")) {
+      for (const side of [-1, 1]) {
+        stroke([[side * 10, -24], [side * 13, -45], [side * 19, -50]], d.skin, 5);
+        oval(c, side * 19, -50, 3, 3, d.skin, dark, 1);
+      }
+    }
+    if (flags.has("scouter")) {
+      path(c, [[-22, -4], [-1, -5], [-1, 9], [-20, 10]], "#9bf7db99", "#e8ffff", 1.4);
+      stroke([[-24, 1], [-29, -2]], dark, 2);
+    }
+    if (flags.has("emblem")) {
+      oval(c, 17, 56, 7, 7, "#f0ede2", dark, 1.6);
+      c.fillStyle = dark; c.font = "8px serif"; c.textAlign = "center";
+      c.fillText("亀", 17, 59);
+    }
+    c.restore();
+  }
+  Art.profile = profile;
   Art.character = portrait;
   Art.fighter = fighter;
   Art.modelManifest = UZDesigns;

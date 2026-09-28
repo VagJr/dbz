@@ -161,13 +161,16 @@ function steering(enemy, target, enemies, time) {
   const desired =
     (ai.desiredDistance || 165) + (wounded && ai.rangedRange ? 130 : 0);
   const radial = Math.max(-0.85, Math.min(1, (d - desired) / 120));
-  const phase = time * (ai.orbit || 1) * 0.8 + (ai.tempoOffset || 0);
+  const flankSide = enemy.brain?.flankUntil > time
+    ? enemy.brain.flankSide
+    : ai.orbit || 1;
+  const phase = time * flankSide * 0.8 + (ai.tempoOffset || 0);
   const tangent =
     ((enemy.formation === "pincer"
       ? enemy.homeX < target.x
         ? -1
         : 1
-      : ai.orbit) || 1) *
+      : flankSide) || 1) *
     (d < desired + 200 ? 0.68 : 0.28) *
     (0.76 + 0.24 * Math.sin(phase));
   let x = ux * radial - uy * tangent;

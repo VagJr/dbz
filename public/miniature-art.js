@@ -17,8 +17,10 @@
     bun:'M-13 5 Q-17-3-12-12 Q-4-18 7-13 Q17-8 14 5 L9 3 L8-5 L3-1 L0-6 L-5 0 L-10 1 Z'
   };
   const paths = Object.fromEntries(Object.entries(hairPaths).map(([k,v])=>[k,new Path2D(v)]));
+  const catalogue = new Map(UZ.CHARACTERS.map(ch=>[ch.id,ch])), pathCache = new Map();
+  const cachedPath = svg => {if(pathCache.has(svg))return pathCache.get(svg);const p=new Path2D(svg);if(pathCache.size>=384)pathCache.delete(pathCache.keys().next().value);pathCache.set(svg,p);return p;};
   function fighter(c,e,t,scale=1) {
-    const meta=UZ.CHARACTERS.find(ch=>ch.id===e.skin), d=Art.personalDesign(UZDesigns[e.skin]||UZDesigns[meta?.skin]||UZDesigns.soldier,e);
+    const meta=catalogue.get(e.skin), d=Art.personalDesign(UZDesigns[e.skin]||UZDesigns[meta?.skin]||UZDesigns.soldier,e);
     const f=new Set(d.flags), form=e.form||meta?.form, hair=d.hair?(colors[form]||d.hair):null;
     const state=e.state||'idle', reduced=Art.reduceMotion===true, time=reduced?0:t;
     const flight=e.mode==='flight'||(e.mode!=='ground'&&['fly','glide','boost'].includes(state));
@@ -30,17 +32,21 @@
     const boost=e.boosting||state==='boost'||rush;
     const ease=v=>v*v*(3-2*v);
     const m=e.combatAction, clock=e.combatClock||0;
-    const punch=m?(clock<m.impact?-.22*ease(Math.max(0,Math.min(1,(clock-m.start)/(m.impact-m.start)))):clock<m.activeEnd?1:1-ease(Math.max(0,Math.min(1,(clock-m.activeEnd)/(m.end-m.activeEnd))))):cycle<.22?-.22*ease(cycle/.22):cycle<.38?ease((cycle-.22)/.16):cycle<.48?1:1-ease((cycle-.48)/.52);
-    const motion=m?.motion, pose=motion?.pose||((e.combo===3)?'roundhouse':(e.combo===2)?'cross':'jab');
+    const impact=m?.impact??0, activeEnd=m?.activeEnd??impact+.07, end=m?.end??activeEnd+.16;
+    const punch=m?(clock<impact?-.22*ease(Math.max(0,Math.min(1,(clock-(m.start||0))/Math.max(.015,impact-(m.start||0))))):clock<activeEnd?1:1-ease(Math.max(0,Math.min(1,(clock-activeEnd)/Math.max(.015,end-activeEnd))))):cycle<.22?-.22*ease(cycle/.22):cycle<.38?ease((cycle-.22)/.16):cycle<.48?1:1-ease((cycle-.48)/.52);
+    const motion=m?.motion, pose=e.previewPose||motion?.pose||((e.combo===3)?'roundhouse':(e.combo===2)?'cross':'jab');
     const strikeSide=motion?.side||((e.combo||1)%2?1:-1);
-    const reach=Math.max(0,punch), kick=['roundhouse','airSpin','airKnee'].includes(pose);
-    const movingStrike=hit&&motion?.moving, driving=hit&&pose==='lunge';
-    const twist=hit?strikeSide*(punch*(['hook','slipHook','airSpin'].includes(pose)?.65:.32)-.10):guard?-.12:blast?.12:walk?beat*.025:0;
-    const tilt=flight?.72:hit?(driving?.62:.32)+reach*(pose==='uppercut'?.12:.25):guard?.32:charge?.28:blast?.62:state==='stun'?.55:.04;
+    const reach=Math.max(0,punch), kick=['roundhouse','airSpin','airKnee','risingKnee','heelDrop','spinKick','sweep'].includes(pose);
+    const movingStrike=hit&&motion?.moving, driving=hit&&['lunge','dashHammer','airDive','flyingCross'].includes(pose);
+    const twist=hit?strikeSide*(punch*(['hook','slipHook','airSpin','bodyHook','spinKick','sweep'].includes(pose)?.65:.32)-.10):guard?-.12:blast?.12:walk?beat*.025:0;
+    // The overhead camera can still see a face when the fighter turns toward
+    // the lower edge of the screen. This is the same rig in the world and UI.
+    const cameraFacing=flight?0:e.previewFacing?1:Math.max(0,Math.min(1,(Math.sin(e.angle||0)+.12)/1.12));
+    const tilt=flight?.72:hit?(driving?.62:.32)+reach*(['uppercut','risingKnee','guardBreak'].includes(pose)?.12:.25):guard?.32+cameraFacing*.18:charge?.28:blast?.62:state==='stun'?.55:.08+cameraFacing*.42;
     const size=f.has('small')?.84:f.has('giant')?1.42:1, width=f.has('wide')?1.22:f.has('large')?1.15:f.has('slim')?.92:1;
     const bare=['bare','alien','majin','animal','dragon'].includes(d.rig), suit=bare?d.skin:d.cloth;
     function ellipse(x,y,rx,ry,color,edge=ink,lw=1.7){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=color;c.fill();if(edge){c.strokeStyle=edge;c.lineWidth=lw;c.stroke();}}
-    function shape(svg,color,edge=ink,lw=1.7){const p=typeof svg==='string'?new Path2D(svg):svg;c.fillStyle=color;c.fill(p);if(edge){c.strokeStyle=edge;c.lineWidth=lw;c.stroke(p);}}
+    function shape(svg,color,edge=ink,lw=1.7){const p=typeof svg==='string'?cachedPath(svg):svg;c.fillStyle=color;c.fill(p);if(edge){c.strokeStyle=edge;c.lineWidth=lw;c.stroke(p);}}
     function stroke(points,color,lw){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.strokeStyle=color;c.lineWidth=lw;c.stroke();}
     function limb(points,color,lw){
       // Tapered upper/lower segments keep an elbow and a wrist, not bead joints.
@@ -61,10 +67,10 @@
       if(state==='stun')c.rotate(Math.sin(time*6)*.2);
     }else if(hit){c.translate(strikeSide*punch*1.4,punch*1.6);}
     if(rush||driving){c.scale(1,flight?1.12:.90);c.translate(0,3);}
-    if(hit&&['airSpin','roundhouse'].includes(pose))c.rotate(strikeSide*reach*.65);
-    if(hit&&pose==='uppercut')c.translate(0,reach*4);
-    if(hit&&pose==='meteor'){c.scale(1,1-reach*.13);c.translate(0,reach*5);}
-    if(hit&&!reduced&&(driving||motion?.airborne||pose==='slipHook')){
+    if(hit&&['airSpin','roundhouse','spinKick','sweep'].includes(pose))c.rotate(strikeSide*reach*(pose==='spinKick'||pose==='airSpin'?1.05:.65));
+    if(hit&&['uppercut','risingKnee','guardBreak'].includes(pose))c.translate(0,reach*4);
+    if(hit&&['meteor','airDive'].includes(pose)){c.scale(1,1-reach*.13);c.translate(0,reach*(pose==='airDive'?9:5));}
+    if(hit&&!reduced&&(driving||motion?.airborne||['slipHook','spinKick','sweep'].includes(pose))){
       c.save();c.globalAlpha=.22;for(let i=1;i<=3;i++)stroke([[-10-i*3,-8-i*6],[strikeSide*8,-14-i*7]],form?'#ffdd7c':'#a9eeff',2);c.restore();
     }
     if(d.rig==='serpent'){
@@ -95,12 +101,14 @@
         else{knee=[s*8,-7];foot=[s*10,-12+(s===strikeSide?-punch*3:punch*4)];}
       }
       if(hit&&kick&&s===strikeSide){
-        if(pose==='airKnee'){knee=[s*9,1+16*reach];foot=[s*8,-9+18*reach];}
-        else {const sweep=pose==='airSpin'?Math.sin(reach*Math.PI*.7):reach;knee=[s*(12-9*sweep),-3+14*reach];foot=[s*(23-24*sweep),-7+43*reach];}
+        if(['airKnee','risingKnee'].includes(pose)){knee=[s*9,1+16*reach];foot=[s*8,-9+18*reach];}
+        else if(pose==='heelDrop'){knee=[s*10,7+15*reach];foot=[s*11,10+42*reach];}
+        else if(pose==='sweep'){knee=[s*(13+6*reach),-7+4*reach];foot=[s*(23+22*reach),-12+10*reach];}
+        else {const sweep=['airSpin','spinKick'].includes(pose)?Math.sin(reach*Math.PI*.7):reach;knee=[s*(12-9*sweep),-3+14*reach];foot=[s*(23-24*sweep),-7+43*reach];}
       }
       if(movingStrike&&!kick){foot[1]+=gait*3;knee[0]+=gait*2;}
       if(hit&&pose==='retreatJab'){knee=[s*9,-11];foot=[s*13,-19-reach*3];}
-      if(driving){knee=[s*7,-9+s*4];foot=[s*10,-18+s*8];}
+      if(driving){knee=[s*7,-9+s*4];foot=[s*10,-18+s*8];if(pose==='airDive'&&s===strikeSide){knee=[s*9,4+8*reach];foot=[s*11,8+28*reach];}}
       if(state==='stun')foot=[s*13,-19];
       if(rush){knee=[s*7,-13];foot=[s*6,flight?-31:-14-s*beat*4];}
       limb([[s*5,-7],knee,foot],d.cloth,8);
@@ -127,11 +135,14 @@
       }
       if(hit){
         if(kick){elbow=[s*18,2];hand=[s*22,6+reach*5];}
-        else if(pose==='meteor'){elbow=[s*(13-8*reach),12+reach*3];hand=[s*4,24+reach*8];}
+        else if(['meteor','airDive','dashHammer','guardBreak'].includes(pose)){elbow=[s*(13-8*reach),12+reach*3];hand=[s*4,24+reach*(pose==='dashHammer'?17:8)];}
         else if(s===strikeSide){
-          if(['hook','slipHook','airCross'].includes(pose)){elbow=[s*(22-6*reach),5+reach*12];hand=[s*(25-29*reach),9+23*reach];}
+          if(['hook','slipHook','airCross','bodyHook'].includes(pose)){elbow=[s*(22-6*reach),5+reach*(pose==='bodyHook'?5:12)];hand=[s*(25-29*reach),9+(pose==='bodyHook'?12:23)*reach];}
           else if(pose==='uppercut'){elbow=[s*(17-8*reach),-3+10*reach];hand=[s*(14-10*reach),-5+38*reach];}
           else if(pose==='cross'){elbow=[s*(16-12*reach),3+15*reach];hand=[s*(14-19*reach),8+33*reach];}
+          else if(pose==='elbow'){elbow=[s*(17-17*reach),5+19*reach];hand=[s*(12-12*reach),10+14*reach];}
+          else if(pose==='thrust'){elbow=[s*(17-11*reach),6+18*reach];hand=[s*(16-13*reach),8+39*reach];}
+          else if(pose==='flyingCross'){elbow=[s*(18-14*reach),6+20*reach];hand=[s*(15-18*reach),7+42*reach];}
           else if(pose==='stepJab'){elbow=[s*(17-9*reach),5+16*reach];hand=[s*(16-10*reach),10+32*reach];}
           else if(pose==='retreatJab'){elbow=[s*(18-6*reach),3+11*reach];hand=[s*(17-8*reach),7+25*reach];}
           else if(pose==='lunge'){elbow=[s*(13-9*reach),8+16*reach];hand=[s*4,12+36*reach];}
@@ -190,7 +201,7 @@
       if(f.has('antenna')||f.has('namek'))stroke([[0,9],[2,17],[4,18]],d.skin,2);
       c.restore();
     }else{
-    c.save();c.translate(hit?strikeSide*punch*1.5:0,5+tilt*6+breath);c.scale(.76,-(.62+tilt*.22));
+    c.save();c.translate(hit?strikeSide*punch*1.5:0,5+tilt*6+breath);c.scale(.81,-(.67+tilt*.22));
     if(['pony','braid','bun'].includes(d.cut)&&hair){if(d.cut==='bun')ellipse(0,-17,6,5,hair);else limb([[0,-12],[5,-20],[2,-27]],hair,d.cut==='braid'?5:8);}
     for(const s of [-1,1]){
       if(f.has('pointed')||f.has('namek'))shape(`M${s*10}-1 L${s*21}-5 Q${s*18} 6 ${s*11} 6Z`,d.skin);
@@ -209,7 +220,7 @@
     if(f.has('antenna')||f.has('namek')){const ss=f.has('namek')?[-1,1]:[0];for(const s of ss){c.beginPath();c.moveTo(s*6,-8);c.quadraticCurveTo(s*12+3,-22,s*9+3,-20);c.strokeStyle=ink;c.lineWidth=4;c.stroke();c.strokeStyle=d.skin;c.lineWidth=2;c.stroke();}}
     if(f.has('spines'))for(const s of [-1,1])shape(`M${s*9}-8 L${s*15}-14 L${s*13}-4Z`,d.trim);
     // Face features remain inside the face; no marks are placed on the crown.
-    for(const s of [-1,1]){shape(`M${s*2} 8 L${s*9} 6 L${s*8} 10 L${s*3} 10Z`,'#f4eee2',ink,.7);stroke([[s*5,8],[s*5,9.5]],form?'#278fa3':'#20252d',1.3);}
+    for(const s of [-1,1]){shape(`M${s*2} 8 L${s*9} 6 L${s*8} 10 L${s*3} 10Z`,'#f4eee2',ink,.7);stroke([[s*5,8],[s*5,9.5]],form?'#278fa3':'#20252d',1.3);stroke([[s*2.5,5.2],[s*8.8,4.2]],shade(d.skin,-70),1);}
     c.beginPath();c.moveTo(-2,12);c.quadraticCurveTo(0,13.7,2,12);c.strokeStyle=shade(d.skin,-65);c.lineWidth=1;c.stroke();
     if(f.has('thirdEye'))ellipse(0,5,1.5,1.1,'#fff4de',ink,.6);
     if(f.has('fourEyes'))for(const s of [-1,1])ellipse(s*5.5,4,1.6,1.6,'#26303c',null);
@@ -226,7 +237,7 @@
     // At ninety degrees the crown occludes the face. Lean exposes only a
     // narrow brow; airborne/striking poses progressively reveal the profile.
     if(tilt<.72){
-      c.save();c.globalAlpha*=1-ease(Math.max(0,Math.min(1,(tilt-.22)/.5)));
+      c.save();c.globalAlpha*=(1-ease(Math.max(0,Math.min(1,(tilt-.22)/.5))))*(1-.92*cameraFacing);
       const crown=f.has('turban')?'#efefde':f.has('cap')?d.cloth:hair||d.skin;
       const edge=16-tilt*15;
       shape(`M-12-9 Q0-17 12-9 L13 ${edge-5} L8 ${edge} L0 ${edge+1} L-8 ${edge} L-13 ${edge-5}Z`,crown,null);

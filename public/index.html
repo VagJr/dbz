@@ -15,6 +15,9 @@
     <link rel="stylesheet" href="/sandbox-ui.css" />
   <link rel="stylesheet" href="/frontiers.css">
   <link rel="stylesheet" href="/beta-ui.css">
+    <link rel="stylesheet" href="/production.css">
+    <link rel="stylesheet" href="/mmo-windows.css">
+    <link rel="stylesheet" href="/party.css">
   </head>
   <body>
     <canvas
@@ -190,7 +193,7 @@
         <span id="training-score"></span>
       </section>
       <div class="action-dock">
-        <button class="action" data-action="cycleTarget" title="Tab no PC · toque no inimigo para selecionar"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#target"></use></svg><strong>Alvo</strong></button><button class="action" data-action="attack" title="Clique para combo; segure e solte para golpe pesado">
+        <button class="action" data-action="cycleTarget" title="Y no PC · toque no inimigo para selecionar"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#target"></use></svg><strong>Alvo</strong></button><button class="action" data-action="attack" title="Clique para combo; segure e solte para golpe pesado">
           <kbd>J / CLIQUE</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#strike"></use></svg></span><strong>Golpe</strong><small>Combo de 3</small><i></i></button
         ><button class="action" data-action="blast">
           <kbd>K / DIREITO</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#ki"></use></svg></span><strong id="technique-name">Disparo de ki</strong
@@ -198,7 +201,7 @@
         ><button class="action" data-action="dash">
           <kbd>ESPAÇO</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#dash"></use></svg></span><strong>Esquiva</strong><small>Cancela o golpe</small><i></i></button
         ><button class="action" data-action="guard">
-          <kbd>Ctrl</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#guard"></use></svg></span><strong>Defesa</strong
+          <kbd>G</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#guard"></use></svg></span><strong>Defesa</strong
           ><small>No tempo: parry</small><i></i></button
         ><button class="action" data-action="kaioken" title="Requer treinamento do Senhor Kaio">Kaioken <small>X</small></button><button class="awaken" id="awaken-button">
           <span>✧</span><strong>Despertar</strong
@@ -281,6 +284,7 @@
     <script src="/shared/avatar.js"></script>
     <script src="/character-art.js"></script>
     <script src="/miniature-art.js"></script>
+    <script src="/action-atlas.js"></script>
     <script src="/universe-art.js"></script>
     <script src="/open-world-art.js"></script>
     <script src="/lore-art.js"></script>
@@ -288,13 +292,21 @@
     <script src="/portraits.js"></script>
     <script src="/illustrated-ui.js?v=celestial1"></script>
     <script src="/shared/sandbox.js"></script>
+    <script src="/mmo-windows.js"></script>
+    <script src="/party-ui.js"></script>
     <script src="/sandbox-ui.js"></script>
     <script src="/creator.js"></script>
     <script src="/world-kit.js"></script>
     <script src="/shared/beta.js"></script>
     <script src="/beta-ui.js"></script>
     <script src="/shared/combat.js"></script>
+    <script src="/shared/movement.js"></script>
+    <script src="/realtime.js"></script>
+    <script src="/manga-sfx-grid.js"></script>
+    <script src="/manga-fx.js"></script>
+    <script src="/cinematic-vfx.js"></script>
     <script src="/combat-hud.js"></script>
     <script src="/app.js"></script>
+    <script src="/production-ui.js"></script>
   </body>
 </html>

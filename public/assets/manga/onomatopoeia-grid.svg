@@ -1,0 +1,589 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Editable transparent 7 x 7 onomatopoeia atlas. Each group is a 240 x 120 cell. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="840" viewBox="0 0 1680 840">
+  <title>Universe Z — Manga Combat SFX, 7 × 7</title>
+  <desc>49 separate ink-lettering groups. Toggle the hidden guides group in an SVG editor for cutting.</desc>
+  <g id="guides" display="none" fill="none" stroke="#ff00aa" stroke-width="1"><rect x="0" y="0" width="240" height="120"/><rect x="240" y="0" width="240" height="120"/><rect x="480" y="0" width="240" height="120"/><rect x="720" y="0" width="240" height="120"/><rect x="960" y="0" width="240" height="120"/><rect x="1200" y="0" width="240" height="120"/><rect x="1440" y="0" width="240" height="120"/><rect x="0" y="120" width="240" height="120"/><rect x="240" y="120" width="240" height="120"/><rect x="480" y="120" width="240" height="120"/><rect x="720" y="120" width="240" height="120"/><rect x="960" y="120" width="240" height="120"/><rect x="1200" y="120" width="240" height="120"/><rect x="1440" y="120" width="240" height="120"/><rect x="0" y="240" width="240" height="120"/><rect x="240" y="240" width="240" height="120"/><rect x="480" y="240" width="240" height="120"/><rect x="720" y="240" width="240" height="120"/><rect x="960" y="240" width="240" height="120"/><rect x="1200" y="240" width="240" height="120"/><rect x="1440" y="240" width="240" height="120"/><rect x="0" y="360" width="240" height="120"/><rect x="240" y="360" width="240" height="120"/><rect x="480" y="360" width="240" height="120"/><rect x="720" y="360" width="240" height="120"/><rect x="960" y="360" width="240" height="120"/><rect x="1200" y="360" width="240" height="120"/><rect x="1440" y="360" width="240" height="120"/><rect x="0" y="480" width="240" height="120"/><rect x="240" y="480" width="240" height="120"/><rect x="480" y="480" width="240" height="120"/><rect x="720" y="480" width="240" height="120"/><rect x="960" y="480" width="240" height="120"/><rect x="1200" y="480" width="240" height="120"/><rect x="1440" y="480" width="240" height="120"/><rect x="0" y="600" width="240" height="120"/><rect x="240" y="600" width="240" height="120"/><rect x="480" y="600" width="240" height="120"/><rect x="720" y="600" width="240" height="120"/><rect x="960" y="600" width="240" height="120"/><rect x="1200" y="600" width="240" height="120"/><rect x="1440" y="600" width="240" height="120"/><rect x="0" y="720" width="240" height="120"/><rect x="240" y="720" width="240" height="120"/><rect x="480" y="720" width="240" height="120"/><rect x="720" y="720" width="240" height="120"/><rect x="960" y="720" width="240" height="120"/><rect x="1200" y="720" width="240" height="120"/><rect x="1440" y="720" width="240" height="120"/></g>
+  <g id="sfx-01" data-word="AHHHHH!" data-style="charge" transform="translate(0 0)">
+    <title>AHHHHH!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-6 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">AHHHHH!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">AHHHHH!</text>
+    </g>
+  </g>
+  <g id="sfx-02" data-word="PUNCHHH!!" data-style="impact" transform="translate(240 0)">
+    <title>PUNCHHH!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="41" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">PUNCHHH!!</text>
+      <text x="120" y="64" font-size="41" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">PUNCHHH!!</text>
+    </g>
+  </g>
+  <g id="sfx-03" data-word="SMMSHH!!!" data-style="slash" transform="translate(480 0)">
+    <title>SMMSHH!!!</title>
+    <g fill="#12171c"><path d="M14 16 67 49 52 53Z"/><path d="M29 97 73 80 57 86Z"/>
+        <path d="m201 18 23-7-31 42Z"/><path d="m218 106-47-27 17 3Z"/></g>
+        <path d="M21 70 94 24 211 31 175 95 46 90Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+        <path d="M26 85 219 18" fill="none" stroke="#12171c" stroke-width="2"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-4 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="41" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">SMMSHH!!!</text>
+      <text x="120" y="64" font-size="41" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">SMMSHH!!!</text>
+    </g>
+  </g>
+  <g id="sfx-04" data-word="WHAM!!" data-style="impact" transform="translate(720 0)">
+    <title>WHAM!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">WHAM!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">WHAM!!</text>
+    </g>
+  </g>
+  <g id="sfx-05" data-word="THWACK!!" data-style="speed" transform="translate(960 0)">
+    <title>THWACK!!</title>
+    <g class="speed-lines" stroke="#13171b" stroke-linecap="square" fill="none">
+        <path d="M13 28 H82 M7 39 H55 M27 91 H93 M17 103 H69" stroke-width="3"/>
+        <path d="M164 18 H226 M185 28 H235 M160 93 H228 M195 106 H235" stroke-width="2"/>
+        <path d="M11 53 H37 M194 83 H233" stroke-width="5"/>
+      </g><path d="M26 77 68 31 206 35 178 91 35 95Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">THWACK!!</text>
+      <text x="120" y="64" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">THWACK!!</text>
+    </g>
+  </g>
+  <g id="sfx-06" data-word="KRAK!!" data-style="slash" transform="translate(1200 0)">
+    <title>KRAK!!</title>
+    <g fill="#12171c"><path d="M14 16 67 49 52 53Z"/><path d="M29 97 73 80 57 86Z"/>
+        <path d="m201 18 23-7-31 42Z"/><path d="m218 106-47-27 17 3Z"/></g>
+        <path d="M21 70 94 24 211 31 175 95 46 90Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+        <path d="M26 85 219 18" fill="none" stroke="#12171c" stroke-width="2"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(2 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KRAK!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KRAK!!</text>
+    </g>
+  </g>
+  <g id="sfx-07" data-word="BOOM!!!" data-style="burst" transform="translate(1440 0)">
+    <title>BOOM!!!</title>
+    <path d="m13 52 35-7-16-29 43 19L90 9l31 26 27-24 15 25 43-22-11 31 32 7-24 18 20 28-48-7-18 19-30-21-34 21-19-20-49 10 22-30Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g fill="#15191e"><path d="m19 10 37 28-10 2Z"/><path d="m225 101-38-25 9-3Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BOOM!!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BOOM!!!</text>
+    </g>
+  </g>
+  <g id="sfx-08" data-word="HAAAH!!" data-style="charge" transform="translate(0 120)">
+    <title>HAAAH!!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-6 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">HAAAH!!</text>
+      <text x="120" y="64" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">HAAAH!!</text>
+    </g>
+  </g>
+  <g id="sfx-09" data-word="HYAAH!!" data-style="charge" transform="translate(240 120)">
+    <title>HYAAH!!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">HYAAH!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">HYAAH!!</text>
+    </g>
+  </g>
+  <g id="sfx-10" data-word="ORAA!!" data-style="speed" transform="translate(480 120)">
+    <title>ORAA!!</title>
+    <g class="speed-lines" stroke="#13171b" stroke-linecap="square" fill="none">
+        <path d="M13 28 H82 M7 39 H55 M27 91 H93 M17 103 H69" stroke-width="3"/>
+        <path d="M164 18 H226 M185 28 H235 M160 93 H228 M195 106 H235" stroke-width="2"/>
+        <path d="M11 53 H37 M194 83 H233" stroke-width="5"/>
+      </g><path d="M26 77 68 31 206 35 178 91 35 95Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-4 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">ORAA!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">ORAA!!</text>
+    </g>
+  </g>
+  <g id="sfx-11" data-word="HOOO!!" data-style="charge" transform="translate(720 120)">
+    <title>HOOO!!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">HOOO!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">HOOO!!</text>
+    </g>
+  </g>
+  <g id="sfx-12" data-word="FWOOSH!!" data-style="speed" transform="translate(960 120)">
+    <title>FWOOSH!!</title>
+    <g class="speed-lines" stroke="#13171b" stroke-linecap="square" fill="none">
+        <path d="M13 28 H82 M7 39 H55 M27 91 H93 M17 103 H69" stroke-width="3"/>
+        <path d="M164 18 H226 M185 28 H235 M160 93 H228 M195 106 H235" stroke-width="2"/>
+        <path d="M11 53 H37 M194 83 H233" stroke-width="5"/>
+      </g><path d="M26 77 68 31 206 35 178 91 35 95Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">FWOOSH!!</text>
+      <text x="120" y="64" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">FWOOSH!!</text>
+    </g>
+  </g>
+  <g id="sfx-13" data-word="VZAAAM!!" data-style="energy" transform="translate(1200 120)">
+    <title>VZAAAM!!</title>
+    <path d="M15 63 39 48 27 29 62 40 82 12 102 34 133 16 149 36 189 25 186 44 225 54 196 69 217 92 175 86 162 106 127 89 90 106 75 87 30 91 46 74Z" fill="#f8f7f1" stroke="#14191d" stroke-width="3"/>
+        <g stroke="#15191e" fill="none"><path d="M15 20 43 35 M7 92 40 80 M196 25 232 9 M198 93 233 112" stroke-width="2"/>
+        <path d="M205 11 184 35" stroke-width="4"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(2 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">VZAAAM!!</text>
+      <text x="120" y="64" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">VZAAAM!!</text>
+    </g>
+  </g>
+  <g id="sfx-14" data-word="ZAAAP!!" data-style="energy" transform="translate(1440 120)">
+    <title>ZAAAP!!</title>
+    <path d="M15 63 39 48 27 29 62 40 82 12 102 34 133 16 149 36 189 25 186 44 225 54 196 69 217 92 175 86 162 106 127 89 90 106 75 87 30 91 46 74Z" fill="#f8f7f1" stroke="#14191d" stroke-width="3"/>
+        <g stroke="#15191e" fill="none"><path d="M15 20 43 35 M7 92 40 80 M196 25 232 9 M198 93 233 112" stroke-width="2"/>
+        <path d="M35 11 58 33" stroke-width="4"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">ZAAAP!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">ZAAAP!!</text>
+    </g>
+  </g>
+  <g id="sfx-15" data-word="BAMMM!!" data-style="impact" transform="translate(0 240)">
+    <title>BAMMM!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-6 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BAMMM!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BAMMM!!</text>
+    </g>
+  </g>
+  <g id="sfx-16" data-word="BASH!!" data-style="impact" transform="translate(240 240)">
+    <title>BASH!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BASH!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BASH!!</text>
+    </g>
+  </g>
+  <g id="sfx-17" data-word="KAPOW!!" data-style="burst" transform="translate(480 240)">
+    <title>KAPOW!!</title>
+    <path d="m13 52 35-7-16-29 43 19L90 9l31 26 27-24 15 25 43-22-11 31 32 7-24 18 20 28-48-7-18 19-30-21-34 21-19-20-49 10 22-30Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g fill="#15191e"><path d="m19 10 37 28-10 2Z"/><path d="m225 101-38-25 9-3Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-4 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KAPOW!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KAPOW!!</text>
+    </g>
+  </g>
+  <g id="sfx-18" data-word="KRAAASH!!" data-style="slash" transform="translate(720 240)">
+    <title>KRAAASH!!</title>
+    <g fill="#12171c"><path d="M14 16 67 49 52 53Z"/><path d="M29 97 73 80 57 86Z"/>
+        <path d="m201 18 23-7-31 42Z"/><path d="m218 106-47-27 17 3Z"/></g>
+        <path d="M21 70 94 24 211 31 175 95 46 90Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+        <path d="M26 85 219 18" fill="none" stroke="#12171c" stroke-width="2"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="41" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">KRAAASH!!</text>
+      <text x="120" y="64" font-size="41" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">KRAAASH!!</text>
+    </g>
+  </g>
+  <g id="sfx-19" data-word="KABOOM!!" data-style="burst" transform="translate(960 240)">
+    <title>KABOOM!!</title>
+    <path d="m13 52 35-7-16-29 43 19L90 9l31 26 27-24 15 25 43-22-11 31 32 7-24 18 20 28-48-7-18 19-30-21-34 21-19-20-49 10 22-30Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g fill="#15191e"><path d="m19 10 37 28-10 2Z"/><path d="m225 101-38-25 9-3Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KABOOM!!</text>
+      <text x="120" y="64" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KABOOM!!</text>
+    </g>
+  </g>
+  <g id="sfx-20" data-word="DOOOOM!!" data-style="burst" transform="translate(1200 240)">
+    <title>DOOOOM!!</title>
+    <path d="m13 52 35-7-16-29 43 19L90 9l31 26 27-24 15 25 43-22-11 31 32 7-24 18 20 28-48-7-18 19-30-21-34 21-19-20-49 10 22-30Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g fill="#15191e"><path d="m19 10 37 28-10 2Z"/><path d="m225 101-38-25 9-3Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(2 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">DOOOOM!!</text>
+      <text x="120" y="64" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">DOOOOM!!</text>
+    </g>
+  </g>
+  <g id="sfx-21" data-word="CLANG!!" data-style="impact" transform="translate(1440 240)">
+    <title>CLANG!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">CLANG!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">CLANG!!</text>
+    </g>
+  </g>
+  <g id="sfx-22" data-word="POW!!" data-style="impact" transform="translate(0 360)">
+    <title>POW!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-6 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="49" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">POW!!</text>
+      <text x="120" y="64" font-size="49" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">POW!!</text>
+    </g>
+  </g>
+  <g id="sfx-23" data-word="SMACK!!" data-style="impact" transform="translate(240 360)">
+    <title>SMACK!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">SMACK!!</text>
+      <text x="120" y="64" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">SMACK!!</text>
+    </g>
+  </g>
+  <g id="sfx-24" data-word="THUD!!" data-style="impact" transform="translate(480 360)">
+    <title>THUD!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-4 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">THUD!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">THUD!!</text>
+    </g>
+  </g>
+  <g id="sfx-25" data-word="KRUNCH!!" data-style="slash" transform="translate(720 360)">
+    <title>KRUNCH!!</title>
+    <g fill="#12171c"><path d="M14 16 67 49 52 53Z"/><path d="M29 97 73 80 57 86Z"/>
+        <path d="m201 18 23-7-31 42Z"/><path d="m218 106-47-27 17 3Z"/></g>
+        <path d="M21 70 94 24 211 31 175 95 46 90Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+        <path d="M26 85 219 18" fill="none" stroke="#12171c" stroke-width="2"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KRUNCH!!</text>
+      <text x="120" y="64" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KRUNCH!!</text>
+    </g>
+  </g>
+  <g id="sfx-26" data-word="SPLASH!!" data-style="burst" transform="translate(960 360)">
+    <title>SPLASH!!</title>
+    <path d="m13 52 35-7-16-29 43 19L90 9l31 26 27-24 15 25 43-22-11 31 32 7-24 18 20 28-48-7-18 19-30-21-34 21-19-20-49 10 22-30Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g fill="#15191e"><path d="m19 10 37 28-10 2Z"/><path d="m225 101-38-25 9-3Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">SPLASH!!</text>
+      <text x="120" y="64" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">SPLASH!!</text>
+    </g>
+  </g>
+  <g id="sfx-27" data-word="WOOOSH!!" data-style="speed" transform="translate(1200 360)">
+    <title>WOOOSH!!</title>
+    <g class="speed-lines" stroke="#13171b" stroke-linecap="square" fill="none">
+        <path d="M13 28 H82 M7 39 H55 M27 91 H93 M17 103 H69" stroke-width="3"/>
+        <path d="M164 18 H226 M185 28 H235 M160 93 H228 M195 106 H235" stroke-width="2"/>
+        <path d="M11 53 H37 M194 83 H233" stroke-width="5"/>
+      </g><path d="M26 77 68 31 206 35 178 91 35 95Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(2 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">WOOOSH!!</text>
+      <text x="120" y="64" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">WOOOSH!!</text>
+    </g>
+  </g>
+  <g id="sfx-28" data-word="SWISH!!" data-style="speed" transform="translate(1440 360)">
+    <title>SWISH!!</title>
+    <g class="speed-lines" stroke="#13171b" stroke-linecap="square" fill="none">
+        <path d="M13 28 H82 M7 39 H55 M27 91 H93 M17 103 H69" stroke-width="3"/>
+        <path d="M164 18 H226 M185 28 H235 M160 93 H228 M195 106 H235" stroke-width="2"/>
+        <path d="M11 53 H37 M194 83 H233" stroke-width="5"/>
+      </g><path d="M26 77 68 31 206 35 178 91 35 95Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">SWISH!!</text>
+      <text x="120" y="64" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">SWISH!!</text>
+    </g>
+  </g>
+  <g id="sfx-29" data-word="ZING!!" data-style="energy" transform="translate(0 480)">
+    <title>ZING!!</title>
+    <path d="M15 63 39 48 27 29 62 40 82 12 102 34 133 16 149 36 189 25 186 44 225 54 196 69 217 92 175 86 162 106 127 89 90 106 75 87 30 91 46 74Z" fill="#f8f7f1" stroke="#14191d" stroke-width="3"/>
+        <g stroke="#15191e" fill="none"><path d="M15 20 43 35 M7 92 40 80 M196 25 232 9 M198 93 233 112" stroke-width="2"/>
+        <path d="M205 11 184 35" stroke-width="4"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-6 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">ZING!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">ZING!!</text>
+    </g>
+  </g>
+  <g id="sfx-30" data-word="ZOOM!!" data-style="speed" transform="translate(240 480)">
+    <title>ZOOM!!</title>
+    <g class="speed-lines" stroke="#13171b" stroke-linecap="square" fill="none">
+        <path d="M13 28 H82 M7 39 H55 M27 91 H93 M17 103 H69" stroke-width="3"/>
+        <path d="M164 18 H226 M185 28 H235 M160 93 H228 M195 106 H235" stroke-width="2"/>
+        <path d="M11 53 H37 M194 83 H233" stroke-width="5"/>
+      </g><path d="M26 77 68 31 206 35 178 91 35 95Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">ZOOM!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">ZOOM!!</text>
+    </g>
+  </g>
+  <g id="sfx-31" data-word="SHOOOM!!" data-style="speed" transform="translate(480 480)">
+    <title>SHOOOM!!</title>
+    <g class="speed-lines" stroke="#13171b" stroke-linecap="square" fill="none">
+        <path d="M13 28 H82 M7 39 H55 M27 91 H93 M17 103 H69" stroke-width="3"/>
+        <path d="M164 18 H226 M185 28 H235 M160 93 H228 M195 106 H235" stroke-width="2"/>
+        <path d="M11 53 H37 M194 83 H233" stroke-width="5"/>
+      </g><path d="M26 77 68 31 206 35 178 91 35 95Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-4 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">SHOOOM!!</text>
+      <text x="120" y="64" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">SHOOOM!!</text>
+    </g>
+  </g>
+  <g id="sfx-32" data-word="FLASH!!" data-style="energy" transform="translate(720 480)">
+    <title>FLASH!!</title>
+    <path d="M15 63 39 48 27 29 62 40 82 12 102 34 133 16 149 36 189 25 186 44 225 54 196 69 217 92 175 86 162 106 127 89 90 106 75 87 30 91 46 74Z" fill="#f8f7f1" stroke="#14191d" stroke-width="3"/>
+        <g stroke="#15191e" fill="none"><path d="M15 20 43 35 M7 92 40 80 M196 25 232 9 M198 93 233 112" stroke-width="2"/>
+        <path d="M35 11 58 33" stroke-width="4"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">FLASH!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">FLASH!!</text>
+    </g>
+  </g>
+  <g id="sfx-33" data-word="BURST!!" data-style="burst" transform="translate(960 480)">
+    <title>BURST!!</title>
+    <path d="m13 52 35-7-16-29 43 19L90 9l31 26 27-24 15 25 43-22-11 31 32 7-24 18 20 28-48-7-18 19-30-21-34 21-19-20-49 10 22-30Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g fill="#15191e"><path d="m19 10 37 28-10 2Z"/><path d="m225 101-38-25 9-3Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BURST!!</text>
+      <text x="120" y="64" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BURST!!</text>
+    </g>
+  </g>
+  <g id="sfx-34" data-word="BLAAST!!" data-style="energy" transform="translate(1200 480)">
+    <title>BLAAST!!</title>
+    <path d="M15 63 39 48 27 29 62 40 82 12 102 34 133 16 149 36 189 25 186 44 225 54 196 69 217 92 175 86 162 106 127 89 90 106 75 87 30 91 46 74Z" fill="#f8f7f1" stroke="#14191d" stroke-width="3"/>
+        <g stroke="#15191e" fill="none"><path d="M15 20 43 35 M7 92 40 80 M196 25 232 9 M198 93 233 112" stroke-width="2"/>
+        <path d="M35 11 58 33" stroke-width="4"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(2 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BLAAST!!</text>
+      <text x="120" y="64" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BLAAST!!</text>
+    </g>
+  </g>
+  <g id="sfx-35" data-word="KIIII!!" data-style="charge" transform="translate(1440 480)">
+    <title>KIIII!!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KIIII!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">KIIII!!</text>
+    </g>
+  </g>
+  <g id="sfx-36" data-word="GRRRAH!!" data-style="charge" transform="translate(0 600)">
+    <title>GRRRAH!!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-6 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">GRRRAH!!</text>
+      <text x="120" y="64" font-size="43" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">GRRRAH!!</text>
+    </g>
+  </g>
+  <g id="sfx-37" data-word="YAAAA!!" data-style="charge" transform="translate(240 600)">
+    <title>YAAAA!!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">YAAAA!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">YAAAA!!</text>
+    </g>
+  </g>
+  <g id="sfx-38" data-word="TAKE THIS!!" data-style="charge" transform="translate(480 600)">
+    <title>TAKE THIS!!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-4 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="37" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">TAKE THIS!!</text>
+      <text x="120" y="64" font-size="37" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">TAKE THIS!!</text>
+    </g>
+  </g>
+  <g id="sfx-39" data-word="HRAAA!!" data-style="charge" transform="translate(720 600)">
+    <title>HRAAA!!</title>
+    <path d="M22 86 60 33 111 17 174 26 221 80 171 99 58 96Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g stroke="#15191e" stroke-width="2" fill="none"><path d="M23 19 43 35 M69 7 79 25 M177 10 169 28 M220 23 201 42 M15 102 48 88 M219 102 198 87"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">HRAAA!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">HRAAA!!</text>
+    </g>
+  </g>
+  <g id="sfx-40" data-word="KAMEHAMEHA!!" data-style="energy" transform="translate(960 600)">
+    <title>KAMEHAMEHA!!</title>
+    <path d="M15 63 39 48 27 29 62 40 82 12 102 34 133 16 149 36 189 25 186 44 225 54 196 69 217 92 175 86 162 106 127 89 90 106 75 87 30 91 46 74Z" fill="#f8f7f1" stroke="#14191d" stroke-width="3"/>
+        <g stroke="#15191e" fill="none"><path d="M15 20 43 35 M7 92 40 80 M196 25 232 9 M198 93 233 112" stroke-width="2"/>
+        <path d="M35 11 58 33" stroke-width="4"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="35" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="190" lengthAdjust="spacingAndGlyphs">KAMEHAMEHA!!</text>
+      <text x="120" y="64" font-size="35" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="190" lengthAdjust="spacingAndGlyphs">KAMEHAMEHA!!</text>
+    </g>
+  </g>
+  <g id="sfx-41" data-word="GALICK HO!!" data-style="energy" transform="translate(1200 600)">
+    <title>GALICK HO!!</title>
+    <path d="M15 63 39 48 27 29 62 40 82 12 102 34 133 16 149 36 189 25 186 44 225 54 196 69 217 92 175 86 162 106 127 89 90 106 75 87 30 91 46 74Z" fill="#f8f7f1" stroke="#14191d" stroke-width="3"/>
+        <g stroke="#15191e" fill="none"><path d="M15 20 43 35 M7 92 40 80 M196 25 232 9 M198 93 233 112" stroke-width="2"/>
+        <path d="M205 11 184 35" stroke-width="4"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(2 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="37" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">GALICK HO!!</text>
+      <text x="120" y="64" font-size="37" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">GALICK HO!!</text>
+    </g>
+  </g>
+  <g id="sfx-42" data-word="MASENKO!!" data-style="energy" transform="translate(1440 600)">
+    <title>MASENKO!!</title>
+    <path d="M15 63 39 48 27 29 62 40 82 12 102 34 133 16 149 36 189 25 186 44 225 54 196 69 217 92 175 86 162 106 127 89 90 106 75 87 30 91 46 74Z" fill="#f8f7f1" stroke="#14191d" stroke-width="3"/>
+        <g stroke="#15191e" fill="none"><path d="M15 20 43 35 M7 92 40 80 M196 25 232 9 M198 93 233 112" stroke-width="2"/>
+        <path d="M35 11 58 33" stroke-width="4"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="41" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">MASENKO!!</text>
+      <text x="120" y="64" font-size="41" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">MASENKO!!</text>
+    </g>
+  </g>
+  <g id="sfx-43" data-word="IMPACT!!" data-style="impact" transform="translate(0 720)">
+    <title>IMPACT!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-6 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">IMPACT!!</text>
+      <text x="120" y="64" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">IMPACT!!</text>
+    </g>
+  </g>
+  <g id="sfx-44" data-word="COUNTER!!" data-style="slash" transform="translate(240 720)">
+    <title>COUNTER!!</title>
+    <g fill="#12171c"><path d="M14 16 67 49 52 53Z"/><path d="M29 97 73 80 57 86Z"/>
+        <path d="m201 18 23-7-31 42Z"/><path d="m218 106-47-27 17 3Z"/></g>
+        <path d="M21 70 94 24 211 31 175 95 46 90Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+        <path d="M26 85 219 18" fill="none" stroke="#12171c" stroke-width="2"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="41" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">COUNTER!!</text>
+      <text x="120" y="64" font-size="41" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="187" lengthAdjust="spacingAndGlyphs">COUNTER!!</text>
+    </g>
+  </g>
+  <g id="sfx-45" data-word="BREAK!!" data-style="slash" transform="translate(480 720)">
+    <title>BREAK!!</title>
+    <g fill="#12171c"><path d="M14 16 67 49 52 53Z"/><path d="M29 97 73 80 57 86Z"/>
+        <path d="m201 18 23-7-31 42Z"/><path d="m218 106-47-27 17 3Z"/></g>
+        <path d="M21 70 94 24 211 31 175 95 46 90Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+        <path d="M26 85 219 18" fill="none" stroke="#12171c" stroke-width="2"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-4 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BREAK!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BREAK!!</text>
+    </g>
+  </g>
+  <g id="sfx-46" data-word="PARRY!!" data-style="impact" transform="translate(720 720)">
+    <title>PARRY!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">PARRY!!</text>
+      <text x="120" y="64" font-size="45" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">PARRY!!</text>
+    </g>
+  </g>
+  <g id="sfx-47" data-word="CRACK!!" data-style="slash" transform="translate(960 720)">
+    <title>CRACK!!</title>
+    <g fill="#12171c"><path d="M14 16 67 49 52 53Z"/><path d="M29 97 73 80 57 86Z"/>
+        <path d="m201 18 23-7-31 42Z"/><path d="m218 106-47-27 17 3Z"/></g>
+        <path d="M21 70 94 24 211 31 175 95 46 90Z" fill="#f8f7f1" stroke="#12171c" stroke-width="3"/>
+        <path d="M26 85 219 18" fill="none" stroke="#12171c" stroke-width="2"/>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-3 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">CRACK!!</text>
+      <text x="120" y="64" font-size="45" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">CRACK!!</text>
+    </g>
+  </g>
+  <g id="sfx-48" data-word="PUMMEL!!" data-style="impact" transform="translate(1200 720)">
+    <title>PUMMEL!!</title>
+    <path d="M20 57 45 31 72 37 94 12 124 33 164 14 177 36 215 32 200 62 223 84 173 85 158 108 121 91 79 107 58 87 19 83Z" fill="#f8f7f1" stroke="#15191e" stroke-width="3"/>
+        <g fill="#14191d"><path d="m5 16 56 28-9 5Z"/><path d="m233 97-53-24 9-5Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(2 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">PUMMEL!!</text>
+      <text x="120" y="64" font-size="43" fill="#f8f7f1" stroke="#15191e" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">PUMMEL!!</text>
+    </g>
+  </g>
+  <g id="sfx-49" data-word="BANG!!" data-style="burst" transform="translate(1440 720)">
+    <title>BANG!!</title>
+    <path d="m13 52 35-7-16-29 43 19L90 9l31 26 27-24 15 25 43-22-11 31 32 7-24 18 20 28-48-7-18 19-30-21-34 21-19-20-49 10 22-30Z" fill="#faf9f4" stroke="#15191e" stroke-width="3"/>
+        <g fill="#15191e"><path d="m19 10 37 28-10 2Z"/><path d="m225 101-38-25 9-3Z"/></g>
+    <path d="M29 109 H66 M172 12 H211" stroke="#13171b" stroke-width="1.5" opacity=".72"/>
+    <g transform="rotate(-5 120 65)" text-anchor="middle" dominant-baseline="middle"
+    font-family="Impact,Arial Black,DejaVu Sans,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1">
+      <text x="122" y="67" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="10" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BANG!!</text>
+      <text x="120" y="64" font-size="47" fill="#15191e" stroke="#f8f7f1" stroke-width="5" paint-order="stroke fill" textLength="159" lengthAdjust="spacingAndGlyphs">BANG!!</text>
+    </g>
+  </g>
+</svg>

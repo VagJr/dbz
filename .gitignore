@@ -3,4 +3,6 @@ node_modules/
 data/
 test-results/
 downloads/
+.preview-data/production/
+.runtime-tests.log
 .env

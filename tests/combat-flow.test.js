@@ -75,7 +75,8 @@ test("holding melee prepares one heavy attack and precise defense prevents launc
   const ki = p.ki;
   e.act("p", "attackRelease");
   step(e, p, 14);
-  assert.ok(p.ki < ki - 15);
+  // Successful heavy contact refunds 4 Ki from its 18 Ki commitment.
+  assert.ok(p.ki < ki - 11 && p.ki > ki - 18);
   assert.equal(foe.launch.tier, "high");
   const q = e.addPlayer("q");
   p.pvp = q.pvp = true;

@@ -9,13 +9,15 @@ function profile(e) {
   return {pace,progress,reaction:Math.max(.1,[.3,.22,.16][n]*(1-progress*.5)),
     think:frames([4,3,2][n])/30,startup:frames([7,5,4][n])/30,
     recovery:frames([5,3,2][n])/30,active:pace>.5?1/30:2/30,
-    gap:(1-pace)*[4,2,1][n]/30,chain:Math.round(2+pace*4),
+    gap:(1-pace)*[4,2,1][n]/30,chain:Math.round(3+pace*2),
     guardRetry:[1.2,.95,.75][n]*(1-progress*.45),
     evadeRetry:[2.4,1.8,1.4][n]*(1-progress*.4)};
 }
 function prepare(e, t) {
   const p = profile(e),
-    stage = t < (e.chainUntil || 0) ? (e.confirmedHits || 0) + 1 : 1;
+    stage = e.counterStrike
+      ? 1
+      : t < (e.chainUntil || 0) ? (e.confirmedHits || 0) + 1 : 1;
   const special = e.pattern === "ring" || e.pattern === "rush";
   const charged =
     e.pattern === "beam" &&
@@ -36,7 +38,7 @@ function prepare(e, t) {
           ? p.startup + 1 / 30
           : p.startup + (finisher ? 1 / 30 : 0),
     recovery: beam || special || finisher ? Math.max(1/30,.2-p.pace*.16) : p.recovery,
-    cost: charged ? 32 : beam ? 18 : special || finisher ? 16 : 10,
+    cost: charged ? 32 : beam ? 18 : special || finisher ? 16 : e.counterStrike ? 14 : 10,
     stun: finisher || special ? .16 : .075,
     heavy: special || finisher,
   };

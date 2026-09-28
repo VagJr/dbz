@@ -11,6 +11,7 @@ const {
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+const Movement = require("../shared/movement");
 const cleanName = (v) =>
   typeof v === "string"
     ? v
@@ -202,6 +203,9 @@ class Engine {
       world: e.world,
       x: e.x,
       y: e.y,
+      skin: e.skin,
+      appearance: e.appearance,
+      name: e.name,
       ...extra,
     });
   }
@@ -417,7 +421,12 @@ class Engine {
       technique: technique.id,
     });
     p.mastery[p.equipped] = (p.mastery[p.equipped] || 0) + 1;
-    this.emit("cast", p, { angle: p.angle, charged });
+    this.emit("cast", p, {
+      angle: p.angle,
+      charged,
+      technique: technique.id,
+      techniqueName: technique.name,
+    });
     return true;
   }
   onGround(p) {
@@ -457,6 +466,11 @@ class Engine {
     e.x = x;
     e.y = y;
   }
+  onboardingProtected(p, enemy) {
+    return p.world === "earth" && p.storyState?.questId === "db-paozu" &&
+      (enemy.cell || enemy.ambient && (p.storyState.objectiveIndex || 0) < 3) &&
+      !enemy.practiceOwner && enemy.provokedBy !== p.id;
+  }
   damage(attacker, target, amount, heavy = false) {
     if (
       (target.practiceOwner && attacker.id !== target.practiceOwner) ||
@@ -469,6 +483,44 @@ class Engine {
       return;
     const t = this.time,
       isPlayer = this.players.has(target.id);
+    if (!isPlayer && this.players.has(attacker.id)) {
+      // The fighter remembers actual contact; choices still wait for observations.
+      target.recentPressure = t - (target.pressureHitAt ?? -99) < 1.1
+        ? Math.min(3, (target.recentPressure || 0) + 1) : 1;
+      target.pressureHitAt = t;
+      const facing = Math.abs(angleDiff(
+        Math.atan2(attacker.y - target.y, attacker.x - target.x),
+        target.angle || 0,
+      )) < 1.25;
+      if (target.state === "evade" && target.until > t) {
+        this.emit("dodge", target, { text: "ESQUIVA" });
+        return;
+      }
+      if (target.state === "guard" && target.guardUntil > t && facing &&
+          (target.guardMeter ?? 0) > 0) {
+        const perfect = t - (target.guardAt || -99) < 0.14 && !heavy;
+        const drain = heavy ? 42 : 21;
+        target.guardMeter = Math.max(0, target.guardMeter - drain);
+        target.effort = Math.max(0, (target.effort ?? 100) - (heavy ? 13 : 7));
+        if (perfect) {
+          target.counterReadyUntil = t + 0.7;
+          target.guardUntil = t;
+          target.cooldown = Math.min(target.cooldown || t, t);
+          target.nextOpening = Math.min(target.nextOpening || t, t);
+          this.emit("parry", target, { text: "CONTRA!" });
+          return;
+        }
+        if (!target.guardMeter) {
+          target.guardBrokenUntil = t + 1.15;
+          target.guardUntil = t;
+          target.stun = t + 0.4;
+          this.emit("break", target, { text: "GUARDA QUEBRADA" });
+        } else {
+          amount *= heavy ? 0.42 : 0.16;
+          this.emit("guard", target, { text: "BLOQUEIO" });
+        }
+      }
+    }
     if (isPlayer) {
       target.lastHit = t;
       target.training = null;
@@ -502,7 +554,13 @@ class Engine {
     }
     target.hp = Math.max(0, target.hp - amount);
     target.stun = Math.max(target.stun || 0, t + (heavy ? 0.2 : 0.075));
-    this.emit("hit", target, { amount: Math.round(amount), heavy });
+    this.emit("hit", target, {
+      amount: Math.round(amount),
+      heavy,
+      combo: attacker.combo || attacker.motorMove?.stage || 0,
+      projectile: !!attacker.projectile,
+      technique: attacker.technique,
+    });
     if (heavy) {
       const a = Math.atan2(target.y - attacker.y, target.x - attacker.x);
       this.move(target, Math.cos(a) * 50, Math.sin(a) * 50);
@@ -519,6 +577,18 @@ class Engine {
     target.dead = true;
     target.respawnAt = t + 18;
     if (target.practiceOwner) return;
+    this.onEnemyDefeated?.(attacker, target);
+    if (this.players.has(attacker.id)) {
+      const kiReward = target.boss
+        ? 12
+        : Math.min(8, 4 + Math.floor((target.maxHp || 0) / 500));
+      attacker.ki = clamp(attacker.ki + kiReward, 0, 100);
+      const hpReward = Math.max(
+        1,
+        Math.round((attacker.maxHp || 100) * (target.boss ? 0.04 : 0.02)),
+      );
+      attacker.hp = Math.min(attacker.maxHp || 100, attacker.hp + hpReward);
+    }
     if (target.ecologyKey) {
       this.worldMemory ??= {};
       this.worldMemory[target.ecologyKey] = {
@@ -778,73 +848,9 @@ class Engine {
         }
       }
       if (p.training && Math.hypot(input.x, input.y) > 0.2) p.training = null;
-      const airborne = p.mode === "flight";
-      const accelerating =
-        (!locked || (p.moveAction && ["jab","link","finisher"].includes(p.moveAction.key))) && p.stun <= t && !input.guard && !input.charge;
-      const intensity =
-        p.moveAction && ["jab","link","finisher"].includes(p.moveAction.key) ? .72 : p.state === "chargeAim"
-          ? 1
-          : p.state === "charge"
-            ? 0.2
-            : p.state === "guard"
-              ? 0.28
-              : 1;
-      if (accelerating && Math.hypot(input.x, input.y) > 0.08) {
-        const acceleration =
-          p.world === "space"
-            ? 7600
-            : airborne
-              ? p.boosting
-                ? 6200
-                : 5400
-              : 2400;
-        // Cancel lateral drift quickly while preserving forward momentum.
-        const n = Math.hypot(input.x, input.y),
-          ux = input.x / n,
-          uy = input.y / n;
-        const lateral = (-p.vx * uy + p.vy * ux) * (1 - Math.exp(-12 * dt));
-        p.vx += lateral * uy;
-        p.vy -= lateral * ux;
-        p.vx += input.x * acceleration * intensity * dt;
-        p.vy += input.y * acceleration * intensity * dt;
-      } else {
-        const drag = stale
-          ? 18
-          : locked && p.state === "dash"
-            ? 0.4
-            : airborne
-              ? accelerating
-                ? 3.8
-                : 9
-              : 12;
-        p.vx *= Math.exp(-drag * dt);
-        p.vy *= Math.exp(-drag * dt);
-      }
+      Movement.velocity(p, input, dt, t,
+        ORIGINS.find((o) => o.id === p.origin).speed, stale);
       if (p.boosting) p.ki = Math.max(0, p.ki - dt * 16);
-      let maxSpeed =
-        locked && p.state === "dash"
-          ? 1600
-          : p.world === "space"
-            ? p.boosting
-              ? 4200
-              : 2100
-            : airborne
-              ? (p.boosting ? 1450 : p.form ? 1120 : 920) * intensity
-              : (ORIGINS.find((o) => o.id === p.origin).speed * 1.18 +
-                  p.stats.force * 3) *
-                intensity;
-      if (p.duelId || t - (p.lastCombatAt ?? -99) < 5)
-        maxSpeed = Math.min(
-          maxSpeed,
-          p.state === "dash" ? 680 : p.mode === "flight" ? 360 : 300,
-        );
-      if (p.roundLocked) maxSpeed = 0;
-      const currentSpeed = Math.hypot(p.vx, p.vy);
-      if (currentSpeed > maxSpeed) {
-        p.vx *= maxSpeed / currentSpeed;
-        p.vy *= maxSpeed / currentSpeed;
-      }
-      if (Math.hypot(p.vx, p.vy) < 0.1) p.vx = p.vy = 0;
       this.move(p, p.vx * dt, p.vy * dt);
       if (p.mode === "ground" && !this.onGround(p)) {
         p.mode = "flight";
@@ -903,30 +909,15 @@ class Engine {
       }
       CombatBrain.maintain(e, dt);
       const priorTarget = this.players.get(e.combatTargetId);
-      const target = [...this.players.values()]
-        .filter(
-          (p) =>
-            !(
-              e.cell &&
-              p.world === "earth" &&
-              p.storyState?.questId === "db-paozu" &&
-              e.provokedBy !== p.id
-            ) &&
-            !p.duelId &&
-            (!e.practiceOwner || e.practiceOwner === p.id) &&
-            p.world === e.world &&
-            p.state !== "dead" &&
-            distance(p, e) <
-              (e.world === "space"
-                ? 1100
-                : e.ai?.aggroRange || (e.boss ? 650 : 390)),
-        )
-        .sort(
-          (a, b) =>
-            distance(a, e) -
-            (a === priorTarget ? 140 : 0) -
-            (distance(b, e) - (b === priorTarget ? 140 : 0)),
-        )[0];
+      let target = null, nearest = Infinity;
+      const aggro = e.world === "space" ? 1100 : e.ai?.aggroRange || (e.boss ? 650 : 390);
+      for (const p of this.players.values()) {
+        // Early exploration is peaceful; deliberately attacking still provokes.
+        if (this.onboardingProtected(p,e) || p.duelId ||
+          (e.practiceOwner && e.practiceOwner !== p.id) || p.world !== e.world || p.state === "dead") continue;
+        const d = distance(p,e), score = d - (p === priorTarget ? 140 : 0);
+        if (d < aggro && score < nearest) { target=p;nearest=score; }
+      }
       e.combatTargetId = target?.id || null;
       const visible = !!target && this.clearSight(e, target);
       CombatBrain.observe(e, target, t, visible);
@@ -1103,6 +1094,7 @@ class Engine {
       e.angle = Math.atan2(target.y - e.y, target.x - e.x);
       if (choice === "guard") {
         e.state = "guard";
+        e.guardAt = t;
         e.guardUntil = t + (e.ai?.guardDuration || 0.55);
         e.nextGuard = t + EnemyMotor.profile(e).guardRetry;
         e.effort -= 8;
@@ -1221,6 +1213,7 @@ class Engine {
               x: ox,
               y: oy,
               projectile: true,
+              technique: s.technique,
               kiWeave: !!s.weave,
               guardBreak: !!s.charged,
               attackData: {
@@ -1412,13 +1405,30 @@ class Engine {
         equipped: p.equipped,
         mastery: p.mastery,
         training: p.training,
+        lastCombatAt: p.lastCombatAt ?? -99,
+        stun: p.stun,
+        roundLocked: !!p.roundLocked,
+        duelId: p.duelId || null,
+        launch: p.launch || null,
       },
       players: [...this.players.values()]
         .filter((q) => q.world === p.world && distance(p, q) < 1450)
         .map(publicPlayer),
       enemies: this.enemies
         .filter((e) => !e.dead && e.world === p.world && distance(p, e) < 1450)
-        .map(({ brain, ...e }) => e),
+        .map((e) => {
+          const out = {};
+          for (const key of [
+            "id", "name", "skin", "world", "x", "y", "vx", "vy", "mode",
+            "hp", "maxHp", "angle", "state", "boss", "rank", "level", "form",
+            "attackAt", "windupAt", "telegraphRadius", "pattern",
+            "counterStrike", "combatTargetId", "guardMeter", "effort", "until", "dead",
+            "practiceOwner", "combatStyle", "storyEncounter", "storyBossId",
+            "storyPhaseIndex", "phaseName",
+          ]) if (e[key] !== undefined) out[key] = e[key];
+          if (e.ai) out.ai = { archetype: e.ai.archetype };
+          return out;
+        }),
       shots: this.shots.filter(
         (s) => s.world === p.world && distance(p, s) < 1700,
       ),

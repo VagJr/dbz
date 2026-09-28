@@ -141,9 +141,11 @@
       this.entities.clear();
       this.effects = [];
       this.trails = [];
+      window.UZVFX?.clear();
       this.buildTerrain();
     }
     buildTerrain() {
+      if (Art.openTerrain) return;
       const cv = document.createElement("canvas");
       cv.width = cv.height = 1700;
       const c = cv.getContext("2d");
@@ -345,7 +347,9 @@
       this.groundTerrain = land;
     }
     effect(e) {
-      this.effects.push({ ...e, age: 0 });
+      const manga = window.UZManga?.effect(e, this);
+      if (!window.UZVFX?.effect(e, this) && !manga) this.effects.push({ ...e, age: 0 });
+      if (this.effects.length > 96) this.effects.splice(0, this.effects.length - 96);
       if (
         ["hit", "parry", "complete", "transform", "collisionBurst"].includes(e.type) &&
         !this.reduced
@@ -551,12 +555,15 @@
         if (!p || Math.hypot(p.x - e.x, p.y - e.y) > 260)
           p = { x: e.x, y: e.y };
         const speed = e.id === me?.id ? 28 : 16;
-        p.x += (e.x - p.x) * Math.min(1, dt * speed);
-        p.y += (e.y - p.y) * Math.min(1, dt * speed);
+        p.x += (e.x - p.x) * (state?.presentation ? 1 : Math.min(1, dt * speed));
+        p.y += (e.y - p.y) * (state?.presentation ? 1 : Math.min(1, dt * speed));
         this.entities.set(e.id, p);
         const scale = e.boss ? 1.22 : 1;
-        if (["run", "dash"].includes(e.state) && !this.reduced)
+        if (["run", "dash"].includes(e.state) && !this.reduced && this.trails.length < 120 &&
+          (!p.trailAt || t - p.trailAt > .045)) {
           this.trails.push({ ...e, ...p, scale, age: 0 });
+          p.trailAt = t;
+        }
         if (e.id === me?.id) {
           c.strokeStyle = "#3be1f69c";
           c.lineWidth = 1;

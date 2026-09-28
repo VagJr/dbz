@@ -4,6 +4,8 @@ const path = require("node:path"),
   http = require("node:http"),
   express = require("express");
 const { Server } = require("socket.io");
+const { SnapshotWire } = require("./src/snapshot-wire");
+const { Parties } = require("./src/party");
 
 // Load this checkout's ignored local settings without replacing explicit environment variables.
 try {
@@ -54,6 +56,16 @@ async function start(options = {}) {
         ),
     });
   engine.worldMemory = store.worldMemory;
+  const parties = new Parties(engine, io);
+  engine.onEnemyDefeated = (attacker, enemy) => parties.enemyDefeated(attacker, enemy);
+  const snapshotFor = (id) => {
+    const socket = io.sockets.sockets.get(id);
+    const state = engine.snapshot(id);
+    if (state) Object.assign(state, parties.view(id));
+    if (socket?.handshake.auth?.protocol !== "uz-2") return state;
+    socket.data.wire ||= new SnapshotWire();
+    return socket.data.wire.encode(state);
+  };
   app.disable("x-powered-by");
   app.use((req, res, next) => Security.headers(req, res, next, cfg));
   app.use((req, res, next) => {
@@ -236,7 +248,7 @@ async function start(options = {}) {
         await persist();
         if (socket.connected) {
           socket.emit("joined", { id: socket.id, token });
-          socket.emit("snapshot", engine.snapshot(socket.id));
+          socket.emit("snapshot", snapshotFor(socket.id));
         }
       } catch (e) {
         console.error("Falha ao salvar perfil:", e.message);
@@ -265,7 +277,7 @@ async function start(options = {}) {
         await persist();
         if (typeof ack === "function") ack(result);
         if (socket.connected)
-          socket.emit("snapshot", engine.snapshot(socket.id));
+          socket.emit("snapshot", snapshotFor(socket.id));
       } catch {
         if (typeof ack === "function")
           ack({
@@ -362,6 +374,7 @@ async function start(options = {}) {
         p.beta.blocked = [
           ...new Set([...p.beta.blocked, target.citizenId]),
         ].slice(-100);
+        parties.blockPair(p.id, target.id);
       } else if (
         data.action === "report" &&
         typeof data.text === "string" &&
@@ -398,6 +411,9 @@ async function start(options = {}) {
       } catch {
         ack({ ok: false, message: "Salvamento indisponível." });
       }
+    });
+    socket.on("latency", (ack) => {
+      if (typeof ack === "function" && !limited("latency", 2, 5000)) ack({ time: engine.time });
     });
     socket.on("input", (data) => {
       if (!limited("input", 100)) engine.input(socket.id, data);
@@ -478,6 +494,26 @@ async function start(options = {}) {
             text: text.trim().slice(0, 160),
           });
     });
+    socket.on("party:command", (data, ack) => {
+      if (typeof ack !== "function") return;
+      if (!token || !engine.players.has(socket.id) || limited("party:command", 7, 10000)) {
+        ack({ ok: false, message: "Aguarde antes de usar a equipe." });
+        return;
+      }
+      if (data?.action === "invite" && limited("party:invite", 2, 10000)) {
+        ack({ ok: false, message: "Aguarde antes de enviar outro convite." });
+        return;
+      }
+      ack(parties.command(socket.id, data));
+    });
+    socket.on("party:chat", (message, ack) => {
+      if (typeof ack !== "function") return;
+      if (!token || !engine.players.has(socket.id) || limited("party:chat", 4, 5000)) {
+        ack({ ok: false, message: "Aguarde antes de enviar outra mensagem." });
+        return;
+      }
+      ack(parties.chat(socket.id, message));
+    });
     socket.on("disconnect", () => {
       clearTimeout(authTimer);
       const left = (connections.get(ip) || 1) - 1;
@@ -485,6 +521,7 @@ async function start(options = {}) {
       else connections.delete(ip);
       gate.entries.delete("packets:" + socket.id);
       const p = engine.players.get(socket.id);
+      parties.disconnect(socket.id);
       if (p && token && store.get(token)) {
         store.save(token, engine.profile(p));
         persist().catch((e) =>
@@ -500,7 +537,7 @@ async function start(options = {}) {
     accumulator = 0;
   const loop = setInterval(() => {
     const now = performance.now();
-    if (paused || closing) {
+    if (paused || closing || engine.players.size === 0) {
       last = now;
       accumulator = 0;
       return;
@@ -513,8 +550,10 @@ async function start(options = {}) {
       accumulator -= 1 / 30;
       ticks++;
       if (ticks % 2 === 0) {
-        for (const id of engine.players.keys())
-          io.to(id).emit("snapshot", engine.snapshot(id));
+        for (const id of engine.players.keys()) {
+          const socket = io.sockets.sockets.get(id);
+          if (socket?.conn.transport.writable) socket.emit("snapshot", snapshotFor(id));
+        }
         engine.effects = [];
       }
     }
