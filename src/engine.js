@@ -558,6 +558,7 @@ class Engine {
       ...(attacker.attackData?.contact || Hitboxes.impactPoint(attacker, target)),
       amount: Math.round(amount),
       heavy,
+      angle: attacker.angle,
       combo: attacker.combo || attacker.motorMove?.stage || 0,
       projectile: !!attacker.projectile,
       technique: attacker.technique,
@@ -959,12 +960,13 @@ class Engine {
         continue;
       }
       if (e.state === "evade" && e.until > t) {
+        const motor = EnemyMotor.profile(e);
         this.tacticalStep(
           e,
           target || e,
           { x: Math.cos(e.evadeAngle), y: Math.sin(e.evadeAngle) },
           dt,
-          e.world === "space" ? 1350 : 500,
+          motor.evadeSpeed,
         );
         continue;
       }
@@ -1023,10 +1025,16 @@ class Engine {
               return;
             }
             // A short physical step closes contact; aim stays locked from startup.
+            const contactTarget = target && Hitboxes.sameLayer(e, target) &&
+              Math.cos(Math.atan2(target.y - e.y, target.x - e.x) - attackAngle) > .35
+              ? target : null;
+            const advance = contactTarget ? Math.min(14, Math.max(0,
+              distance(e, contactTarget) - Hitboxes.body(e).radius - Hitboxes.body(contactTarget).radius - 3,
+            )) : 14;
             this.move(
               e,
-              Math.cos(attackAngle) * 14,
-              Math.sin(attackAngle) * 14,
+              Math.cos(attackAngle) * advance,
+              Math.sin(attackAngle) * advance,
             );
             let hit = false;
             e.attackData = { stun: m.stun, posture: m.heavy ? 30 : 12 };
@@ -1038,7 +1046,7 @@ class Engine {
               )
                 continue;
               const contact = Hitboxes.meleeHit(e, p, { ...m, range: attackRange, pattern,
-                motion: m.motion }, attackAngle);
+                motion: m.motion }, attackAngle) || Hitboxes.contactHit(e, p, m, attackAngle);
               if (contact) {
                 e.attackData.contact = contact;
                 const hp = p.hp,
@@ -1104,10 +1112,12 @@ class Engine {
         continue;
       }
       if (choice === "evade") {
+        const motor = EnemyMotor.profile(e);
         e.state = "evade";
-        e.until = t + 0.26;
-        e.evadeAngle = e.angle + ((e.ai?.orbit || 1) * Math.PI) / 2;
-        e.nextEvade = t + EnemyMotor.profile(e).evadeRetry;
+        e.until = t + motor.evadeDuration;
+        e.evadeAngle = e.angle + ((e.brain?.flankSide || e.ai?.orbit || 1) * Math.PI) / 2;
+        e.reengageUntil = e.until + 0.65;
+        e.nextEvade = t + motor.evadeRetry;
         e.effort -= 26;
         this.emit("dash", e, { angle: e.evadeAngle, text: "PASSO LATERAL" });
         continue;
@@ -1137,11 +1147,7 @@ class Engine {
       } else {
         e.state = choice === "breathe" ? "breathe" : "run";
         let steering = EnemyTactics.steering(e, target, this.enemies, t);
-        if (choice === "retreat" || choice === "breathe")
-          steering = {
-            x: -Math.cos(e.angle) * 0.7,
-            y: -Math.sin(e.angle) * 0.7,
-          };
+        if (choice === "retreat") steering = EnemyTactics.disengage(e, target, t);
         const speed =
           (e.world === "space"
             ? 1250
@@ -1149,7 +1155,7 @@ class Engine {
               ? 580
               : e.boss
                 ? 230
-                : 250) * (e.ai?.moveSpeed || 1);
+                : 250) * (e.ai?.moveSpeed || 1) * (choice === "breathe" ? 0.62 : 1);
         this.tacticalStep(e, target, steering, dt, speed);
       }
     }

@@ -23,7 +23,9 @@ function arena() {
       maxHp: 600,
       angle: 0,
     });
-  b.x += 100;
+  // Fighters now use the visible miniature body, whose touching distance is
+  // around 30px rather than the former 100px arena hit envelope.
+  b.x += 34;
   b.angle = Math.PI;
   a.targetId = b.id;
   b.targetId = a.id;
@@ -67,8 +69,9 @@ test("whiff cannot teleport to a rival or confirm a combo", () => {
   assert.equal(g.nextCombo(a), "jab");
 });
 test("mobile melee assist faces a nearby NPC and adds only a short step", () => {
-  const { g, a } = arena();
-  const npc = g.spawn("space", "Treino", "vegeta", a.x - 145, a.y, false, {
+  const { g, a, b } = arena();
+  b.pvp = false;
+  const npc = g.spawn("space", "Treino", "vegeta", a.x - 85, a.y, false, {
     hp: 1000, maxHp: 1000, mode: "flight", cooldown: Infinity, nextOpening: Infinity,
   });
   a.targetId = npc.id;
@@ -80,7 +83,8 @@ test("mobile melee assist faces a nearby NPC and adds only a short step", () => 
   assert.ok(a.x < start && a.x > start - 65);
 });
 test("mobile melee assist leaves a distant NPC out of reach", () => {
-  const { g, a } = arena();
+  const { g, a, b } = arena();
+  b.pvp = false;
   const npc = g.spawn("space", "Distante", "vegeta", a.x - 400, a.y, false, {
     hp: 1000, maxHp: 1000, mode: "flight", cooldown: Infinity, nextOpening: Infinity,
   });

@@ -4,7 +4,8 @@ const test = require("node:test"),
 const { Engine } = require("../src/engine"),
   Brain = require("../src/combat-brain"),
   T = require("../src/enemy-tactics");
-function arena(role = "duelist", distance = 110) {
+// Contact fixtures follow the rendered rig, whose fist reaches about 30 px.
+function arena(role = "duelist", distance = 32) {
   const g = new Engine(),
     p = g.addPlayer("p");
   g.enemies = [];
@@ -131,6 +132,9 @@ test("active projectile pressure reserves introductory group attack capacity", (
 });
 test("quick ki after two punches consumes extra ki and damages frontal posture", () => {
   const { g, p, e } = arena();
+  // Keep the projectile alive and isolate the weave from enemy interrupts.
+  e.x = p.x + 500;
+  e.stun = 999;
   p.combo = 2;
   p.comboConfirmed = 2;
   p.confirmedAt = g.time;

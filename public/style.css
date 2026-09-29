@@ -1165,6 +1165,15 @@ dialog .eyebrow {
     display: none;
   }
 }
+
+/* Fast combat input feedback: queued actions and server-confirmed contacts. */
+.action-dock .action.queued{border-color:#7cecff!important;outline:2px solid #7cecff!important;outline-offset:2px;animation:uz-input-queued .72s ease-in-out infinite alternate}
+@keyframes uz-input-queued{to{outline-color:#ffe28a}}
+.action-dock .action.confirmed{border-color:#7dffc4!important;outline:2px solid #7dffc4!important;outline-offset:2px;animation:uz-confirm-contact .24s ease-out}
+.action-dock .action[data-combat-result="blocked"]{border-color:#ffc66b!important;outline:2px solid #ffc66b!important;outline-offset:2px}
+.action-dock .action[data-combat-result="evaded"]{border-color:#76dfff!important;outline:2px solid #76dfff!important;outline-offset:2px}
+.action-dock .action[data-combat-result="miss"],.action-dock .action[data-combat-result="no-damage"]{border-color:#d8a08a!important;outline:2px solid #d8a08a!important;outline-offset:2px}
+@keyframes uz-confirm-contact{50%{transform:scale(1.06);filter:brightness(1.35)}}
 @media (max-width: 760px) {
   .topbar {
     padding: 14px 18px;

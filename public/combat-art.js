@@ -348,6 +348,9 @@
       this.groundTerrain = land;
     }
     effect(e) {
+      // The character's windup carries ordinary punch feedback. The old
+      // chargeStart fallback drew a labelled circle over every exchange.
+      if (e.type === "chargeStart") return;
       // Project a copy; networking and collisions retain the physical coordinates.
       const displayZ = Number.isFinite(e.visualZ) ? e.visualZ : e.z;
       if (Number.isFinite(displayZ) && displayZ !== 0) e = { ...e, y: e.y - displayZ };
@@ -358,7 +361,7 @@
         ["hit", "parry", "complete", "transform", "collisionBurst"].includes(e.type) &&
         !this.reduced
       )
-        this.shake = e.type === "collisionBurst" ? 9 : e.heavy ? 5 : 2;
+        this.shake = Math.max(this.shake, e.type === "collisionBurst" ? 5 : e.heavy ? 2.4 : .8);
     }
     draw(state, input, t) {
       const c = this.c,
@@ -962,12 +965,16 @@
       c.fillText(text, x, y);
     }
     radar(state) {
-      const c = document.getElementById("radar").getContext("2d"),
-        W = 176,
-        H = 150;
+      const canvas = document.getElementById("radar");
+      if (!canvas) return;
+      const c = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
+      const radius = Math.min(W, H) / 2 - 3;
       c.clearRect(0, 0, W, H);
+      c.save();
+      c.beginPath();c.arc(W / 2, H / 2, radius, 0, Math.PI * 2);c.clip();
+      c.fillStyle = "#07363ce0";c.fillRect(0, 0, W, H);
       c.strokeStyle = "#45dd8d25";
-      for (let r = 22; r < 80; r += 22) {
+      for (let r = radius / 3; r <= radius; r += radius / 3) {
         c.beginPath();
         c.arc(W / 2, H / 2, r, 0, Math.PI * 2);
         c.stroke();
@@ -990,15 +997,23 @@
         "#45dd8d25",
         1,
       );
+      if (!this.reduced) {
+        const sweep = (state?.time || this.last || 0) * .55;
+        c.save();c.translate(W / 2,H / 2);c.rotate(sweep);
+        c.fillStyle = "#64f0d614";c.beginPath();c.moveTo(0,0);
+        c.arc(0,0,radius,-.48,0);c.closePath();c.fill();
+        line(c,[[0,0],[radius,0]],"#94ffe549",1);c.restore();
+      }
       const me = state?.self;
-      if (!me) return;
+      if (!me) { c.restore(); return; }
       const point = (p, color, size) => {
+        if (!p) return;
         const x = W / 2 + (p.x - me.x) / 17,
           y = H / 2 + (p.y - me.y) / 17;
-        if (x > 4 && x < W - 4 && y > 4 && y < H - 4)
+        if (Math.hypot(x - W / 2, y - H / 2) < radius - size - 3)
           ellipse(c, x, y, size, size, color);
       };
-      for (const e of state.enemies)
+      for (const e of state.enemies || [])
         point(e, e.boss ? "#ff5277" : "#f09153", e.boss ? 3 : 2);
       for (const person of state.npcs || [])
         if (person.world === me.world || !person.world)
@@ -1007,8 +1022,8 @@
       if (me.surfaceRoute?.world === me.world) point(me.surfaceRoute, "#8fddff", 4);
       if (me.world === "earth")
         for (const o of this.data.orbs)
-          if (!me.orbs.includes(o.id)) point(o, "#ffb621", 3);
-      for (const p of state.players) if (p.id !== me.id) point(p, "#6bfac6", 2);
+          if (!me.orbs?.includes(o.id)) point(o, "#ffb621", 3);
+      for (const p of state.players || []) if (p.id !== me.id) point(p, "#6bfac6", 2);
       c.save();
       c.translate(W / 2, H / 2);
       c.rotate(me.angle);
@@ -1022,6 +1037,7 @@
         ],
         "#50ffac",
       );
+      c.restore();
       c.restore();
     }
   }

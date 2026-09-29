@@ -1,5 +1,6 @@
 "use strict";
 const Hitboxes = require("../shared/hitboxes");
+const Motor = require("./enemy-motor");
 
 // Combat roles are shared by every encounter, including procedural patrols.
 // Story bosses can replace these values with their phase-specific profile.
@@ -38,7 +39,7 @@ const ROLES = Object.freeze({
   },
   skirmisher: {
     archetype: "skirmisher",
-    desiredDistance: 295,
+    desiredDistance: 185,
     meleeRange: 155,
     rangedRange: 620,
     attackCooldown: 1.7,
@@ -49,7 +50,7 @@ const ROLES = Object.freeze({
   },
   artillery: {
     archetype: "artillery",
-    desiredDistance: 440,
+    desiredDistance: 225,
     meleeRange: 130,
     rangedRange: 830,
     attackCooldown: 2.1,
@@ -70,6 +71,16 @@ const ROLES = Object.freeze({
     guardInterval: 5.5,
     guardDuration: 0.55,
   },
+});
+
+const ARCHETYPE_ALIAS = Object.freeze({
+  aggressive: "brawler",
+  tank: "juggernaut",
+  speedster: "scout",
+  zoner: "artillery",
+  technical: "duelist",
+  balanced: "duelist",
+  ranged: "artillery",
 });
 
 const SKIN_ROLE = Object.freeze({
@@ -152,29 +163,52 @@ function canCommit(enemy, enemies, target, time) {
 
 function steering(enemy, target, enemies, time) {
   const ai = enemy.ai || ROLES.brawler;
+  const role = ARCHETYPE_ALIAS[ai.archetype] || ai.archetype || "brawler";
   const dx = target.x - enemy.x,
     dy = target.y - enemy.y;
   const d = Math.max(1, Math.hypot(dx, dy));
   const ux = dx / d,
     uy = dy / d;
-  // Wounded ranged fighters seek breathing room; melee escorts keep a flank.
+  // The firing band stays close enough for a fighter to enter melee after a
+  // beam. A confirmed combo keeps every role in striking range.
   const wounded = enemy.hp / enemy.maxHp < 0.3;
-  const contactDistance = Math.max(24, Hitboxes.meleeReach(enemy, enemy.motorMove || {}) + Hitboxes.body(target).radius - 7);
-  const desired =
-    (ai.rangedRange ? ai.desiredDistance || 295 : contactDistance) + (wounded && ai.rangedRange ? 130 : 0);
-  const radial = Math.max(-0.85, Math.min(1, (d - desired) / (ai.rangedRange ? 120 : 48)));
+  const strikeReach = Math.min(Motor.approachReach(enemy), Hitboxes.meleeReach(enemy, enemy.motorMove || {}));
+  const contactDistance = Math.max(24, strikeReach + Hitboxes.body(target).radius * .7 - 7);
+  const artillery = role === "artillery";
+  const reengaging = (enemy.reengageUntil || 0) > time;
+  const pursuingCombo = (enemy.chainUntil || 0) > time ||
+    (enemy.counterReadyUntil || 0) > time;
+  const desired = pursuingCombo || reengaging ? contactDistance - 4 : artillery
+    ?
+      Math.min(ai.desiredDistance || 225, contactDistance + 150) + (wounded ? 24 : 0)
+    : contactDistance +
+      (role === "duelist" ? 3 : role === "juggernaut" ? 12 : role === "scout" ? 0 : role === "skirmisher" ? 8 : -10);
+  const distanceError = d - desired;
+  // Forward movement wins over orbiting until the enemy reaches the hit zone.
+  // A crowded fighter only yields a few pixels instead of fleeing backward.
+  const radial = distanceError > 8
+    ? Math.min(1, distanceError / (artillery ? 110 : 55))
+    : distanceError < -12
+      ? Math.max(-0.1, distanceError / 260)
+      : 0;
   const flankSide = enemy.brain?.flankUntil > time
     ? enemy.brain.flankSide
     : ai.orbit || 1;
   const phase = time * flankSide * 0.8 + (ai.tempoOffset || 0);
+  const orbitStrength =
+    role === "brawler" ? 0.09 :
+    role === "juggernaut" ? 0.07 :
+    role === "scout" ? 0.19 :
+    role === "duelist" ? 0.18 :
+    role === "skirmisher" ? 0.22 : 0.2;
   const tangent =
     ((enemy.formation === "pincer"
       ? enemy.homeX < target.x
         ? -1
         : 1
       : flankSide) || 1) *
-    (d < desired + 200 ? (ai.rangedRange ? .68 : .25) : .28) *
-    (0.76 + 0.24 * Math.sin(phase));
+    (d < desired + 55 ? orbitStrength : orbitStrength * 0.5) *
+    (0.76 + 0.24 * Math.sin(phase)) * (pursuingCombo || reengaging ? .35 : 1);
   let x = ux * radial - uy * tangent;
   let y = uy * radial + ux * tangent;
   for (const other of enemies) {
@@ -182,17 +216,32 @@ function steering(enemy, target, enemies, time) {
     const ox = enemy.x - other.x,
       oy = enemy.y - other.y;
     const gap = Math.hypot(ox, oy);
-    const spacing = ai.rangedRange ? 120 : Hitboxes.body(enemy).radius + Hitboxes.body(other).radius + 14;
+    const spacing = Hitboxes.body(enemy).radius + Hitboxes.body(other).radius +
+      (artillery ? 24 : 10);
     if (gap > 1 && gap < spacing) {
       const push = (spacing - gap) / spacing;
-      x += (ox / gap) * push * 1.65;
-      y += (oy / gap) * push * 1.65;
+      x += (ox / gap) * push * 0.65;
+      y += (oy / gap) * push * 0.65;
     }
   }
   const length = Math.hypot(x, y);
   return length > 0.01
     ? { x: x / Math.max(1, length), y: y / Math.max(1, length) }
     : { x: 0, y: 0 };
+}
+
+function disengage(enemy, target, time) {
+  const dx = target.x - enemy.x,
+    dy = target.y - enemy.y,
+    d = Math.max(1, Math.hypot(dx, dy)),
+    ux = dx / d,
+    uy = dy / d,
+    side = enemy.brain?.flankUntil > time
+      ? enemy.brain.flankSide
+      : enemy.ai?.orbit || 1;
+  // This emergency beat is mostly a sidestep, with just enough separation to
+  // create a readable opening before the fighter re-engages.
+  return { x: -ux * 0.28 - uy * side * 0.86, y: -uy * 0.28 + ux * side * 0.86 };
 }
 
 module.exports = {
@@ -202,4 +251,5 @@ module.exports = {
   attackPattern,
   canCommit,
   steering,
+  disengage,
 };

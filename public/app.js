@@ -1083,7 +1083,7 @@
   function action(a) {
     if (!state || window.UZWindows.blocksPlay() || scene || !socket.connected || typing()) return;
     sendCombatInput(true);
-    const requestedAt = performance.now();
+    const requestedAt = performance.now() / 1000;
     realtime.intent(a, requestedAt, UZCombat.moves);
     window.UZVFX?.intent(a, state.self, renderer);
     socket.emit("action", a, result => {
@@ -1395,21 +1395,26 @@
       else if (mobileControls) {
         const self = state.self;
         const reference = Math.hypot(x, y) > 0.1 ? Math.atan2(y, x) : self.angle;
-        const candidates = [...state.enemies, ...state.players]
-          .filter(e => e.id !== self.id && !e.dead && e.state !== "dead" &&
-            (state.enemies.includes(e) || ((self.pvp && e.pvp) || (self.duelId && self.duelId === e.duelId))) &&
-            Math.hypot(e.x - self.x, e.y - self.y) <= 620 &&
-            Math.abs((e.z || 0) - (self.z || 0)) < 110)
-          .map(e => {
-            const angle = Math.atan2(e.y - self.y, e.x - self.x);
-            const delta = Math.atan2(Math.sin(angle - reference), Math.cos(angle - reference));
-            return { e, angle, score: Math.hypot(e.x - self.x, e.y - self.y) + Math.abs(delta) * 150 };
-          })
-          .sort((a, b) => a.score - b.score);
-        const selected = candidates.find(c => c.e.id === mobileAimTargetId || c.e.id === self.targetId);
-        const target = selected && (!candidates[0] || selected.score <= candidates[0].score + 85)
-          ? selected : candidates[0];
-        mobileAimTargetId = target?.e.id || null;
+        let nearest = null, nearestScore = Infinity, selected = null, selectedScore = Infinity;
+        const consider = (e, player = false) => {
+          if (e.id === self.id || e.dead || e.state === "dead" ||
+              (player && !((self.pvp && e.pvp) || (self.duelId && self.duelId === e.duelId))) ||
+              Math.abs((e.z || 0) - (self.z || 0)) >= 110) return;
+          const dx = e.x - self.x, dy = e.y - self.y, distance = Math.hypot(dx, dy);
+          if (distance > 620) return;
+          const targetAngle = Math.atan2(dy, dx);
+          const delta = Math.atan2(Math.sin(targetAngle - reference), Math.cos(targetAngle - reference));
+          const score = distance + Math.abs(delta) * 150;
+          if (score < nearestScore) { nearest = { id: e.id, angle: targetAngle }; nearestScore = score; }
+          if ((e.id === mobileAimTargetId || e.id === self.targetId) && score < selectedScore) {
+            selected = { id: e.id, angle: targetAngle };
+            selectedScore = score;
+          }
+        };
+        for (const e of state.enemies) consider(e);
+        for (const e of state.players) consider(e, true);
+        const target = selected && selectedScore <= nearestScore + 85 ? selected : nearest;
+        mobileAimTargetId = target?.id || null;
         if (target) angle = target.angle;
         else if (Math.hypot(x, y) > 0.1) angle = Math.atan2(y, x);
       } else if (Math.hypot(x, y) > 0.1) angle = Math.atan2(y, x);

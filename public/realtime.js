@@ -74,7 +74,7 @@
         this.pending &&
         (p.state === "dead" ||
           (p.combatAction && p.combatAction.start >= this.pending.move.start - 0.18) ||
-          now - this.pending.at > (this.pending.queued ? 1500 : 350))
+          now - this.pending.at > (this.pending.queued ? 1.5 : 0.35))
       )
         this.pending = null;
     }
@@ -151,9 +151,9 @@
         y: this.predicted.y + this.offset.y,
         z: Math.max(this.predicted.groundZ || 0, this.predicted.z + this.offset.z),
       };
-      const serverNow = this.current.time + Math.max(0, now - this.arrived) / 1000;
+      const serverNow = this.current.time + Math.max(0, now - this.arrived);
       if (
-        this.pending && now - this.pending.at < (this.pending.queued ? 1500 : 350) &&
+        this.pending && now - this.pending.at < (this.pending.queued ? 1.5 : 0.35) &&
         serverNow >= this.pending.move.start &&
         (!self.combatAction || serverNow >= self.combatAction.end)
       ) {
@@ -206,12 +206,12 @@
             !this.predicted.clash && !this.predicted.roundLocked && !this.predicted.combatAction) Physics.jump(this.predicted);
         return;
       }
-      const held = this.hold ? (now - this.hold.at) / 1000 : 0;
+      const held = this.hold ? now - this.hold.at : 0;
       if (["cancelCharge", "attackRelease", "blast"].includes(action))
         this.hold = null;
       if (!this.current) return;
       const self = this.current.self;
-      const serverNow = this.current.time + Math.max(0, now - this.arrived) / 1000;
+      const serverNow = this.current.time + Math.max(0, now - this.arrived);
       const currentMove = self.combatAction;
       const queueRoom = !self.queuedAction || (self.queuedAction.count || 1) < 2;
       const canQueue = !!currentMove && queueRoom &&
@@ -272,10 +272,10 @@
       };
     }
     rejectIntent(action, requestedAt) {
-      if (this.pending && Math.abs(this.pending.at - requestedAt) < 2)
+      if (this.pending && Math.abs(this.pending.at - requestedAt) < 0.002)
         this.pending = null;
       if ((action === "attackStart" || action === "blastStart") &&
-          this.hold && Math.abs(this.hold.at - requestedAt) < 2)
+          this.hold && Math.abs(this.hold.at - requestedAt) < 0.002)
         this.hold = null;
     }
   }

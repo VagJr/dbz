@@ -59,14 +59,14 @@
     if (!ready || ["dash", "guard", "clashPulse"].includes(e.type) ||
         e.type === "slash" && e.combo < 3 ||
         e.type === "enemyAttack" && !e.counter) return true;
-    // Alternating light impacts give the fight manga punctuation without a
-    // letter on every punch. Heavy blows and counters remain guaranteed.
-    if (e.type === 'hit' && !heavy && Math.abs(salt) % 2 !== 0) return true;
+    // Ordinary punches communicate through the hands and contact sparks.
+    // Ink punctuation accents confirmed finishers and defensive reversals.
+    if (e.type === 'hit' && !heavy || e.type === 'slash' || e.type === 'dodge') return true;
     if (e.type === 'cast' && (!e.technique || e.technique === 'ki') && !e.charged) return true;
     const lifetime = reduced.matches ? .55 : heavy ? .58 : .44;
     for (let i = active.length - 1; i >= 0; i--)
       if (born - active[i].born >= active[i].life) active.splice(i, 1);
-    if (born - lastWordAt < (heavy ? .32 : .39) || active.length >= (innerWidth < 760 ? 2 : MAX_ACTIVE)) return true;
+    if (born - lastWordAt < (heavy ? .62 : .70) || active.length >= (innerWidth < 760 ? 1 : 2)) return true;
     if (active.some(v => born - v.born < .52 && Math.hypot(v.x - e.x, v.y - e.y) < 260)) return true;
     lastWordAt = born;
     const side = renderer?.cam && Math.abs(e.x - renderer.cam.x) > 35

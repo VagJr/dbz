@@ -80,6 +80,8 @@ test("holding melee prepares one heavy attack and precise defense prevents launc
   assert.equal(foe.launch.tier, "high");
   const q = e.addPlayer("q");
   p.pvp = q.pvp = true;
+  q.mode = p.mode;
+  q.z = p.z;
   q.x = p.x + 40;
   q.y = p.y;
   q.state = "guard";

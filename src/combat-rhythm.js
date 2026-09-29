@@ -5,6 +5,25 @@ const Motion = require("./combat-motion");
 const Hitboxes = require("../shared/hitboxes");
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y),
   front = (a, b) => Math.cos(Math.atan2(b.y - a.y, b.x - a.x) - a.angle) > 0.35;
+function acquireMeleeTarget(engine, player, move, range) {
+  const reach = Hitboxes.meleeReach(player, move);
+  return engine.combatTargets(player, range)
+    .filter((e) => Hitboxes.sameLayer(player, e) && engine.clearSight(player, e))
+    .filter((e) => dist(player, e) <= reach + Hitboxes.body(e).radius * 1.8)
+    .filter((e) => !player.input.manualAim ||
+      dist(player, e) <= Hitboxes.body(player).radius + Hitboxes.body(e).radius + 12 ||
+      Math.cos(Math.atan2(e.y - player.y, e.x - player.x) - player.input.angle) > 0.5)
+    .sort((a, b) => {
+      const score = (e) => dist(player, e) -
+        (e.id === player.comboTargetId ? 8 : 0) -
+        (e.id === player.targetId ? 4 : 0) +
+        (player.input.manualAim ? Math.abs(Math.atan2(
+          Math.sin(Math.atan2(e.y - player.y, e.x - player.x) - player.input.angle),
+          Math.cos(Math.atan2(e.y - player.y, e.x - player.x) - player.input.angle),
+        )) * 12 : 0);
+      return score(a) - score(b);
+    })[0] || null;
+}
 module.exports = (Engine) => {
   const act = Engine.prototype.act,
     tick = Engine.prototype.tick,
@@ -47,6 +66,7 @@ module.exports = (Engine) => {
       return false;
     if(p.aimReceived && t-p.inputAt<.25)p.angle=p.input.angle;
     const mobileMelee = !m.speed && p.input.mobileAssist && !p.input.manualAim;
+    const motion = Motion(p, key, (p.attackSequence || 0) + 1);
     const assistRange = m.speed ? Math.min(650, m.range) : m.range + m.step + 42;
     const assisted = p.input.mobileAssist && !p.input.manualAim
       ? this.combatTargets(p, assistRange)
@@ -54,8 +74,13 @@ module.exports = (Engine) => {
           .sort((a, b) => dist(p, a) - dist(p, b))
       : [];
     const selected = assisted.find((e) => e.id === p.targetId);
-    const assistedTarget = selected && (!assisted[0] || dist(p, selected) <= dist(p, assisted[0]) + 72)
+    const mobileTarget = selected && (!assisted[0] || dist(p, selected) <= dist(p, assisted[0]) + 72)
       ? selected : assisted[0];
+    // Close-range aim assist is shared by desktop and mobile. Mouse aim remains
+    // manual until a valid opponent is inside the actual punch contact envelope.
+    const assistedTarget = p.input.mobileAssist && !p.input.manualAim
+      ? mobileTarget
+      : !m.speed ? acquireMeleeTarget(this, p, { ...m, motion }, assistRange) : null;
     const aim = assistedTarget || this.target(p, m.range);
     if (assistedTarget) p.targetId = assistedTarget.id;
     if (assistedTarget || (!p.input.manualAim && aim && dist(p, aim) < 240 && front(p, aim)))
@@ -98,11 +123,15 @@ module.exports = (Engine) => {
       exhausted:false,damageScale:1,
       motion:Motion(p,key,p.attackSequence),
       angle: p.angle,
-      assistedTargetId: mobileMelee ? assistedTarget?.id : null,
+      assistedTargetId: !m.speed ? assistedTarget?.id || null : null,
       magnetTargetId,
       hits: [],
       hit: false,
     };
+    p.moveAction.hitWindowEnd = Math.min(
+      p.moveAction.end,
+      p.moveAction.impact + Math.max(m.active, 3 / 30),
+    );
     p.cooldowns[
       key === "ki" || key === "charged" || key === "weave" ? "blast" : "attack"
     ] = p.moveAction.end;
@@ -216,7 +245,7 @@ module.exports = (Engine) => {
         ["attack", "attackStart", "blast", "blastStart"].includes(name) &&
         (["jab","link","finisher"].includes(p.moveAction.key) || p.moveAction.end - t <= C.buffer ||
           (p.moveAction.hit && ["jab", "link"].includes(p.moveAction.key))) &&
-        (!p.rhythmQueue || (p.rhythmQueue.pressAt == null && !p.rhythmTail))
+        !p.rhythmQueue
       ) {
         const kind = name.startsWith("blast") || name === "blast" ? "ki" : "melee";
         const pressAt = name === "attackStart" ? t : name === "blastStart" ? t : null;
@@ -226,7 +255,7 @@ module.exports = (Engine) => {
           action: kind === "ki" ? "ki" : "jab",
           kind,
           pressAt,
-          expires: p.moveAction.end + C.buffer,
+          expires: pressAt == null ? p.moveAction.end + C.buffer : t + 1.5,
         };
         if (!p.rhythmQueue) p.rhythmQueue = entry;
         else p.rhythmTail = entry;
@@ -376,16 +405,29 @@ module.exports = (Engine) => {
       });
       return;
     }
+    if (move.resolved) return;
     if (!move.stepped) {
-      const assisted = move.assistedTargetId && this.enemies.find((e) => e.id === move.assistedTargetId && !e.dead && e.world === p.world);
-      const contactDistance = Hitboxes.meleeReach(p, { ...m, motion: move.motion }) + (assisted ? Hitboxes.body(assisted).radius : 0) - 3;
-      const extra = assisted && Hitboxes.sameLayer(p, assisted) && dist(p, assisted) <= m.range + m.step + 42 && this.clearSight(p, assisted)
-        ? Math.min(42, Math.max(0, dist(p, assisted) - contactDistance - m.step))
-        : 0;
+      const nearby = this.combatTargets(p, m.range + m.step + 42)
+        .filter(e => Hitboxes.sameLayer(p, e) && this.clearSight(p, e));
+      const intended = nearby.find(e => e.id === move.assistedTargetId) ||
+        nearby.find(e => e.id === move.magnetTargetId) ||
+        nearby.find(e => e.id === p.targetId);
+      const toward = intended && Math.cos(Math.atan2(intended.y - p.y, intended.x - p.x) - move.angle) > 0.35;
+      const close = toward ? intended : null;
+      const reach = Hitboxes.meleeReach(p, { ...m, motion: move.motion });
+      const stopDistance = close ? Math.max(
+        Hitboxes.body(p).radius + Hitboxes.body(close).radius - 2,
+        Math.min(34, reach + Hitboxes.body(close).radius * 0.6),
+      ) : 0;
+      // A point-blank punch must not step through the target before its
+      // contact frame. Extend the approach only when the same target needs it.
+      const advance = close
+        ? Math.min(m.step + 42, Math.max(0, dist(p, close) - stopDistance))
+        : m.step;
       this.move(
         p,
-        Math.cos(move.angle) * (m.step + extra),
-        Math.sin(move.angle) * (m.step + extra),
+        Math.cos(move.angle) * advance,
+        Math.sin(move.angle) * advance,
       );
       move.stepped = true;
       this.emit("slash", p, { angle: move.angle, combo: p.combo });
@@ -393,12 +435,16 @@ module.exports = (Engine) => {
     const strike = { ...m, motion: move.motion };
     const targets = this.combatTargets(p, m.range + 12)
       .filter((e) => this.clearSight(p, e))
-      .map((e) => ({ e, contact: Hitboxes.meleeHit(p, e, strike, move.angle) }))
+      .map((e) => ({
+        e,
+        contact: Hitboxes.meleeHit(p, e, strike, move.angle) ||
+          Hitboxes.contactHit(p, e, move, move.angle),
+      }))
       .filter((candidate) => candidate.contact);
     const selected = targets.find((candidate) => candidate.e.id === p.targetId) ||
       targets.sort((a, b) => dist(p, a.e) - dist(p, b.e))[0];
-    if (move.resolved) return;
     if (!selected || move.hits.length) {
+      if (t < (move.hitWindowEnd || move.activeEnd) - 1e-7) return;
       move.resolved = true;
       move.result = "miss";
       return;
@@ -557,9 +603,19 @@ module.exports = (Engine) => {
           p.rhythmQueue = null;
           p.rhythmTail = null;
         } else {
-          if (this.time < m.impact && !C.moves[m.key].speed) {
+          if (!m.resolved && this.time < (m.hitWindowEnd || m.activeEnd) && !C.moves[m.key].speed) {
             const reach = C.moves[m.key].range + C.moves[m.key].step + 42;
-            if (p.input.mobileAssist && !p.input.manualAim) {
+            const closeTarget = acquireMeleeTarget(
+              this,
+              p,
+              { ...C.moves[m.key], motion: m.motion },
+              reach,
+            );
+            if (closeTarget) {
+              p.targetId = closeTarget.id;
+              m.assistedTargetId = closeTarget.id;
+              m.angle = Math.atan2(closeTarget.y - p.y, closeTarget.x - p.x);
+            } else if (p.input.mobileAssist && !p.input.manualAim) {
               const candidates = this.combatTargets(p, reach)
                 .filter(e => Hitboxes.sameLayer(p, e) && this.clearSight(p, e))
                 .sort((a, b) => dist(p, a) - dist(p, b));
@@ -619,7 +675,7 @@ module.exports = (Engine) => {
         p.stun <= this.time &&
         p.state !== "dead" &&
         this.time+1e-7 >= m.impact &&
-        this.time < m.activeEnd-1e-7
+        this.time < (m.hitWindowEnd || m.activeEnd)-1e-7
       )
         intents.push({
           source: p,
@@ -672,6 +728,10 @@ module.exports = (Engine) => {
         ["jab", "link"].includes(m.key) &&
         this.time >= m.activeEnd + 1 / 30;
       if (this.time+1e-7 >= m.end || cancel) {
+        if (!C.moves[m.key].speed && !m.resolved) {
+          m.resolved = true;
+          m.result = "miss";
+        }
         if (!m.hit && !C.moves[m.key].speed) p.comboConfirmed = 0;
         p.moveAction = null;
         p.state = "idle";

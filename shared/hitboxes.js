@@ -178,6 +178,18 @@
     }
     return contactInWorld(contact, offset);
   }
+  function contactHit(attacker, target, move = {}, angle = attacker.angle) {
+    if (!attacker || !target || !sameLayer(attacker, target)) return false;
+    const distance = Math.hypot(target.x - attacker.x, target.y - attacker.y);
+    const contactDistance = body(attacker).radius + body(target).radius + 12;
+    const direction = Math.atan2(target.y - attacker.y, target.x - attacker.x);
+    const strikeZ = attackHeight(attacker, move), targetZ = height(target);
+    // Small contact tolerance keeps a touching torso hittable when a hook or
+    // elbow's drawn sweep passes around its edge. It never extends attack reach.
+    if (distance > contactDistance || Math.cos(angleDelta(direction, angle)) <= .18 ||
+      strikeZ < targetZ - 4 || strikeZ > targetZ + body(target).height + 4) return false;
+    return impactPoint(attacker, target);
+  }
   function guardArc(defender, attacker) {
     if (!defender || !attacker || defender.world !== attacker.world) return false;
     const impactZ = finite(attacker.attackData?.contact?.z, finite(attacker.impactZ,
@@ -194,5 +206,5 @@
     return { world: b.world, x: torso.x + Math.cos(angle) * r, y: torso.y + Math.sin(angle) * r,
       z: torso.z, visualZ: height(b) };
   }
-  return Object.freeze({ body, height, hurtboxes, sameLayer, attackHeight, meleeReach, meleeHit, projectileHit, guardArc, impactPoint });
+  return Object.freeze({ body, height, hurtboxes, sameLayer, attackHeight, meleeReach, meleeHit, contactHit, projectileHit, guardArc, impactPoint });
 });

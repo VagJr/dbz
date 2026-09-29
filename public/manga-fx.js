@@ -26,17 +26,18 @@
   function panelLayout() {
     const W = innerWidth, H = innerHeight, compact = mobile.matches;
     const landscape = W > H;
-    let w = compact ? Math.min(landscape ? W * .42 : W * .86, 340) : Math.min(W * .46, 580);
+    let w = compact ? Math.min(landscape ? W * .30 : W * .64, 260) : Math.min(W * .31, 410);
     let h = w * 54 / 240;
-    const x = 0;
-    let y = compact ? Math.max(8, Math.min(H - h - 8, H * .70)) : Math.max(76, Math.min(100, H * .1));
-    if (!compact) {
-      const boundsList = topPanels.map(panel => panel.getBoundingClientRect()).filter(bounds => bounds.width && bounds.height);
-      for (const bounds of boundsList)
-        if (bounds.bottom < H * .42 && bounds.right > x && bounds.left < x + w)
-          y = Math.max(y, bounds.bottom + 10);
-    }
-    return { W, H, w, h, x, y };
+    const x = 10;
+    let y = compact ? 10 : Math.max(76, Math.min(100, H * .1));
+    const boundsList = topPanels.map(panel => panel.getBoundingClientRect()).filter(bounds => bounds.width && bounds.height);
+    for (const bounds of boundsList)
+      if (bounds.bottom < H * .42 && bounds.right > x && bounds.left < x + w)
+        y = Math.max(y, bounds.bottom + 10);
+    // Very short screens have no spare lane below the HUD. Do not paint a
+    // cinematic panel across the fighters or mobile action controls.
+    const available = y + h < H * .43;
+    return { W, H, w, h, x, y, available };
   }
   const upper = (value, limit = 38) => String(value || "").trim().replace(/\s+/g, " ").toLocaleUpperCase("pt-BR").slice(0, limit);
   function techniqueName(e) {
@@ -75,16 +76,22 @@
     const detail = e.type === "hit" && Number.isFinite(e.amount) ? String(e.amount)
       : stateText;
     const noteLetter = letter;
-    if ((noteLetter || detail) && !notes.some((n) => n.type === e.type && n.letter === noteLetter && now - n.born < .1 && Math.hypot(n.x - e.x, n.y - e.y) < 24)) {
-      if (notes.length >= 8) notes.shift();
+    const nearby = e.type === "hit" && notes.find(n => n.type === "hit" && now - n.born < .22 && Math.hypot(n.x - e.x, n.y - e.y) < 38);
+    if (nearby && Number.isFinite(e.amount)) {
+      nearby.amount += e.amount;
+      nearby.detail = String(nearby.amount);
+      nearby.heavy ||= e.heavy;
+      nearby.x = e.x; nearby.y = e.y;
+    } else if ((noteLetter || detail) && !notes.some((n) => n.type === e.type && n.letter === noteLetter && now - n.born < .1 && Math.hypot(n.x - e.x, n.y - e.y) < 24)) {
+      if (notes.length >= 3) notes.shift();
+      const side = renderer?.cam && Math.abs(e.x - renderer.cam.x) > 12 ? Math.sign(e.x - renderer.cam.x) : (Number(e.id) || 0) % 2 ? 1 : -1;
       notes.push({ ...e, letter: noteLetter, detail, sprite: atlasWord,
-        side: (Number(e.id) || 0) % 2 ? 1 : -1,
-        born: now, life: e.type === "hit" ? .55 : .7 });
+        side,
+        born: now, life: e.type === "hit" ? .42 : .7 });
     }
     const basicCast = e.type === "cast" && (e.technique === "ki" || !e.technique);
-    const dramatic = e.type === "transform" || e.type === "cast" && (!basicCast || e.charged) ||
-      e.type === "slash" && e.combo >= 3 || e.type === "enemyAttack" && e.counter;
-    if (dramatic && e.skin && now - lastPanelAt > (mobile.matches ? 3 : 2.6)) {
+    const dramatic = e.type === "transform" || e.type === "cast" && (!basicCast || e.charged);
+    if (dramatic && e.skin && now - lastPanelAt > (mobile.matches ? 4.2 : 3.6)) {
       // A single strip accents techniques, finishers and counters without stacking.
       const priority = e.type === "transform" || e.charged ? 3 : e.type === "cast" ? 2 : 1;
       const current = panels[0];
@@ -105,9 +112,10 @@
     for (let i = notes.length - 1; i >= 0; i--) {
       const n = notes[i], f = (time - n.born) / n.life;
       if (f >= 1 || f < 0) { notes.splice(i, 1); continue; }
-      const x = W / 2 + (n.x - renderer.cam.x) * zoom + n.side * (n.type === 'hit' ? 34 : 65);
-      const y = H / 2 + (n.y - renderer.cam.y) * zoom - 31 - f * 32;
+      const x = W / 2 + (n.x - renderer.cam.x) * zoom + n.side * (n.type === 'hit' ? (mobile.matches ? 55 : 69) : 65);
+      const y = H / 2 + (n.y - renderer.cam.y) * zoom - 24 - f * 26;
       if (x < -130 || x > W + 130 || y < -80 || y > H + 50) continue;
+      if (n.type === "hit" && (x < 12 || x > W - 12 || y < 100 || y > H - (mobile.matches ? 145 : 55))) continue;
       const label = n.letter;
       const size = n.type === "hit" ? 18 : label.length > 18 ? 14 : 19;
       c.save();
@@ -119,7 +127,7 @@
       const measured = c.measureText(label).width;
       const width = Math.min(220, measured);
       c.scale(Math.min(1, 220 / Math.max(1, measured)), 1);
-      c.globalAlpha = .86 * Math.min(1, (1 - f) * 2.2);
+      c.globalAlpha = .78 * Math.min(1, (1 - f) * 2.2);
       c.lineJoin = "round";
       if (label) {
         c.strokeStyle = page; c.lineWidth = 4;
@@ -131,7 +139,7 @@
       }
       if (n.detail && n.detail !== label) {
         if (n.type === 'hit') {
-          c.font = "900 18px Impact, 'Barlow Condensed', sans-serif";
+          c.font = `900 ${n.heavy ? 16 : 13}px Impact, 'Barlow Condensed', sans-serif`;
           c.strokeStyle = ink;
           c.lineWidth = 3;
           c.strokeText(n.detail, 0, 0);
@@ -168,7 +176,8 @@
       const art = p.art;
       if (!art.image.complete || !art.image.naturalWidth) continue;
       if (!p.layout || p.layout.W !== W || p.layout.H !== H) p.layout = panelLayout();
-      const { w, h, x, y } = p.layout;
+      const { w, h, x, y, available } = p.layout;
+      if (!available) continue;
       const scale = h / 54;
       const enter = reduced.matches ? 1 : Math.min(1, f * 8);
       c.save();

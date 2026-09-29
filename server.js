@@ -96,6 +96,7 @@ async function start(options = {}) {
   );
   app.use("/shared", express.static(path.join(__dirname, "shared")));
   app.use("/audio", express.static(path.join(__dirname, "audio")));
+  app.use("/hud-reference", express.static(path.join(__dirname, "hud"), { maxAge: "7d" }));
   app.use(express.static(path.join(__dirname, "public")));
   const sessions = new Map();
   const capture = () => {

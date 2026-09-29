@@ -18,10 +18,10 @@
     update: (s) => {
       const p = s.self,
         m = p.combatAction;
+      const technicalMove = m && !["jab", "link", "finisher"].includes(m.key);
       status.hidden = !(
-        m ||
+        technicalMove ||
         p.counterUntil > s.time ||
-        p.duel ||
         p.clash ||
         p.beamControl
       );
@@ -30,9 +30,9 @@
           beat = Math.floor((s.time - q.start) / q.period),
           phase = ((s.time - q.start) / q.period) % 1;
         label.textContent =
-          q.type === "beam" ? "DISPUTA DE KI" : "TROCAÇÃO · GOLPE / DEFESA";
+          q.type === "beam" ? "DISPUTA DE KI" : "TROCAÇÃO · ATAQUE / DEFESA";
         const expected =
-          q.type === "beam" ? "KI" : beat % 2 ? "DEFESA" : "GOLPE";
+          q.type === "beam" ? "KI" : beat % 2 ? "DEFESA" : "ATAQUE";
         hint.textContent =
           expected +
           " no centro da barra · " +
@@ -46,7 +46,7 @@
         bar.style.width = "100%";
         hint.textContent = "Mova a mira · curva limitada por 0,65 s";
         status.dataset.phase = "IMPACTO";
-      } else if (m) {
+      } else if (technicalMove) {
         const stage =
           s.time < m.impact
             ? "PREPARAÇÃO"

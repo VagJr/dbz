@@ -37,13 +37,12 @@
     const boost=e.boosting||state==='boost'||rush;
     const ease=v=>v*v*(3-2*v);
     const m=e.combatAction, clock=e.combatClock||0;
-    const impact=m?.impact??0, activeEnd=m?.activeEnd??impact+.07, end=m?.end??activeEnd+.16;
-    const punch=m?(clock<impact?-.22*ease(Math.max(0,Math.min(1,(clock-(m.start||0))/Math.max(.015,impact-(m.start||0))))):clock<activeEnd?1:1-ease(Math.max(0,Math.min(1,(clock-activeEnd)/Math.max(.015,end-activeEnd))))):cycle<.22?-.22*ease(cycle/.22):cycle<.38?ease((cycle-.22)/.16):cycle<.48?1:1-ease((cycle-.48)/.52);
+    const punch=m?UZBodyGeometry.strikeProgress(m,clock):cycle<.22?-.18*ease(cycle/.22):cycle<.38?-.18+1.18*ease((cycle-.22)/.16):cycle<.48?1:1-ease((cycle-.48)/.52);
     const motion=m?.motion, pose=e.previewPose||motion?.pose||((e.combo===3)?'roundhouse':(e.combo===2)?'cross':'jab');
     const strikeSide=motion?.side||((e.combo||1)%2?1:-1);
     const reach=Math.max(0,punch), kick=['roundhouse','airSpin','airKnee','risingKnee','heelDrop','spinKick','sweep'].includes(pose);
     const movingStrike=hit&&motion?.moving, driving=hit&&['lunge','dashHammer','airDive','flyingCross'].includes(pose);
-    const twist=hit?strikeSide*(punch*(['hook','slipHook','airSpin','bodyHook','spinKick','sweep'].includes(pose)?.65:.32)-.10):guard?-.12:blast?.12:walk?beat*.025:0;
+    const twist=hit?strikeSide*(punch*(['hook','slipHook','airSpin','bodyHook','spinKick','sweep'].includes(pose)?.72:['cross','airCross','flyingCross','lunge','thrust'].includes(pose)?.54:.38)-.10):guard?-.12:blast?.12:walk?beat*.025:0;
     // The overhead camera can still see a face when the fighter turns toward
     // the lower edge of the screen. This is the same rig in the world and UI.
     const cameraFacing=flight?0:e.previewFacing?1:Math.max(0,Math.min(1,(Math.sin(e.angle||0)+.12)/1.12));
@@ -70,7 +69,7 @@
     ellipse(0,6,21*width*shadowSize,11*shadowSize,'#020b1950',null);c.restore();
     c.translate(0,-(heightDisplay-groundDisplay));
     c.scale(scale*metric.scale,scale*metric.scale);c.lineJoin='round';c.lineCap='round';
-    if(charge||form){c.save();c.globalCompositeOperation='lighter';const aura=colors[form]||'#70dbfa';const r=32+(e.chargeRatio||.5)*12;const g=c.createRadialGradient(0,0,7,0,0,r);g.addColorStop(0,aura+'42');g.addColorStop(1,aura+'00');c.fillStyle=g;c.fillRect(-r,-r,r*2,r*2);for(let i=0;i<3;i++){const a=time*2+i*2.1;stroke([[Math.cos(a)*23,Math.sin(a)*18],[Math.cos(a)*29,Math.sin(a)*26]],aura,1.2);}c.restore();}
+    if(charge||form){c.save();const aura=colors[form]||'#70dbfa';const r=30+(e.chargeRatio||.5)*10;const g=c.createRadialGradient(0,0,16,0,0,r);g.addColorStop(0,aura+(hit?'10':charge?'28':'18'));g.addColorStop(1,aura+'00');c.fillStyle=g;c.fillRect(-r,-r,r*2,r*2);if(!reduced)for(let i=0;i<3;i++){const a=time*2+i*2.1;stroke([[Math.cos(a)*24,Math.sin(a)*19],[Math.cos(a)*28,Math.sin(a)*24]],aura+'90',1);}c.restore();}
     c.rotate((e.angle||0)-Math.PI/2+twist+(state==='stun'?Math.sin(time*35)*.07:0));c.scale(width,1);
     if(airborne&&!hit){c.rotate(rising?-.08:.04);c.scale(1,rising?.92:1.04);}
     if(landing>0&&!flight&&!airborne&&!hit){c.scale(1+landing*.08,1-landing*.18);}
@@ -79,7 +78,7 @@
       c.translate(0,hit?Math.max(0,punch)*3:Math.sin(time*4)*.7);
       if(hit)c.rotate(strikeSide*punch*.13);
       if(state==='stun')c.rotate(Math.sin(time*6)*.2);
-    }else if(hit){c.translate(strikeSide*punch*1.4,punch*1.6);}
+    }else if(hit){c.translate(strikeSide*punch*3.1,punch*2.2);}
     if(rush||driving){c.scale(1,flight?1.12:.90);c.translate(0,3);}
     if(hit&&['airSpin','roundhouse','spinKick','sweep'].includes(pose))c.rotate(strikeSide*reach*(pose==='spinKick'||pose==='airSpin'?1.05:.65));
     if(hit&&['uppercut','risingKnee','guardBreak'].includes(pose))c.translate(0,reach*4);
@@ -152,7 +151,10 @@
         }else{elbow=[s*15,2];hand=[s*9,12];}
       }
       if(hit){
-        if(kick){elbow=[s*18,2];hand=[s*22,6+reach*5];}
+        if(kick){
+          // The two arms counterbalance a spinning or rising finisher.
+          elbow=[s*(18+3*reach),2+8*reach];hand=[s*(21+4*reach),6+15*reach];
+        }
         else if(['meteor','airDive','dashHammer','guardBreak'].includes(pose)){elbow=[s*(13-8*reach),12+reach*3];hand=[s*4,24+reach*(pose==='dashHammer'?17:8)];}
         else if(s===strikeSide){
           if(['hook','slipHook','airCross','bodyHook'].includes(pose)){elbow=[s*(22-6*reach),5+reach*(pose==='bodyHook'?5:12)];hand=[s*(25-29*reach),9+(pose==='bodyHook'?12:23)*reach];}
@@ -166,13 +168,21 @@
           else if(pose==='lunge'){elbow=[s*(13-9*reach),8+16*reach];hand=[s*4,12+36*reach];}
           else if(pose==='airJab'){elbow=[s*(15-9*reach),7+14*reach];hand=[s*5,11+33*reach];}
         }
+        else {
+          // The free hand chambers and guards the chin during a jab, then
+          // drives forward to balance the cross in the next combo beat.
+          const follow=m?.key==='link'||['cross','airCross','flyingCross','lunge'].includes(pose);
+          elbow=[s*(follow?16-6*reach:16-2*reach),5+(follow?11:6)*reach];
+          hand=[s*(follow?10-6*reach:10),15+(follow?11:4)*reach];
+          if(punch<0){elbow[1]-=3;hand[1]-=5;}
+        }
       }
       if(state==='stun'){elbow=[s*19,0];hand=[s*23,5];}
       if(rush){elbow=[s*11,flight?18:7];hand=[s*5,flight?32:18];}
       limb([[s*10,2],elbow,hand],d.skin,6.5);
       if(!bare)shape(`M${s*8} 6 L${s*14} 6 L${s*17} 1 L${s*13}-3 L${s*8}-1Z`,d.cloth);
       if(f.has('namek'))stroke([elbow,[elbow[0],elbow[1]+3]],'#d39698',3);
-      hands.push([hand,s]);
+      hands.push([hand,s,elbow]);
     }
     shape('M-15 5 L-16 0 L-11-7 L-9-12 L0-14 L9-12 L11-7 L16 0 L15 5 L8 9 L-8 9Z',suit);
     shape('M7 7 Q14 3 12-7 Q9-13 0-13 L-7-12 Q5-11 6-4Z',shade(suit,-24),null);
@@ -274,11 +284,20 @@
       stroke([[-1,1],[2,1]],shade(glove,-35),.7);stroke([[-2,-2],[1,-2]],shade(glove,20),1);
       c.restore();
     }
-    if(hit&&!reduced&&cycle>.30&&cycle<.53){
-      c.save();c.globalAlpha=(.53-cycle)/.23*.65;
-      stroke([[strikeSide*20,8],[strikeSide*18,21],[strikeSide*7,35]],'#e6f5ff',1.3);
-      stroke([[strikeSide*24,10],[strikeSide*21,23]],'#8edafa',.7);
-      c.restore();
+    if(hit&&!kick&&!reduced&&reach>.18){
+      const activeHand=hands.find(([,side])=>side===strikeSide);
+      if(activeHand){
+        const [hand,,elbow]=activeHand, dx=hand[0]-elbow[0], dy=hand[1]-elbow[1];
+        c.save();c.globalAlpha=Math.min(.36,reach*.4);c.strokeStyle='#eaf7ff';c.lineWidth=1.1;
+        c.beginPath();
+        if(['hook','slipHook','bodyHook','airCross'].includes(pose)){
+          c.moveTo(strikeSide*23,10);c.quadraticCurveTo(strikeSide*27,hand[1]+4,hand[0]+strikeSide*4,hand[1]);
+        }else{
+          c.moveTo(hand[0]-dx*.75+strikeSide*5,hand[1]-dy*.75);
+          c.lineTo(hand[0]+strikeSide*5,hand[1]);
+        }
+        c.stroke();c.restore();
+      }
     }
     if(f.has('halo')){c.save();c.scale(1,.4);c.beginPath();c.ellipse(0,26,20,12,0,0,Math.PI*2);c.strokeStyle='#9ce6f0';c.lineWidth=1.5;c.stroke();c.restore();}
     if(charge||blast){const ki=e.equipped==='galick'?'#caa0ff':'#9aedff';if(state==='chargeAim'||blast){c.save();c.globalCompositeOperation='lighter';c.shadowColor=ki;c.shadowBlur=10;ellipse(0,29,blast?6:3+(e.chargeRatio||0)*3,blast?6:3,ki,null);ellipse(-1,30,2,2,'#ffffff',null);c.restore();}}

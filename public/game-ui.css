@@ -25,11 +25,6 @@
 .action-dock .action[data-action="blast"]{border-color:#8ceffd}
 .action-dock .action[data-action="dash"]{border-color:#c4aaff;background:radial-gradient(circle at 50% 25%,#71529d,#25334d 56%,#101928)}
 .action-dock .action[data-action="guard"]{border-color:#79f6c6;background:radial-gradient(circle at 50% 25%,#177e69,#13453f 56%,#0c2629)}
-.action-dock .action.queued{outline:2px solid #7cecff;outline-offset:2px;filter:brightness(1.22);animation:uz-input-queued .72s ease-in-out infinite alternate}
-@keyframes uz-input-queued{to{outline-color:#ffe28a;filter:brightness(1.5)}}
-.action-dock .action.confirmed{outline:2px solid #7dffc4!important;outline-offset:2px;filter:brightness(1.5);animation:uz-confirm-contact .24s ease-out}
-.action-dock .action[data-combat-result="blocked"]{outline:2px solid #ffc66b!important;outline-offset:2px}
-@keyframes uz-confirm-contact{50%{transform:scale(1.06);filter:brightness(1.55)}}
 .action-dock .action[data-action="cycleTarget"]{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-color:#ffdf94;background:radial-gradient(circle at 50% 25%,#78552c,#233145 60%,#0a1725)}
 .action-dock .action[data-action="kaioken"]{color:#ffd3ca;border-color:#ff8475;background:radial-gradient(circle at 50% 30%,#a92f2f,#381d2c 65%,#131823)}
 .action-dock .action svg{display:block;width:30px;height:30px;margin:auto;filter:drop-shadow(0 0 8px #ecfbff81)}

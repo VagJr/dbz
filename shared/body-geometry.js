@@ -46,6 +46,20 @@
     return { radius, height, mass };
   }
   const kicks = new Set(["roundhouse", "airSpin", "airKnee", "risingKnee", "heelDrop", "spinKick", "sweep"]);
+  function strikeProgress(move, clock) {
+    if (!Number.isFinite(clock) || !Number.isFinite(move?.impact)) return 0;
+    const start = move.start || 0, impact = move.impact;
+    const activeEnd = move.activeEnd ?? impact + .07;
+    const end = move.end ?? activeEnd + .16;
+    const ease = value => { const v = clamp(value, 0, 1); return v * v * (3 - 2 * v); };
+    // The final portion of anticipation is a visible extension into contact.
+    // Explicit collision samples still pass their own progress to rigPose.
+    const extension = impact - Math.min(.095, Math.max(.015, impact - start) * .48);
+    if (clock < extension) return -.18 * ease((clock - start) / Math.max(.015, extension - start));
+    if (clock < impact) return -.18 + 1.18 * ease((clock - extension) / Math.max(.015, impact - extension));
+    if (clock < activeEnd) return 1;
+    return 1 - ease((clock - activeEnd) / Math.max(.015, end - activeEnd));
+  }
   function rigPose(e = {}, move, progress, time = 0) {
     const m = move || e.combatAction || e.moveAction || e.motorMove, motion = m?.motion;
     const state = e.state || "idle", flight = e.mode === "flight" || (e.mode !== "ground" && ["fly", "glide", "boost"].includes(state));
@@ -60,13 +74,11 @@
     let punch = Number.isFinite(progress) ? progress : state === "windup" ? -.12 : state === "recover" ? .35 : hit ? 1 : 0;
     const clock = e.combatClock;
     if (!Number.isFinite(progress) && Number.isFinite(clock) && Number.isFinite(m?.impact)) {
-      const ease = v => v * v * (3 - 2 * v), activeEnd = m.activeEnd ?? m.impact + .07;
-      punch = clock < m.impact ? -.22 * ease(clamp((clock - (m.start || 0)) / Math.max(.015, m.impact - (m.start || 0)), 0, 1)) :
-        clock < activeEnd ? 1 : 1 - ease(clamp((clock - activeEnd) / Math.max(.015, (m.end || activeEnd + .16) - activeEnd), 0, 1));
+      punch = strikeProgress(m, clock);
     }
     const reach = Math.max(0, punch), driving = hit && ["lunge", "dashHammer", "airDive", "flyingCross"].includes(pose);
     const rush = state === "rush" || hit && Math.hypot(e.vx || 0, e.vy || 0) > (flight ? 500 : 260) && punch < 0;
-    const twist = hit ? strikeSide * (punch * (["hook", "slipHook", "airSpin", "bodyHook", "spinKick", "sweep"].includes(pose) ? .65 : .32) - .10) :
+    const twist = hit ? strikeSide * (punch * (["hook", "slipHook", "airSpin", "bodyHook", "spinKick", "sweep"].includes(pose) ? .72 : ["cross", "airCross", "flyingCross", "lunge", "thrust"].includes(pose) ? .54 : .38) - .10) :
       guard ? -.12 : blast ? .12 : walk ? Math.sin(time * 14) * .025 : 0;
     const cameraFacing = flight ? 0 : e.previewFacing ? 1 : clamp((Math.sin(e.angle || 0) + .12) / 1.12, 0, 1);
     const tilt = flight ? .72 : hit ? (driving ? .62 : .32) + reach * (["uppercut", "risingKnee", "guardBreak"].includes(pose) ? .12 : .25) :
@@ -85,7 +97,7 @@
     if (landing > 0 && !flight && !airborne && !hit) scale(1 + landing * .08, 1 - landing * .18);
     if (jumpCrouch && !hit) { scale(1 + jumpCrouch * .035, 1 - jumpCrouch * .13); translate(0, -jumpCrouch * 2); }
     if (flight) { translate(0, hit ? reach * 3 : Math.sin(time * 4) * .7); if (hit) rotate(strikeSide * punch * .13); }
-    else if (hit) translate(strikeSide * punch * 1.4, punch * 1.6);
+    else if (hit) translate(strikeSide * punch * 3.1, punch * 2.2);
     if (rush || driving) { scale(1, flight ? 1.12 : .90); translate(0, 3); }
     if (hit && ["airSpin", "roundhouse", "spinKick", "sweep"].includes(pose)) rotate(strikeSide * reach * (["spinKick", "airSpin"].includes(pose) ? 1.05 : .65));
     if (hit && ["uppercut", "risingKnee", "guardBreak"].includes(pose)) translate(0, reach * 4);
@@ -129,7 +141,7 @@
       if (hit) {
         if (s === strikeSide && !kick) { elbow = [s * (17 - 8 * punch), 3 + 14 * punch]; hand = e.combo === 2 ? [s * (22 - 22 * punch), 8 + 22 * punch] : [s * (15 - 10 * punch), 8 + 29 * punch]; }
         else { elbow = [s * 15, 2]; hand = [s * 9, 12]; }
-        if (kick) { elbow = [s * 18, 2]; hand = [s * 22, 6 + reach * 5]; }
+        if (kick) { elbow = [s * (18 + 3 * reach), 2 + 8 * reach]; hand = [s * (21 + 4 * reach), 6 + 15 * reach]; }
         else if (["meteor", "airDive", "dashHammer", "guardBreak"].includes(pose)) { elbow = [s * (13 - 8 * reach), 12 + reach * 3]; hand = [s * 4, 24 + reach * (pose === "dashHammer" ? 17 : 8)]; }
         else if (s === strikeSide) {
           if (["hook", "slipHook", "airCross", "bodyHook"].includes(pose)) { elbow = [s * (22 - 6 * reach), 5 + reach * (pose === "bodyHook" ? 5 : 12)]; hand = [s * (25 - 29 * reach), 9 + (pose === "bodyHook" ? 12 : 23) * reach]; }
@@ -142,6 +154,11 @@
           else if (pose === "retreatJab") { elbow = [s * (18 - 6 * reach), 3 + 11 * reach]; hand = [s * (17 - 8 * reach), 7 + 25 * reach]; }
           else if (pose === "lunge") { elbow = [s * (13 - 9 * reach), 8 + 16 * reach]; hand = [s * 4, 12 + 36 * reach]; }
           else if (pose === "airJab") { elbow = [s * (15 - 9 * reach), 7 + 14 * reach]; hand = [s * 5, 11 + 33 * reach]; }
+        } else {
+          const follow = m?.key === "link" || ["cross", "airCross", "flyingCross", "lunge"].includes(pose);
+          elbow = [s * (follow ? 16 - 6 * reach : 16 - 2 * reach), 5 + (follow ? 11 : 6) * reach];
+          hand = [s * (follow ? 10 - 6 * reach : 10), 15 + (follow ? 11 : 4) * reach];
+          if (punch < 0) { elbow[1] -= 3; hand[1] -= 5; }
         }
       }
       if (state === "stun") { elbow = [s * 19, 0]; hand = [s * 23, 5]; }
@@ -150,5 +167,5 @@
     }
     return { ...metric, flight, airborne, rising, hit, pose, kick, strikeSide, reach, punch, twist, tilt, limbs, transform };
   }
-  return Object.freeze({ UNIT_SCALE, design, flags, metrics, body, rigPose });
+  return Object.freeze({ UNIT_SCALE, design, flags, metrics, body, strikeProgress, rigPose });
 });

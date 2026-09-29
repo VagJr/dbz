@@ -19,7 +19,7 @@ function arena(rank = "regular", role = "brawler") {
     invuln: 0,
     angle: 0,
   });
-  const e = g.spawn("space", "Rival", "vegeta", p.x + 95, p.y, false, {
+  const e = g.spawn("space", "Rival", "vegeta", p.x + 32, p.y, false, {
     ai: { ...T.ROLES[role], aggroRange: 1100 },
     mode: "flight",
     hp: 1000,
@@ -131,6 +131,7 @@ test("rapid press-release pairs retain at most one followup, and releasing it ne
   g.act(p.id, "attackRelease");
   step(g, 1);
   g.act(p.id, "attackStart");
+  g.act(p.id, "attackRelease");
   step(g, 2);
   assert.equal(p.moveAction.key, "link");
   g.act(p.id, "attackRelease");

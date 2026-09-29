@@ -56,11 +56,12 @@ const aliases = {
   balanced: "duelist",
   ranged: "artillery",
 };
+function archetype(e) {
+  const value = e.ai?.archetype;
+  return aliases[value] || value || "brawler";
+}
 function personality(e) {
-  return (
-    personalities[aliases[e.ai?.archetype] || e.ai?.archetype] ||
-    personalities.brawler
-  );
+  return personalities[archetype(e)] || personalities.brawler;
 }
 function reaction(e) {
   const p=Motor.profile(e);
@@ -145,7 +146,12 @@ function observe(e, target, t, visible) {
   }
 }
 function decide(e, target, t, canAttack, visible) {
-  const b = e.brain || { seen: null };
+  const b = e.brain || (e.brain = { seen: null });
+  if (e.decision === "retreat" && t < (b.retreatUntil || 0)) return "retreat";
+  if (e.decision === "retreat" && t >= (b.retreatUntil || 0)) {
+    e.decision = "position";
+    b.nextThink = Math.min(b.nextThink || t, t);
+  }
   if (t < (b.nextThink || 0))
     return ["breathe", "retreat"].includes(e.decision)
       ? e.decision
@@ -153,8 +159,12 @@ function decide(e, target, t, canAttack, visible) {
   const p = personality(e),
     d = Math.hypot(target.x - e.x, target.y - e.y),
     ai = e.ai || {},
-    melee = Hitboxes.meleeReach(e, e.motorMove || {}) + Hitboxes.body(target).radius + 14,
-    range = ai.rangedRange || 0;
+    // The next jab must not inherit a preceding kick's longer range. Startup
+    // commits only close enough for the engine's short physical step to land.
+    melee = Math.min(Motor.approachReach(e), Hitboxes.meleeReach(e, e.motorMove || {})) +
+      Hitboxes.body(target).radius + 4,
+    range = ai.rangedRange || 0,
+    style = archetype(e);
   const pressure =
     t - (e.pressureHitAt ?? -99) >= reaction(e) &&
     t - (e.pressureHitAt ?? -99) < 1.1
@@ -167,17 +177,19 @@ function decide(e, target, t, canAttack, visible) {
     expectingAnother =
       repeated >= 3 && t - (b.attackTimes?.at(-1) ?? -99) < 0.8,
     threat =
-      (seen?.visible && t - (b.threatAt ?? -99) < 0.65) ||
+      (seen?.visible && t - (b.threatAt ?? -99) < 0.55) ||
       expectingAnother || pressure ? 1 : 0,
     charge = seen?.visible && seen.charging ? 1 : 0,
     recovery = seen?.visible && seen.recovering ? 1 : 0,
     guard = seen?.visible && seen.guarding ? 1 : 0;
   const energy = clamp((e.effort ?? 100) / 100),
     injured = 1 - clamp(e.hp / e.maxHp),
-    near = clamp(1 - (d - melee) / 150);
+    near = clamp(1 - (d - melee) / 150),
+    comboWindow = (e.chainUntil || 0) > t && (e.confirmedHits || 0) > 0;
   const scores = {
-    position: 0.18,
-    breathe: energy < 0.32 ? 0.75 + (1 - energy) * 0.4 : 0,
+    position: 0.16,
+    // Low stamina asks for a short recovery beat, not a full retreat from combat.
+    breathe: energy < 0.28 ? 0.3 + (1 - energy) * 0.3 : 0,
   };
   const allowed = canAttack && visible;
   // A successful timed block creates a single counter opportunity. It still
@@ -192,13 +204,16 @@ function decide(e, target, t, canAttack, visible) {
   if (allowed && energy >= 0.2 && d < melee && Hitboxes.sameLayer(e,target))
     scores.strike =
       p.aggression *
-      (0.68 +
-        0.22 * near +
+      (0.82 +
+        0.24 * near +
         0.2 * charge +
         0.22 * recovery -
         0.18 * guard +
-        ((e.chainUntil || 0) > t ? 0.3 : 0));
-  if (allowed && energy >= 0.3 && range && d < range)
+        (comboWindow ? 0.5 : 0));
+  // Ranged profiles can still use beams, but contact always favors a physical
+  // follow-up so the player can read and answer a real combo string.
+  if (allowed && energy >= 0.3 && range && d >= melee && d < range &&
+      t >= (e.nextProjectile || 0) && t >= (e.reengageUntil || 0))
     scores.projectile =
       p.aggression *
       (0.62 +
@@ -218,14 +233,29 @@ function decide(e, target, t, canAttack, visible) {
       p.guard *
       (0.8 + 0.24 * near + 0.12 * injured + 0.4 * pressure +
         0.14 * repeated);
-  if (visible && threat && d < 620 && energy >= 0.26 && (e.nextEvade || 0) <= t)
+  if (visible && threat && d < 620 && energy >= 0.26 &&
+      (e.nextEvade || 0) <= t && t >= (e.reengageUntil || 0))
     scores.evade =
       p.evade *
-      (0.68 + 0.45 * charge + 0.18 * injured + 0.3 * pressure +
-        0.12 * repeated);
-  if (range && d < melee + 80) scores.retreat = 0.5 + p.caution * 0.45;
-  if (energy < 0.2)
-    scores.retreat = Math.max(scores.retreat || 0, 0.7 + p.caution * 0.25);
+      (0.58 + 0.35 * charge + 0.12 * injured + 0.22 * pressure +
+        0.08 * repeated);
+  // Once a punch lands, the fighter commits to the visible follow-up instead
+  // of repeatedly dodging out of the combo it just opened.
+  if (comboWindow && d < melee && allowed) {
+    if (scores.guard) scores.guard *= 0.4;
+    if (scores.evade) scores.evade *= 0.35;
+  }
+  // Disengage is a rare emergency response: an exhausted, badly wounded
+  // defensive fighter creates one brief opening, then returns to the fight.
+  const defensiveStyle = ["scout", "duelist", "skirmisher", "artillery"].includes(style);
+  if (
+    defensiveStyle && injured > 0.82 && energy < 0.24 && pressure >= 2 &&
+    threat && d < melee + 30 && (e.nextRetreat || 0) <= t &&
+    t >= (e.reengageUntil || 0)
+  ) {
+    scores.retreat = 0.86 + p.caution * 0.08;
+  }
+  if (energy < 0.12) scores.breathe = Math.max(scores.breathe, 0.92);
   // A small preference for the existing choice reduces oscillation at range boundaries.
   if (scores[e.decision] > 0) scores[e.decision] += 0.04;
   const choice = Object.keys(scores).reduce(
@@ -234,11 +264,17 @@ function decide(e, target, t, canAttack, visible) {
   );
   b.scores = scores;
   e.decision = choice;
+  if (choice === "retreat") {
+    e.nextRetreat = t + 5.5;
+    b.retreatUntil = t + .2;
+    e.reengageUntil = t + .85;
+  }
   b.nextThink = t + Motor.profile(e).think;
   return choice;
 }
 module.exports = {
   personalities,
+  archetype,
   personality,
   reaction,
   maintain,
