@@ -211,16 +211,32 @@
   }
   function build(id,cx,cy){
     const chunk=UZOpenWorld.chunk(id,cx,cy),rand=UZ.rng(UZOpenWorld.hash(id,cx,cy)^7813),p=themes[id]||themes.demon;
-    const mountains=[],houses=[],grass=[];
-    for(let i=0;i<7;i++){const x=chunk.x+rand()*S,y=chunk.y+rand()*S,r=85+rand()*100;
-      if(Math.hypot(x-1700,y-1740)>650&&Math.hypot(x-chunk.site.x,y-chunk.site.y)>750&&Math.abs(x-riverX(y,id))>r+170)mountains.push({x,y,r,h:35+rand()*85,phase:rand()*6,snow:id==='earth'&&rand()<.22});}
+    const mountains=chunk.mountains||[],houses=[],grass=[];
     for(const prop of chunk.props)houses.push({...prop,kind:"prop"});
     for(let i=0;i<100;i++){const x=chunk.x+rand()*S,y=chunk.y+rand()*S;if(dry(x,y,id))grass.push({x,y,size:3+rand()*6});}
     const canvas=document.createElement('canvas');canvas.width=canvas.height=(S+PAD*2)/2;const g=canvas.getContext('2d');g.scale(.5,.5);g.translate(PAD-chunk.x,PAD-chunk.y);
     for(let i=0;i<24;i++){const x=chunk.x+rand()*S,y=chunk.y+rand()*S,r=100+rand()*210,grad=g.createRadialGradient(x,y,0,x,y,r);grad.addColorStop(0,p[1]+'40');grad.addColorStop(1,p[1]+'00');g.fillStyle=grad;g.fillRect(x-r,y-r,r*2,r*2);}
     groundDetails(g,id,chunk,p,rand);
+    for(const path of chunk.paths||[]){
+      g.save();g.lineCap='butt';
+      g.strokeStyle=p[2]+'52';g.lineWidth=path.width+14;g.beginPath();g.moveTo(path.x1,path.y1);g.lineTo(path.x2,path.y2);g.stroke();
+      g.strokeStyle=p[3]+'9a';g.lineWidth=path.width;g.stroke();
+      g.strokeStyle='#e3dcc342';g.lineWidth=3;g.setLineDash([18,32]);g.stroke();g.restore();
+    }
     siteDetails(g,chunk.site,p);
+    for(const marker of chunk.landmarkSites||[])if(marker.atlasId!==chunk.site.atlasId)siteDetails(g,marker,p);
     return {chunk,p,canvas,mountains,houses,grass};
+  }
+  function terrainObject(c,o,p,id,clock){
+    if(o.kind==='sandboxObject'){
+      c.save();c.translate(o.x,o.y);c.globalAlpha*=o.ready?1:.35;globalThis.UZWorldKit?.object(c,o,clock,Art.reduceMotion);c.restore();return;
+    }
+    if(o.kind==='landmark'){Art.landmark?.(c,o,id,clock);return;}
+    if(globalThis.UZWorldKit?.terrain(c,o,id,clock))return;
+    if(o.kind==='mountain')relief(c,o,p,id);
+    else if(o.kind==='house')house(c,o,p);
+    else if(o.kind==='tree')tree(c,o,p,clock,id);
+    else{ellipse(c,o.x+4,o.y+5,o.size,o.size*.55,'#20333b30');poly(c,[[o.x-o.size,o.y],[o.x-o.size*.4,o.y-o.size*.7],[o.x+o.size*.4,o.y-o.size*.5],[o.x+o.size,o.y+7]],p[2]);}
   }
   Art.openTerrain=(c,renderer,me,t,width,height)=>{
     const {x,y}=renderer.cam,id=renderer.world,p=themes[id]||themes.demon,clock=renderer.reduced?0:t;
@@ -261,7 +277,8 @@
     for(let i=objects.length-1;i>=0;i--){const o=objects[i],key=id+':'+o.kind+':'+Math.round(o.x)+':'+Math.round(o.y);if(ruined.has(key))objects.splice(i,1);}
     for(const d of me?.debris||[]){if(!visible(d))continue;ellipse(c,d.x,d.y,d.radius,d.radius*.6,'#29343b77');for(let i=0;i<7;i++){const a=i*2.4,rx=d.x+Math.cos(a)*d.radius*.7,ry=d.y+Math.sin(a)*d.radius*.4;poly(c,[[rx-9,ry+5],[rx-4,ry-8],[rx+12,ry+3]],p[2]);}}
     objects.sort((a,b)=>a.y-b.y);
-    for(const o of objects){if(globalThis.UZWorldKit?.terrain(c,o,id,clock))continue;if(o.kind==='mountain')relief(c,o,p,id);else if(o.kind==='house')house(c,o,p);else if(o.kind==='tree')tree(c,o,p,clock,id);else {ellipse(c,o.x+4,o.y+5,o.size,o.size*.55,'#20333b30');poly(c,[[o.x-o.size,o.y],[o.x-o.size*.4,o.y-o.size*.7],[o.x+o.size*.4,o.y-o.size*.5],[o.x+o.size,o.y+7]],p[2]);}}
+    for(const object of objects)terrainObject(c,object,p,id,clock);
+    renderer.foreground=null;
     globalThis.UZWorldKit?.dress(c,entries,id,clock,visible,me);
     // Cascades repeat along the continuous river, with flowing streaks and spray.
     for(let k=Math.floor(start/2200);k<=Math.ceil(end/2200);k++){
@@ -271,10 +288,39 @@
       for(let j=0;j<16;j++){const yy=fy-25+((j*19+clock*95)%94);c.strokeStyle=j%2?'#efffefaa':'#d2fff070';c.lineWidth=2;c.beginPath();c.moveTo(fx-48+j*6,yy);c.lineTo(fx-48+j*6,Math.min(fy+69,yy+18));c.stroke();}
       for(let j=0;j<7;j++)ellipse(c,fx-55+j*18,fy+70+Math.sin(clock*3+j)*4,18,7,'#dff5e478');
     }
-    for(const e of entries){const site=e.chunk.site;if(e.chunk.props.length&&visible(site,180)){c.fillStyle='#e8e0c4b0';c.textAlign='center';c.font='600 12px system-ui';c.fillText(site.name,site.x,site.y-260);}}
+    for(const e of entries){
+      const sites=e.chunk.landmarkSites?.length?e.chunk.landmarkSites:[e.chunk.site];
+      for(const site of sites)if((site.atlasId||e.chunk.props.length)&&visible(site,300)){
+        c.save();c.textAlign='center';c.font='600 12px system-ui';
+        if(site.atlasId){
+          const measured=c.measureText?.(site.name)?.width;
+          const labelWidth=Math.min(310,(Number.isFinite(measured)?measured:String(site.name).length*7)+22);
+          c.fillStyle='#152630df';c.fillRect(site.x-labelWidth/2,site.y-284,labelWidth,25);
+          c.strokeStyle='#ebd8a44a';c.lineWidth=1;c.strokeRect(site.x-labelWidth/2,site.y-284,labelWidth,25);
+          c.fillStyle='#f1e5bf';c.fillText(site.name,site.x,site.y-267);
+        }else{c.fillStyle='#e8e0c4b0';c.fillText(site.name,site.x,site.y-260);}
+        c.restore();
+      }
+    }
     for(const r of UZOpenWorld.regions(id))if(visible(r,200)){c.fillStyle='#f4efcaaa';c.font='600 14px system-ui';c.textAlign='center';c.fillText(r.name,r.x,r.y-210);}
     c.restore();
   };
+  // Only redraw the sprite pixels covering a fighter behind an obstacle.
+  // Foreground fighters are drawn afterwards by the renderer's depth order.
+  Art.openForeground=(c,renderer,actor)=>{
+    const frame=renderer.foreground;
+    if(!frame||frame.world!==renderer.world||!actor)return;
+    const z=Number.isFinite(actor.z)?actor.z:0;
+    const pad=(UZPhysics.body(actor).radius*2.2+16)*(actor.renderScale||1);
+    const visualY=actor.y-z;
+    for(const {object,body}of frame.objects){
+      if(z>=(body.z||0)+(body.topHeight??body.height)-.5||actor.y>=body.y+body.ry)continue;
+      const bounds=body.visualBounds||{left:body.x-body.rx,right:body.x+body.rx,top:body.y-body.height-body.ry,bottom:body.y+body.ry};
+      if(actor.x+pad<bounds.left||actor.x-pad>bounds.right||visualY+pad<bounds.top||visualY-pad>bounds.bottom)continue;
+      c.save();c.beginPath();c.rect(actor.x-pad,visualY-pad,pad*2,pad*2);c.clip();
+      terrainObject(c,object,frame.p,frame.world,frame.clock);c.restore();
+    }
+  };
   const update=FlightUI.update;
-  FlightUI.update=p=>{update(p);if(p.region&&p.world!=='space'&&!p.ascent&&p.altitude<.1)document.getElementById('flight-status').textContent=`${p.region.name} · Nível ${p.region.level}+ · ${p.mode==='ground'?'Solo':'Céu'}`;};
+  FlightUI.update=p=>{update(p);if(p.region&&p.world!=='space'&&!p.ascent&&p.altitude<.1)document.getElementById('flight-status').textContent=`${p.region.name} · Nível ${p.region.level}+ · ${p.mode==='ground'?p.grounded===false?p.vz>0?'Pulo':'Queda':'Solo':'Voo'}`;};
 })();

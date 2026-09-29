@@ -1,6 +1,7 @@
 "use strict";
 // Decisions use delayed observations, not player inputs or future commands.
 const Motor = require("./enemy-motor");
+const Hitboxes = require("../shared/hitboxes");
 const clamp = (v) => Math.max(0, Math.min(1, v));
 const personalities = Object.freeze({
   scout: {
@@ -152,7 +153,7 @@ function decide(e, target, t, canAttack, visible) {
   const p = personality(e),
     d = Math.hypot(target.x - e.x, target.y - e.y),
     ai = e.ai || {},
-    melee = ai.meleeRange || (e.boss ? 175 : 125),
+    melee = Hitboxes.meleeReach(e, e.motorMove || {}) + Hitboxes.body(target).radius + 14,
     range = ai.rangedRange || 0;
   const pressure =
     t - (e.pressureHitAt ?? -99) >= reaction(e) &&
@@ -182,13 +183,13 @@ function decide(e, target, t, canAttack, visible) {
   // A successful timed block creates a single counter opportunity. It still
   // waits for the regular think interval and attack startup.
   if (allowed && energy >= 0.22 &&
-      (e.counterReadyUntil || 0) > t && d < melee + 40) {
+      (e.counterReadyUntil || 0) > t && d < melee + 8 && Hitboxes.sameLayer(e,target)) {
     e.decision = "counter";
     b.scores = { counter: 1 };
     b.nextThink = t + Motor.profile(e).think;
     return "counter";
   }
-  if (allowed && energy >= 0.2 && d < melee)
+  if (allowed && energy >= 0.2 && d < melee && Hitboxes.sameLayer(e,target))
     scores.strike =
       p.aggression *
       (0.68 +

@@ -4,8 +4,9 @@
   const CELL_W = 240;
   const CELL_H = 120;
   const COLS = 7;
-  const MAX_ACTIVE = 16;
+  const MAX_ACTIVE = 3;
   const active = [];
+  let lastWordAt = -Infinity;
   const atlas = new Image();
   let ready = false;
   atlas.decoding = "async";
@@ -47,22 +48,35 @@
     return -1;
   }
 
-  function spawn(e) {
-    if (!ready || !e || !Number.isFinite(e.x) || !Number.isFinite(e.y)) return false;
+  function spawn(e, renderer) {
+    if (!e || !Number.isFinite(e.x) || !Number.isFinite(e.y)) return false;
     const born = performance.now() / 1000;
     const salt = (Number(e.id) || 0) + (Number(e.amount) || 0) + (Number(e.combo) || 0) * 13 + Math.round(e.x + e.y);
     const index = wordFor(e, salt);
     if (index < 0) return false;
-    const close = active.find((v) => v.index === index && v.type === e.type && born - v.born < .085 && Math.hypot(v.x - e.x, v.y - e.y) < 20);
-    if (close) return true;
-    if (active.length >= MAX_ACTIVE) active.shift();
     const heavy = !!e.heavy || e.type === "collisionBurst" || e.type === "break" || e.combo >= 3;
+    // A handled-but-skipped word must not spawn a larger fallback in manga-fx.
+    if (!ready || ["dash", "guard", "clashPulse"].includes(e.type) ||
+        e.type === "slash" && e.combo < 3 ||
+        e.type === "enemyAttack" && !e.counter) return true;
+    // Alternating light impacts give the fight manga punctuation without a
+    // letter on every punch. Heavy blows and counters remain guaranteed.
+    if (e.type === 'hit' && !heavy && Math.abs(salt) % 2 !== 0) return true;
+    if (e.type === 'cast' && (!e.technique || e.technique === 'ki') && !e.charged) return true;
+    const lifetime = reduced.matches ? .55 : heavy ? .58 : .44;
+    for (let i = active.length - 1; i >= 0; i--)
+      if (born - active[i].born >= active[i].life) active.splice(i, 1);
+    if (born - lastWordAt < (heavy ? .32 : .39) || active.length >= (innerWidth < 760 ? 2 : MAX_ACTIVE)) return true;
+    if (active.some(v => born - v.born < .52 && Math.hypot(v.x - e.x, v.y - e.y) < 260)) return true;
+    lastWordAt = born;
+    const side = renderer?.cam && Math.abs(e.x - renderer.cam.x) > 35
+      ? e.x >= renderer.cam.x ? 1 : -1 : salt % 2 ? 1 : -1;
     active.push({
       index, type: e.type, x: e.x, y: e.y, born,
-      life: reduced.matches ? .95 : heavy ? .83 : .67,
+      life: lifetime,
       heavy,
-      side: salt % 2 ? 1 : -1,
-      offset: (salt % 3 - 1) * 12,
+      side,
+      offset: (salt % 3 - 1) * 5,
     });
     return true;
   }
@@ -83,26 +97,30 @@
       const baseX = W / 2 + (item.x - renderer.cam.x) * zoom;
       const baseY = H / 2 + (item.y - renderer.cam.y) * zoom;
       if (baseX < -150 || baseX > W + 150 || baseY < -110 || baseY > H + 110) continue;
-      const travel = reduced.matches ? 0 : item.side * (item.heavy ? 92 : 74) * f;
-      let x = baseX + item.offset + travel;
-      let y = baseY - 44 - (reduced.matches ? 0 : 23 * f);
+      const travel = reduced.matches ? 0 : item.side * 30 * f;
+      let x = baseX + item.side * (item.heavy ? 96 : 80) + item.offset + travel;
+      let y = baseY - 28 - (reduced.matches ? 0 : 18 * f);
       const narrow = W < 760;
-      const width = Math.min(narrow ? 102 : item.heavy ? 142 : 124, W * .27);
+      const width = Math.min(narrow ? item.heavy ? 74 : 62 : item.heavy ? 92 : 76, W * .19);
       const height = width * CELL_H / CELL_W;
       // Keep the small lettering in the fighting area, clear of status HUD corners.
-      x = Math.max(width / 2 + 7, Math.min(W - width / 2 - 7, x));
-      y = Math.max(narrow ? 145 : 84, Math.min(H - (narrow ? 119 : 78), y));
-      if (x < 315 && y < 163 && !narrow) y = 166;
-      if (x > W - 230 && y < 135 && !narrow) y = 138;
+      // Do not clamp a world effect into the player's central viewing area.
+      if (x < width / 2 + 7 || x > W - width / 2 - 7 ||
+          y < (narrow ? 105 : 80) || y > H - (narrow ? 165 : 85)) continue;
+      if (!narrow && (x < 315 && y < 163 || x > W - 230 && y < 135)) continue;
+      if (Math.abs(x - W / 2) < 58 && Math.abs(y - H / 2) < 72) {
+        x += item.side * 95;
+        if (x < width / 2 + 7 || x > W - width / 2 - 7) continue;
+      }
       const pop = reduced.matches ? 1 : f < .16 ? .77 + f / .16 * .23 : 1 - Math.max(0, f - .61) * .18;
       c.save();
       c.translate(x, y);
       if (!reduced.matches) c.rotate(item.side * (-.07 + f * .12));
       c.scale(pop, pop);
-      c.globalAlpha = Math.min(1, f * 10, (1 - f) * (reduced.matches ? 5 : 3.4));
+      c.globalAlpha = .76 * Math.min(1, f * 9, (1 - f) * 3.4);
       if (!reduced.matches && f < .55) {
         c.strokeStyle = "#f8f7f1";
-        c.lineWidth = 2.5;
+        c.lineWidth = 1.4;
         c.beginPath();
         const trail = -item.side * (width / 2 + 5);
         c.moveTo(trail, -7); c.lineTo(trail - item.side * (14 + 12 * f), -7);
@@ -116,5 +134,5 @@
     c.restore();
   }
 
-  window.UZMangaWords = { spawn, draw, clear() { active.length = 0; } };
+  window.UZMangaWords = { spawn, draw, clear() { active.length = 0; lastWordAt = -Infinity; } };
 })();

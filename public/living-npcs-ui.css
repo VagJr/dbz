@@ -1,0 +1,78 @@
+/* A nearby character can be addressed while the world keeps playing. */
+#hud .living-npc-panel {
+  position: absolute;
+  z-index: 13;
+  left: 50%;
+  bottom: 182px;
+  width: min(330px, calc(100vw - 28px));
+  padding: 9px 11px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  color: #eff5f2;
+  border: 1px solid #e6bc7585;
+  border-radius: 10px;
+  background: linear-gradient(110deg, #0d2637ec, #071822e8);
+  box-shadow: 0 5px 18px #0008, inset 0 1px #e3f4ff1f;
+  font-family: "DM Sans", sans-serif;
+}
+#hud .living-npc-panel[hidden] { display: none !important; }
+.living-npc-identity { display: flex; align-items: center; gap: 8px; }
+.living-npc-marker { color: #ffce84; font-size: 25px; line-height: 1; }
+.living-npc-description { min-width: 0; flex: 1; }
+.living-npc-name {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 17px;
+  color: #ffdfab;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.living-npc-activity { display: block; color: #a4c3ce; font-size: 9px; line-height: 13px; }
+.living-npc-relationship { flex: 0 0 82px; text-align: right; }
+.living-npc-confidence { display: block; font-size: 8px; color: #d7e8e5; white-space: nowrap; }
+.living-npc-meter { display: block; height: 3px; margin-top: 5px; border-radius: 3px; background: #284758; }
+.living-npc-meter i { display: block; height: 100%; border-radius: inherit; background: #9de4c2; }
+.living-npc-actions { display: flex; gap: 5px; margin-top: 8px; }
+#hud .living-npc-action {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 5px;
+  pointer-events: auto;
+  touch-action: manipulation;
+  user-select: none;
+  color: #f4e8d0;
+  border: 1px solid #a8cad44f;
+  border-radius: 7px;
+  background: #15384ac9;
+  font: 700 11px "DM Sans", sans-serif;
+  cursor: pointer;
+}
+#hud .living-npc-action.is-follow { border-color: #86d2ac98; color: #c3f4d5; background: #1b483bcc; }
+#hud .living-npc-action.is-train { border-color: #e3b96f84; color: #ffe0a8; background: #553d25c7; }
+#hud .living-npc-action.is-release { color: #c7d9e0; background: #213445d9; }
+#hud .living-npc-action:hover:not(:disabled) { border-color: #ffe3a2; filter: brightness(1.15); }
+#hud .living-npc-action:focus-visible { outline: 2px solid #fff0b0; outline-offset: 2px; }
+#hud .living-npc-action:disabled { opacity: .42; cursor: default; }
+.living-npc-companion { margin: 5px 0 0; color: #92d7b9; font-size: 9px; }
+.living-npc-status { margin: 7px 0 0; max-height: 36px; overflow: hidden; color: #d6e4e6; font-size: 10px; line-height: 17px; }
+.living-npc-companion[hidden], .living-npc-status[hidden] { display: none; }
+#hud .living-npc-panel.is-accompanying { border-color: #92dab375; }
+.living-npc-panel.is-accompanying .living-npc-marker { color: #9de4c2; }
+body.mobile-menu-open #hud .living-npc-panel,
+body.mobile-chat-open #hud .living-npc-panel { visibility: hidden; }
+@media (max-width: 760px) {
+  #hud .living-npc-panel {
+    bottom: calc(280px + env(safe-area-inset-bottom, 0px));
+    width: min(310px, calc(100vw - 28px));
+    padding: 7px 9px;
+  }
+  #hud .living-npc-action { min-height: 44px; font-size: 11px; }
+  .living-npc-status { max-height: 32px; font-size: 9px; line-height: 15px; }
+}
+@media (max-height: 560px) and (min-width: 600px) {
+  #hud .living-npc-panel { left: 12px; bottom: 206px; width: 280px; transform: none; padding: 5px 8px; }
+  .living-npc-status { display: none; }
+  .living-npc-actions { margin-top: 5px; }
+}

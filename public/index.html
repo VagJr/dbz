@@ -7,8 +7,12 @@
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
     <meta name="theme-color" content="#07121e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>UNIVERSE Z — DESTROY THE GALAXY</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/assets/pwa/icon-192.png" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/universe-ui.css?v=celestial1" />
     <link rel="stylesheet" href="/creator.css" />
@@ -18,6 +22,13 @@
     <link rel="stylesheet" href="/production.css">
     <link rel="stylesheet" href="/mmo-windows.css">
     <link rel="stylesheet" href="/party.css">
+    <link rel="stylesheet" href="/mobile-layout.css?v=1">
+    <link rel="stylesheet" href="/world-economy-ui.css">
+    <link rel="stylesheet" href="/living-npcs-ui.css">
+    <link rel="stylesheet" href="/surface-atlas-ui.css">
+    <link rel="stylesheet" href="/pwa-mobile.css">
+    <link rel="stylesheet" href="/mobile-game.css">
+    <link rel="stylesheet" href="/icon-navigation.css?v=2">
   </head>
   <body>
     <canvas
@@ -199,7 +210,7 @@
           <kbd>K / DIREITO</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#ki"></use></svg></span><strong id="technique-name">Disparo de ki</strong
           ><small>Segure: concentrar</small><i></i></button
         ><button class="action" data-action="dash">
-          <kbd>ESPAÇO</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#dash"></use></svg></span><strong>Esquiva</strong><small>Cancela o golpe</small><i></i></button
+          <kbd>ALT</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#dash"></use></svg></span><strong>Esquiva</strong><small>Cancela o golpe</small><i></i></button
         ><button class="action" data-action="guard">
           <kbd>G</kbd><span class="skill-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#guard"></use></svg></span><strong>Defesa</strong
           ><small>No tempo: parry</small><i></i></button
@@ -222,6 +233,7 @@
       <div class="movement-hint">
         <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> mover <span>·</span>
         <kbd>SHIFT</kbd> acelerar <span>·</span><kbd>F</kbd> pousar/decolar
+        <span>·</span><kbd>ESPAÇO</kbd> pular
         <span>·</span> <kbd>Q</kbd> ki
       </div>
       <div class="touch-stick" id="stick" aria-label="Joystick de movimento">
@@ -233,6 +245,8 @@
       <button class="touch-boost" id="touch-boost" aria-label="Acelerar o voo">
         BOOST
       </button>
+      <button class="touch-height" id="touch-ascend" aria-label="Segurar para subir no voo" hidden>↟<span>SUBIR</span></button>
+      <button class="touch-height" id="touch-descend" aria-label="Segurar para descer no voo" hidden>↡<span>DESCER</span></button>
       <section class="chat-box">
         <div id="chat-messages" aria-live="polite"></div>
         <form id="chat-form">
@@ -252,8 +266,8 @@
         ><button data-panel="settings"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/ui-symbols.svg#settings"></use></svg><span>Ajustes</span></button>
       </nav>
       <div id="death-screen" hidden>
-        <span>O treino continua.</span><strong>Recuperando suas forças…</strong
-        ><small>Você retorna ao vilarejo em instantes.</small>
+        <span>A jornada continua.</span><strong>Caminho do Outro Mundo…</strong
+        ><small>Encontre Enma e peça permissão para retornar.</small>
       </div>
     </main>
     <div class="toast" id="toast" role="status" hidden></div>
@@ -276,23 +290,34 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/shared/content.js"></script>
     <script src="/shared/navigation.js"></script>
+    <script src="/shared/universe-atlas.js"></script>
+    <script src="/shared/quests.js"></script>
     <script src="/shared/open-world.js"></script>
+    <script src="/shared/body-geometry.js"></script>
+    <script src="/shared/physics.js"></script>
+    <script src="/shared/wildlife.js"></script>
     <script src="/shared/lore.js"></script>
     <script src="/renderer.js"></script>
     <script src="/combat-art.js"></script>
     <script src="/shared/character-designs.js"></script>
+    <script src="/shared/hitboxes.js"></script>
     <script src="/shared/avatar.js"></script>
     <script src="/character-art.js"></script>
     <script src="/miniature-art.js"></script>
     <script src="/action-atlas.js"></script>
     <script src="/universe-art.js"></script>
     <script src="/open-world-art.js"></script>
+    <script src="/wildlife-art.js"></script>
     <script src="/lore-art.js"></script>
     <script src="/audio.js"></script>
     <script src="/portraits.js"></script>
     <script src="/illustrated-ui.js?v=celestial1"></script>
     <script src="/shared/sandbox.js"></script>
+    <script src="/shared/world-economy.js"></script>
     <script src="/mmo-windows.js"></script>
+    <script src="/world-economy-ui.js"></script>
+    <script src="/living-npcs-ui.js"></script>
+    <script src="/surface-atlas-ui.js"></script>
     <script src="/party-ui.js"></script>
     <script src="/sandbox-ui.js"></script>
     <script src="/creator.js"></script>
@@ -303,10 +328,14 @@
     <script src="/shared/movement.js"></script>
     <script src="/realtime.js"></script>
     <script src="/manga-sfx-grid.js"></script>
-    <script src="/manga-fx.js"></script>
+    <script src="/manga-fx.js?v=upper-strips-2"></script>
     <script src="/cinematic-vfx.js"></script>
     <script src="/combat-hud.js"></script>
+    <script src="/desktop-controls.js"></script>
     <script src="/app.js"></script>
     <script src="/production-ui.js"></script>
+    <script src="/mobile-layout.js?v=1"></script>
+    <script src="/mobile-game.js"></script>
+    <script src="/pwa-install.js"></script>
   </body>
 </html>

@@ -1,5 +1,8 @@
 "use strict";
 const W = require("../shared/open-world");
+const Hitboxes = require("../shared/hitboxes");
+const Physics = require("../shared/physics");
+const CollisionWorld = require("../shared/collision-world");
 module.exports = (Engine) => {
   const act = Engine.prototype.act,
     target = Engine.prototype.target,
@@ -145,13 +148,15 @@ module.exports = (Engine) => {
     if (!this.players.has(b.id) && ["recover", "breathe"].includes(b.state))
       amount *= 1.2;
     if (!this.players.has(b.id) && b.state === "guard") {
-      const facing =
-        Math.cos(Math.atan2(a.y - b.y, a.x - b.x) - b.angle) > 0.17;
+      const facing = Hitboxes.guardArc(b, a);
       if (facing) {
         b.guardMeter = (b.guardMeter ?? 70) - (heavy || a.kiWeave ? 45 : 15);
         if (b.guardMeter > 0) {
           amount *= 0.2;
           blocked = true;
+          // The base damage handler also has an NPC guard path. This hit was
+          // already blocked here, so it must not spend posture or scale damage twice.
+          b.flowGuardHandled = true;
           b.effort = Math.max(0, (b.effort ?? 100) - 10);
           b.counterReadyUntil = this.time + 0.9;
           b.nextOpening = Math.min(b.nextOpening || 0, this.time + 0.12);
@@ -170,7 +175,11 @@ module.exports = (Engine) => {
         }
       }
     }
-    damage.call(this, a, b, amount, heavy);
+    try {
+      damage.call(this, a, b, amount, heavy);
+    } finally {
+      if (blocked) delete b.flowGuardHandled;
+    }
     if (b.hp >= hp) return;
     if (blocked) {
       b.stun = oldStun;
@@ -180,7 +189,7 @@ module.exports = (Engine) => {
       return;
     }
     if (a.combo === 3 && heavy) b.chaseUntil = this.time + 0.65;
-    const guard = b.state === "guard" && b.ki > 0;
+    const guard = b.state === "guard" && b.ki > 0 && Hitboxes.guardArc(b, a);
     if (guard) return;
     // Brief hitstun resistance prevents an infinite party stun lock.
     b.hitChain =
@@ -196,7 +205,7 @@ module.exports = (Engine) => {
           ? "high"
           : "mid"
         : "low",
-      speed = tier === "high" ? 1900 : tier === "mid" ? 950 : 160;
+      speed = (tier === "high" ? 1900 : tier === "mid" ? 950 : 160) * Math.max(.45, Math.min(1.3, Math.sqrt(80 / Physics.body(b).mass)));
     const angle = Math.atan2(b.y - a.y, b.x - a.x);
     b.launch = {
       x: Math.cos(angle) * speed,
@@ -204,7 +213,13 @@ module.exports = (Engine) => {
       left: tier === "high" ? 0.36 : 0.18,
       tier,
     };
-    this.emit("impact", b, { angle, tier, heavy });
+    const finisher = a.attackData?.finisher || a.motorMove?.finisher || a.combo === 3;
+    if (heavy && !a.projectile && finisher && b.world !== "space")
+      Physics.impulse(b, { z: 260 });
+    else if (heavy && !a.projectile && a.heavyStrike && b.world !== "space")
+      Physics.impulse(b, { z: 165 });
+    const contact = a.attackData?.contact || Hitboxes.impactPoint(a, b);
+    this.emit("impact", { ...b, x: contact.x, y: contact.y, z: contact.z }, { angle, tier, heavy, visualZ: contact.visualZ ?? Physics.height(b), part: contact.part || "torso" });
     if (tier === "high" && b.world !== "space") this.impactTerrain(b, tier);
   };
   Engine.prototype.tick = function (dt = 1 / 30) {
@@ -257,14 +272,23 @@ module.exports = (Engine) => {
     }
   };
   Engine.prototype.impactTerrain = function (e, tier) {
+    return;
     this.worldMemory ??= {};
+    const airborneZ = Hitboxes.height(e);
+    const lower = e.owner ? airborneZ - (e.r || 0) : airborneZ;
+    const upper = e.owner ? airborneZ + (e.r || 0) : airborneZ + Hitboxes.body(e).height;
+    const radius = e.owner ? e.r || 8 : Hitboxes.body(e).radius;
+    const planeY = e.y + (e.owner ? e.visualOffset ?? Physics.body(e).height*.59 : 0);
     const cx = Math.floor(e.x / W.CHUNK),
       cy = Math.floor(e.y / W.CHUNK);
     for (let dx = -1; dx <= 1; dx++)
       for (let dy = -1; dy <= 1; dy++)
         for (const o of W.features(e.world, cx + dx, cy + dy)) {
           if (o.kind === "mountain" && tier !== "high") continue;
-          if (Math.hypot(o.x - e.x, (o.y - e.y) * 1.4) > o.radius + 18)
+          const touching = CollisionWorld.collidersFor(o, e.world).some(c => Physics.parts(c).some(part =>
+            part.solid !== false && lower < (part.z || 0) + part.height - .4 &&
+            upper > (part.z || 0) + .4 && Physics.contact(part, e.x, planeY, radius)));
+          if (!touching)
             continue;
           const key = "debris:" + o.id;
           if (this.worldMemory[key]) continue;

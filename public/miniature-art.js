@@ -24,7 +24,12 @@
     const f=new Set(d.flags), form=e.form||meta?.form, hair=d.hair?(colors[form]||d.hair):null;
     const state=e.state||'idle', reduced=Art.reduceMotion===true, time=reduced?0:t;
     const flight=e.mode==='flight'||(e.mode!=='ground'&&['fly','glide','boost'].includes(state));
-    const walk=state==='run', guard=state==='guard', charge=['charge','chargeAim','meleeCharge'].includes(state), hit=!!(e.combatAction&&!['ki','charged','weave'].includes(e.combatAction.key))||state==='attack'||e.clashType==='fists', blast=!!(e.combatAction&&['ki','charged','weave'].includes(e.combatAction.key))||state==='blast'||e.clashType==='beam';
+    const groundZ=Number.isFinite(e.groundZ)?e.groundZ:0, height=Number.isFinite(e.z)?e.z:0;
+    const airborne=!flight&&(e.grounded===false||height>groundZ+2), rising=airborne&&(e.vz||0)>20;
+    const jumpCrouch=!flight&&e.jumpWindup>0?Math.max(0,Math.min(1,1-e.jumpWindup/(UZPhysics?.JUMP_WINDUP||.09))):0;
+    const jumpRise=Math.max(0,Math.min(1,((e.vz||0)+100)/400));
+    const landing=e.landedAt!=null&&e.combatClock!=null?Math.max(0,Math.min(1,1-(e.combatClock-e.landedAt)/.18)):0;
+    const walk=state==='run'&&!airborne, guard=state==='guard', charge=['charge','chargeAim','meleeCharge'].includes(state), hit=!!(e.combatAction&&!['ki','charged','weave'].includes(e.combatAction.key))||state==='attack'||e.clashType==='fists', blast=!!(e.combatAction&&['ki','charged','weave'].includes(e.combatAction.key))||state==='blast'||e.clashType==='beam';
     const beat=Math.sin(time*14), breath=Math.sin(time*3)*.35;
     // Anticipation, fast extension, brief contact, then a slower recovery.
     const cycle=reduced?.42:(time*(e.clashType==='fists'?10:2.8))%1;
@@ -43,7 +48,7 @@
     // the lower edge of the screen. This is the same rig in the world and UI.
     const cameraFacing=flight?0:e.previewFacing?1:Math.max(0,Math.min(1,(Math.sin(e.angle||0)+.12)/1.12));
     const tilt=flight?.72:hit?(driving?.62:.32)+reach*(['uppercut','risingKnee','guardBreak'].includes(pose)?.12:.25):guard?.32+cameraFacing*.18:charge?.28:blast?.62:state==='stun'?.55:.08+cameraFacing*.42;
-    const size=f.has('small')?.84:f.has('giant')?1.42:1, width=f.has('wide')?1.22:f.has('large')?1.15:f.has('slim')?.92:1;
+    const metric=UZBodyGeometry.metrics(e),size=metric.size,width=metric.width;
     const bare=['bare','alien','majin','animal','dragon'].includes(d.rig), suit=bare?d.skin:d.cloth;
     function ellipse(x,y,rx,ry,color,edge=ink,lw=1.7){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=color;c.fill();if(edge){c.strokeStyle=edge;c.lineWidth=lw;c.stroke();}}
     function shape(svg,color,edge=ink,lw=1.7){const p=typeof svg==='string'?cachedPath(svg):svg;c.fillStyle=color;c.fill(p);if(edge){c.strokeStyle=edge;c.lineWidth=lw;c.stroke(p);}}
@@ -57,10 +62,19 @@
         stroke([[a[0]+nx*w*.45,a[1]+ny*w*.45],[b[0]+nx*tip*.4,b[1]+ny*tip*.4]],shade(color,22),1);
       }
     }
-    c.save();c.translate(e.x||0,e.y||0);c.scale(scale*.69*size,scale*.69*size);c.lineJoin='round';c.lineCap='round';
-    ellipse(0,6,21*width,11,'#020b1940',null);
+    const groundDisplay=e.previewModel?0:groundZ;
+    const heightDisplay=e.previewModel?Math.min(22,Math.max(0,height-groundZ)):height;
+    c.save();c.translate(e.x||0,(e.y||0)-groundDisplay);
+    const distance=Math.max(0,height-groundZ), shadowSize=1/(1+distance/420);
+    c.save();c.scale(scale*metric.scale,scale*metric.scale);c.globalAlpha*=Math.max(.28,1-distance/900);
+    ellipse(0,6,21*width*shadowSize,11*shadowSize,'#020b1950',null);c.restore();
+    c.translate(0,-(heightDisplay-groundDisplay));
+    c.scale(scale*metric.scale,scale*metric.scale);c.lineJoin='round';c.lineCap='round';
     if(charge||form){c.save();c.globalCompositeOperation='lighter';const aura=colors[form]||'#70dbfa';const r=32+(e.chargeRatio||.5)*12;const g=c.createRadialGradient(0,0,7,0,0,r);g.addColorStop(0,aura+'42');g.addColorStop(1,aura+'00');c.fillStyle=g;c.fillRect(-r,-r,r*2,r*2);for(let i=0;i<3;i++){const a=time*2+i*2.1;stroke([[Math.cos(a)*23,Math.sin(a)*18],[Math.cos(a)*29,Math.sin(a)*26]],aura,1.2);}c.restore();}
     c.rotate((e.angle||0)-Math.PI/2+twist+(state==='stun'?Math.sin(time*35)*.07:0));c.scale(width,1);
+    if(airborne&&!hit){c.rotate(rising?-.08:.04);c.scale(1,rising?.92:1.04);}
+    if(landing>0&&!flight&&!airborne&&!hit){c.scale(1+landing*.08,1-landing*.18);}
+    if(jumpCrouch&&!hit){c.scale(1+jumpCrouch*.035,1-jumpCrouch*.13);c.translate(0,-jumpCrouch*2);}
     if(flight){
       c.translate(0,hit?Math.max(0,punch)*3:Math.sin(time*4)*.7);
       if(hit)c.rotate(strikeSide*punch*.13);
@@ -94,6 +108,8 @@
       let foot=[s*7,-10-gait*2.4],knee=[s*6,-7];
       if(flight){foot=[s*5,-29+(boost?0:beat*s*.7)];knee=[s*5,-19];}
       if(state==='dash'){foot=[s*10,-19+s*4];knee=[s*9,-11];}
+      if(airborne&&!flight){knee=[s*(7+3*jumpRise),-9+7*jumpRise];foot=[s*(11+2*jumpRise),-20+13*jumpRise];}
+      if(jumpCrouch&&!hit){knee=[s*9,-3];foot=[s*11,-6];}
       if(guard||charge)foot=[s*11,-15];
       if(flight&&(guard||charge)){knee=[s*8,-14];foot=[s*6,-23+s*2];}
       if(hit&&!kick){
@@ -122,6 +138,8 @@
       let elbow=[s*16,1],hand=[s*17,5+(walk?beat*s*4:breath)];
       if(flight){elbow=[s*(state==='glide'?19:15),-6];hand=[s*(state==='glide'?24:14),boost?-17:-11];}
       if(state==='dash'){elbow=[s*17,-3+s*4];hand=[s*20,-7+s*6];}
+      if(airborne&&!flight){elbow=[s*(20-4*jumpRise),1+5*jumpRise];hand=[s*(26-15*jumpRise),7+7*jumpRise];}
+      if(jumpCrouch&&!hit){elbow=[s*18,-2];hand=[s*11,-3];}
       if(guard){elbow=[s*16,10];hand=[s*9,18];}
       if(charge){elbow=[s*18,2];hand=[s*(state==='chargeAim'?8:19),state==='chargeAim'?19:9];}
       if(flight&&guard){elbow=[s*15,11];hand=[s*8,24];}

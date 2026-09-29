@@ -6,9 +6,18 @@ const { chromium } = require(
   process.env.UZ_PLAYWRIGHT_PATH ||
     "C:/Users/vagmi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright",
 );
+async function openCentral(page) {
+  if (await page.locator("#beta-launcher").isVisible())
+    await page.locator("#beta-launcher").click();
+  else {
+    await page.locator(".mobile-menu-toggle").click();
+    await page.locator(".mobile-central").click();
+  }
+}
 (async () => {
   const folder = path.resolve(".preview-data/beta");
   await fs.mkdir(folder, { recursive: true });
+  const captures = await fs.mkdtemp(path.join(folder, "screens-"));
   const app = await start({
     port: 0,
     dataDir: await fs.mkdtemp(path.join(folder, "run-")),
@@ -22,6 +31,7 @@ const { chromium } = require(
       ["landscape", 844, 390, true],
       ["compact", 360, 640, true],
     ]) {
+      if (process.argv[2] && process.argv[2] !== name) continue;
       const ctx = await browser.newContext({
           viewport: { width, height },
           hasTouch: touch,
@@ -37,18 +47,24 @@ const { chromium } = require(
       await page.goto("http://localhost:" + app.server.address().port, {
         waitUntil: "networkidle",
       });
-      await page.screenshot({ path: path.join(folder, name + "-welcome.png") });
+      await page.screenshot({ path: path.join(captures, name + "-welcome.png") });
+      await page.locator("#start-game").click();
       await page.locator("#player-name").fill("Beta " + name);
       await page.locator("#join-button").click();
       await page.locator("#skip-scene").click();
-      await page.locator("#tutorial-dismiss").click();
+      if (await page.locator("#tutorial-dismiss").isVisible())
+        await page.locator("#tutorial-dismiss").click();
+      else {
+        await page.locator(".mobile-objective-expand").click();
+        await page.locator(".mobile-objective-dismiss").click();
+      }
       const p = [...app.engine.players.values()].find(
         (p) => p.name === "Beta " + name,
       );
       app.engine.enemies = [];
       p.invuln = app.engine.time + 10000;
       p.sandbox.discoveries = ["earth:a", "earth:b"];
-      await page.locator("#beta-launcher").click();
+      await openCentral(page);
       for (const tab of [
         "journey",
         "expeditions",
@@ -62,13 +78,18 @@ const { chromium } = require(
         await page.waitForTimeout(120);
         const size = await page
           .locator(".beta-body")
-          .evaluate((e) => ({ w: e.clientWidth, sw: e.scrollWidth }));
+          .evaluate((e) => ({
+            w: e.clientWidth, sw: e.scrollWidth,
+            overflow: [...e.querySelectorAll("*")]
+              .filter((item) => item.getBoundingClientRect().right > e.getBoundingClientRect().right + 1)
+              .slice(0, 6).map((item) => `${item.tagName.toLowerCase()}.${item.className}`),
+          }));
         assert.ok(
           size.sw <= size.w + 1,
-          name + " " + tab + " horizontal overflow",
+          name + " " + tab + " horizontal overflow " + JSON.stringify(size),
         );
         await page.screenshot({
-          path: path.join(folder, name + "-" + tab + ".png"),
+          path: path.join(captures, name + "-" + tab + ".png"),
         });
       }
       const pos = { x: p.x, y: p.y };
@@ -77,8 +98,8 @@ const { chromium } = require(
       await page.waitForTimeout(350);
       await page.keyboard.up("KeyW");
       assert.ok(
-        Math.hypot(pos.x - p.x, pos.y - p.y) < 1,
-        "Central blocks movement",
+        Math.hypot(pos.x - p.x, pos.y - p.y) > 10,
+        "Utility windows preserve movement while playing",
       );
       await page.locator('[data-beta-tab="collection"]').click();
       const cyan = page
@@ -124,13 +145,13 @@ const { chromium } = require(
       await page
         .getByRole("button", { name: "Fechar vida no universo" })
         .click();
-      await page.locator("#beta-launcher").click();
+      await openCentral(page);
       await page
         .locator("#beta-hub")
         .getByRole("button", { name: "Abrir atlas", exact: true })
         .click();
-      await page.locator("#panel").waitFor({ state: "visible" });
-      await page.locator("#close-panel").click();
+      await page.locator("#game-panel-atlas").waitFor({ state: "visible" });
+      await page.locator("#game-panel-atlas header button[aria-label='Fechar janela']").click();
       assert.deepEqual(errors, []);
       assert.deepEqual(missing, []);
       report.push({
@@ -146,7 +167,7 @@ const { chromium } = require(
       await ctx.close();
     }
     await fs.writeFile(
-      path.join(folder, "report.json"),
+      path.join(captures, "report.json"),
       JSON.stringify(report, null, 2),
     );
     console.log(JSON.stringify(report, null, 2));

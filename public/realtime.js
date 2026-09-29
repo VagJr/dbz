@@ -5,41 +5,16 @@
       require("../shared/movement"),
       require("../shared/content"),
       require("../shared/open-world"),
+      require("../shared/physics"),
     );
-  else root.UZRealtime = factory(root.UZMovement, root.UZ, root.UZOpenWorld);
-})(globalThis, (Movement, Content, World) => {
-  const terrain = new Map(),
-    maps = new Map();
-  function obstacles(p) {
-    const cx = Math.floor(p.x / World.CHUNK),
-      cy = Math.floor(p.y / World.CHUNK),
-      out = [];
-    for (let dx = -1; dx <= 1; dx++)
-      for (let dy = -1; dy <= 1; dy++) {
-        const key = `${p.world}:${cx + dx}:${cy + dy}`;
-        if (!terrain.has(key)) {
-          terrain.set(
-            key,
-            World.features(p.world, cx + dx, cy + dy).filter(
-              (o) =>
-                o.kind === "mountain" ||
-                (o.kind === "prop" &&
-                  (o.sheet === "nature" ||
-                    (o.sprite >= 126 && o.sprite <= 167))),
-            ),
-          );
-          if (terrain.size > 64) terrain.delete(terrain.keys().next().value);
-        }
-        out.push(...terrain.get(key));
-      }
-    return out;
-  }
+  else root.UZRealtime = factory(root.UZMovement, root.UZ, root.UZOpenWorld, root.UZPhysics);
+})(globalThis, (Movement, Content, World, Physics) => {
   class Presentation {
     constructor() {
       this.rtt = 0;
       this.frames = [];
       this.input = { x: 0, y: 0, angle: 0 };
-      this.offset = { x: 0, y: 0 };
+      this.offset = { x: 0, y: 0, z: 0 };
       this.last = null;
       this.pending = null;
       this.hold = null;
@@ -64,6 +39,7 @@
       }
       if (p.stun > state.time || p.clash || p.roundLocked) this.hold = null;
       this.predicted = { ...p, stun: p.stun || 0 };
+      Physics.ensure(this.predicted);
       if (!reset && this.connected && this.rtt < 600) {
         // Predict only a bounded one-way flight time; never alter HP/hit results.
         for (
@@ -78,30 +54,45 @@
           );
       }
       this.offset = reset
-        ? { x: 0, y: 0 }
+        ? { x: 0, y: 0, z: 0 }
         : {
             x: old.x + this.offset.x - this.predicted.x,
             y: old.y + this.offset.y - this.predicted.y,
+            z: (old.z || 0) + (this.offset.z || 0) - this.predicted.z,
           };
       if (Math.hypot(this.offset.x, this.offset.y) > 160)
-        this.offset = { x: 0, y: 0 };
+        this.offset = { x: 0, y: 0, z: 0 };
+      const jumpCorrection = Math.max(72, Math.min(180,
+        Math.max(Math.abs(old?.vz || 0), Math.abs(p.vz || 0)) * Math.max(.12, Math.min(.3, this.rtt / 1000))));
+      this.offset.z = Math.max(-jumpCorrection, Math.min(jumpCorrection, this.offset.z));
+      // An accepted landing must put the feet on the visible surface at once;
+      // easing an old airborne offset would make the model hover after impact.
+      if (this.predicted.grounded && this.predicted.mode !== "flight") this.offset.z = 0;
       this.frames.push({ state, at: now });
       if (this.frames.length > 6) this.frames.shift();
       if (
         this.pending &&
-        (p.combatAction || p.state === "dead" || now - this.pending.at > 0.35)
+        (p.state === "dead" ||
+          (p.combatAction && p.combatAction.start >= this.pending.move.start - 0.18) ||
+          now - this.pending.at > (this.pending.queued ? 1500 : 350))
       )
         this.pending = null;
     }
     step(p, dt, t) {
+      const cover = Physics.colliders(p.world, p.x, p.y,
+        this.current?.self.physicsColliders || []);
+      const debris = new Set((this.current?.self.debris || []).map(o => o.id));
+      const colliders = debris.size ? cover.filter(o => !debris.has(o.id) && !debris.has(o.sourceId)) : cover;
       if (
         p.state === "dead" ||
         p.stun > t ||
         p.clash ||
         p.roundLocked ||
         p.launch
-      )
+      ) {
+        Physics.step(p, dt, colliders, { input: this.input, time: t });
         return;
+      }
       const input = this.input;
       const locked =
         (p.combatAction && t < p.combatAction.end) ||
@@ -136,40 +127,8 @@
         Math.hypot(p.x - 16000, p.y - 1740) < 300;
       const dx = p.vx * dt * (heavy ? 0.65 : 1),
         dy = p.vy * dt * (heavy ? 0.65 : 1);
-      if (p.mode === "flight" || p.world === "space") {
-        p.x += dx;
-        p.y += dy;
-        return;
-      }
-      if (!maps.has(p.world)) maps.set(p.world, Content.worldData(p.world));
-      if (maps.size > 32) maps.delete(maps.keys().next().value);
-      const cover = obstacles(p),
-        debris = new Set((this.current.self.debris || []).map((o) => o.id));
-      const blocked = (x, y) =>
-        cover.some(
-          (o) =>
-            !debris.has(o.id) &&
-            Math.hypot(x - o.x, (y - o.y) * 1.45) < o.radius * 0.76 + 16,
-        );
-      const move = (x, y) => {
-        for (const b of maps.get(p.world).buildings)
-          if (Math.abs(x - b.x) < 70 && Math.abs(y - b.y) < 60) {
-            if (Math.abs(p.x - b.x) >= 70) x = p.x;
-            else y = p.y;
-          }
-        p.x = Math.max(-1e8, Math.min(1e8, x));
-        p.y = Math.max(-1e8, Math.min(1e8, y));
-      };
-      const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 22));
-      for (let i = 0; i < n; i++) {
-        const x = p.x + dx / n,
-          y = p.y + dy / n;
-        if (!blocked(x, y)) move(x, y);
-        else {
-          if (!blocked(x, p.y)) move(x, p.y);
-          if (!blocked(p.x, y)) move(p.x, y);
-        }
-      }
+      Physics.move(p, dx, dy, colliders);
+      Physics.step(p, dt, colliders, { input, time: t, gravityScale: heavy ? 1.6 : 1 });
     }
     sample(now) {
       if (!this.current) return null;
@@ -184,13 +143,20 @@
       const fade = Math.exp(-22 * elapsed);
       this.offset.x *= fade;
       this.offset.y *= fade;
+      this.offset.z *= Math.exp(-12 * elapsed);
       const self = {
         ...this.current.self,
         ...this.predicted,
         x: this.predicted.x + this.offset.x,
         y: this.predicted.y + this.offset.y,
+        z: Math.max(this.predicted.groundZ || 0, this.predicted.z + this.offset.z),
       };
-      if (this.pending && now - this.pending.at < 0.25 && !self.combatAction) {
+      const serverNow = this.current.time + Math.max(0, now - this.arrived) / 1000;
+      if (
+        this.pending && now - this.pending.at < (this.pending.queued ? 1500 : 350) &&
+        serverNow >= this.pending.move.start &&
+        (!self.combatAction || serverNow >= self.combatAction.end)
+      ) {
         self.combatAction = this.pending.move;
         self.state = "attack";
       }
@@ -208,7 +174,7 @@
       }
       const ratio =
         a === b ? 1 : Math.max(0, Math.min(1, (target - a.at) / (b.at - a.at)));
-      const interpolate = (list, before) => {
+      const interpolate = (list = [], before = []) => {
         const old = new Map(before.map((e) => [e.id, e]));
         return list.map((e) => {
           if (e.id === self.id) return self;
@@ -218,6 +184,9 @@
             ...e,
             x: prev.x + (e.x - prev.x) * ratio,
             y: prev.y + (e.y - prev.y) * ratio,
+            z: (prev.z || 0) + ((e.z || 0) - (prev.z || 0)) * ratio,
+            vz: (prev.vz || 0) + ((e.vz || 0) - (prev.vz || 0)) * ratio,
+            groundZ: (prev.groundZ || 0) + ((e.groundZ || 0) - (prev.groundZ || 0)) * ratio,
           };
         });
       };
@@ -226,25 +195,38 @@
         self,
         enemies: interpolate(b.state.enemies, a.state.enemies),
         players: interpolate(b.state.players, a.state.players),
+        npcs: interpolate(b.state.npcs, a.state.npcs),
+        wildlife: interpolate(b.state.wildlife, a.state.wildlife),
         presentation: true,
       };
     }
     intent(action, now, moves) {
-      const held = this.hold ? now - this.hold.at : 0;
+      if (action === "jump" && this.predicted && this.current) {
+        if (this.predicted.state !== "dead" && this.predicted.stun <= this.current.time &&
+            !this.predicted.clash && !this.predicted.roundLocked && !this.predicted.combatAction) Physics.jump(this.predicted);
+        return;
+      }
+      const held = this.hold ? (now - this.hold.at) / 1000 : 0;
       if (["cancelCharge", "attackRelease", "blast"].includes(action))
         this.hold = null;
+      if (!this.current) return;
+      const self = this.current.self;
+      const serverNow = this.current.time + Math.max(0, now - this.arrived) / 1000;
+      const currentMove = self.combatAction;
+      const queueRoom = !self.queuedAction || (self.queuedAction.count || 1) < 2;
+      const canQueue = !!currentMove && queueRoom &&
+        (["jab", "link", "finisher"].includes(currentMove.key) ||
+          currentMove.end - serverNow <= 0.18 ||
+          (currentMove.confirmed && ["jab", "link"].includes(currentMove.key)));
       if (
-        !this.current ||
-        this.current.self.stun > this.current.time ||
-        this.current.self.state === "dead" ||
-        this.current.self.combatAction ||
-        this.current.self.roundLocked
+        self.stun > serverNow || self.state === "dead" || self.roundLocked ||
+        (currentMove && !canQueue)
       )
         return;
       if (action === "attackStart" || action === "blastStart") {
         if (
           action === "blastStart" &&
-          this.current.self.cooldowns.blast > this.current.time
+          self.cooldowns.blast > serverNow
         )
           return;
         this.hold = {
@@ -256,10 +238,10 @@
       if (action !== "attackRelease" && action !== "blast") return;
       if (
         action === "blast" &&
-        this.current.self.cooldowns.blast > this.current.time
+        self.cooldowns.blast > serverNow
       )
         return;
-      const combo = this.current.self.comboConfirmed || 0;
+      const combo = self.comboConfirmed || 0;
       const key =
           action === "blast"
             ? held >= 0.55
@@ -275,9 +257,10 @@
                   ? "finisher"
                   : "jab",
         m = moves[key];
-      const time = this.current.time + Math.max(0, now - this.arrived);
+      const time = Math.max(serverNow, currentMove?.end || 0);
       this.pending = {
         at: now,
+        queued: canQueue,
         move: {
           key,
           name: m.name,
@@ -287,6 +270,13 @@
           end: time + m.startup + m.active + m.recovery,
         },
       };
+    }
+    rejectIntent(action, requestedAt) {
+      if (this.pending && Math.abs(this.pending.at - requestedAt) < 2)
+        this.pending = null;
+      if ((action === "attackStart" || action === "blastStart") &&
+          this.hold && Math.abs(this.hold.at - requestedAt) < 2)
+        this.hold = null;
     }
   }
   return { Presentation };

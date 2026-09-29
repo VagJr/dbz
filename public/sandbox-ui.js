@@ -552,24 +552,10 @@
       contextAction();
     }
   });
-  // Draw in world coordinates using the same camera as the battle renderer.
-  const draw = Art.Renderer.prototype.draw;
-  Art.Renderer.prototype.draw = function (snapshot, input, t) {
-    draw.call(this, snapshot, input, t);
-    if (
-      !snapshot?.sandbox ||
-      snapshot.self.world === "space" ||
-      snapshot.self.altitude > 0.1
-    )
-      return;
-    const c = this.c,
-      z = this.zoom,
-      dpr = Math.min(devicePixelRatio || 1, 2);
-    c.save();
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    c.translate(innerWidth / 2, innerHeight / 2);
-    c.scale(z, z);
-    c.translate(-this.cam.x, -this.cam.y);
+  // Scene objects belong below the actor pass; only interaction labels are
+  // drawn afterwards. A built roof must not paint over a fighter above it.
+  function drawSandboxObjects(c, snapshot, t, geometry) {
+    const z = this.zoom;
     for (const o of snapshot.sandbox.objects) {
       if (
         Math.abs(o.x - this.cam.x) > innerWidth / z / 2 + 100 ||
@@ -578,6 +564,7 @@
         continue;
       c.save();
       c.translate(o.x, o.y);
+      if (geometry) {
       c.globalAlpha = o.ready ? 1 : 0.35;
       c.fillStyle = "#00142166";
       c.beginPath();
@@ -633,7 +620,8 @@
         c.ellipse(0, 11, 42, 16, 0, 0, Math.PI * 2);
         c.stroke();
       }
-      if (near(o) < 210 || o.id === tracked) {
+      }
+      if (!geometry && (near(o) < 210 || o.id === tracked)) {
         c.globalAlpha = 1;
         c.font = "600 12px system-ui";
         c.textAlign = "center";
@@ -642,7 +630,7 @@
         c.fillStyle = "#e4f8ee";
         c.fillText(o.name, 0, -48);
       }
-      if (o.id === tracked) {
+      if (!geometry && o.id === tracked) {
         c.strokeStyle = "#ffdb8d";
         c.lineWidth = 2;
         c.beginPath();
@@ -657,6 +645,39 @@
       }
       c.restore();
     }
+  }
+  Art.sandboxTerrain = function(c, renderer, snapshot, t) {
+    if (!snapshot?.sandbox || snapshot.self.world === "space" || snapshot.self.altitude > .1) return;
+    drawSandboxObjects.call(renderer, c, snapshot, t, true);
+    const frame = renderer.foreground;
+    if (!frame) return;
+    const physical = snapshot.self.physicsColliders || [];
+    for (const object of snapshot.sandbox.objects) {
+      if (object.type === "resource") continue;
+      if(Math.abs(object.x-renderer.cam.x)>innerWidth/renderer.zoom/2+170||Math.abs(object.y-renderer.cam.y)>innerHeight/renderer.zoom/2+170)continue;
+      const sprite=C.items[object.kind]?.sprite;
+      const metadata=sprite?.sheet==='furniture'?{sheet:sprite.sheet,sprite:sprite.index}:{};
+      const row=Math.floor((metadata.sprite??0)/14);
+      const size=row===10||['camp','gravity'].includes(object.kind)?145:110;
+      const body = physical.find(b => b.id === object.id || b.sourceId === object.id)
+        || UZCollisionWorld.colliderFor({...object,...metadata,size},snapshot.self.world);
+      if (!body || body.solid === false || body.height < 16) continue;
+      frame.objects.push({object:{...object,kind:"sandboxObject"}, body});
+    }
+    frame.objects.sort((a,b)=>a.body.y+a.body.ry-b.body.y-b.body.ry);
+  };
+  // Draw interaction markers in world coordinates with the battle camera.
+  const draw = Art.Renderer.prototype.draw;
+  Art.Renderer.prototype.draw = function (snapshot, input, t) {
+    draw.call(this, snapshot, input, t);
+    if (!snapshot?.sandbox || snapshot.self.world === "space" || snapshot.self.altitude > .1) return;
+    const c = this.c, z = this.zoom, dpr = Math.min(devicePixelRatio || 1, 2);
+    c.save();
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.translate(innerWidth / 2, innerHeight / 2);
+    c.scale(z, z);
+    c.translate(-this.cam.x, -this.cam.y);
+    drawSandboxObjects.call(this, c, snapshot, t, false);
     const job = snapshot.self.sandboxJob;
     if (job) {
       c.strokeStyle = "#ffdb8d";

@@ -7,6 +7,14 @@ const { chromium } = require(
   process.env.UZ_PLAYWRIGHT_PATH ||
     "C:/Users/vagmi/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright",
 );
+async function openCentral(page) {
+  if (await page.locator("#beta-launcher").isVisible())
+    await page.locator("#beta-launcher").click();
+  else {
+    await page.locator(".mobile-menu-toggle").click();
+    await page.locator(".mobile-central").click();
+  }
+}
 (async () => {
   const dir = path.resolve(".preview-data/beta");
   await fs.mkdir(dir, { recursive: true });
@@ -23,6 +31,7 @@ const { chromium } = require(
       ["landscape", 844, 390],
       ["compact", 360, 640],
     ]) {
+      if (process.argv[2] && process.argv[2] !== name) continue;
       const context = await browser.newContext({
           viewport: { width: w, height: h },
           hasTouch: name !== "desktop",
@@ -32,10 +41,16 @@ const { chromium } = require(
         errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
       await page.goto("http://localhost:" + app.server.address().port);
+      await page.locator("#start-game").click();
       await page.locator("#player-name").fill("Dojo " + name);
       await page.locator("#join-button").click();
       await page.locator("#skip-scene").click();
-      await page.locator("#tutorial-dismiss").click();
+      if (await page.locator("#tutorial-dismiss").isVisible())
+        await page.locator("#tutorial-dismiss").click();
+      else {
+        await page.locator(".mobile-objective-expand").click();
+        await page.locator(".mobile-objective-dismiss").click();
+      }
       const p = [...app.engine.players.values()].find(
         (p) => p.name === "Dojo " + name,
       );
@@ -45,7 +60,7 @@ const { chromium } = require(
       p.altitude = 0;
       p.invuln = 1e9;
       Object.assign(p, app.engine.maps[p.world].mentor);
-      await page.locator("#beta-launcher").click();
+      await openCentral(page);
       await page.locator('[data-beta-tab="combat"]').click();
       await page
         .getByRole("button", { name: "Treinar Artilharia", exact: true })
@@ -85,7 +100,7 @@ const { chromium } = require(
       }
       assert.ok(windup, "visible windup");
       assert.ok(projectile, "visible projectile");
-      await page.locator("#beta-launcher").click();
+      await openCentral(page);
       await page.locator('[data-beta-tab="combat"]').click();
       await page
         .getByRole("button", { name: "Encerrar sparring", exact: true })

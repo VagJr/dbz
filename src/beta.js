@@ -89,7 +89,7 @@ module.exports = (Engine) => {
         p.hp < 2 ||
         p.training ||
         p.expedition ||
-        this.time - p.lastHit < 5
+        ((p.lastHit || 0) > 0 && this.time - p.lastHit < 5)
       )
         return bad("Recupere-se e encerre a atividade atual primeiro.");
       if (

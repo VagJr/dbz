@@ -3,7 +3,7 @@
 // stays client-side; the server only sends combat events and technique names.
 (() => {
   const notes = [], panels = [], images = new Map();
-  let lastBasicCast = -Infinity;
+  let lastPanelAt = -Infinity;
   const page = "#f7f3e8", ink = "#111923";
   const stripSources = {
     goku: "/assets/manga/goku-strike.jpg",
@@ -21,28 +21,26 @@
     weave: "Ruptura de ki",
   };
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  const mobile = matchMedia("(max-width: 760px), (pointer: coarse) and (max-height: 600px)");
+  const topPanels = [...document.querySelectorAll("#hud .player-card, #hud .radar-card, #flight-button, #hud .target-card, #hud .quest-card, #hud .nav-telemetry, .topbar .location")];
+  function panelLayout() {
+    const W = innerWidth, H = innerHeight, compact = mobile.matches;
+    const landscape = W > H;
+    let w = compact ? Math.min(landscape ? W * .42 : W * .86, 340) : Math.min(W * .46, 580);
+    let h = w * 54 / 240;
+    const x = 0;
+    let y = compact ? Math.max(8, Math.min(H - h - 8, H * .70)) : Math.max(76, Math.min(100, H * .1));
+    if (!compact) {
+      const boundsList = topPanels.map(panel => panel.getBoundingClientRect()).filter(bounds => bounds.width && bounds.height);
+      for (const bounds of boundsList)
+        if (bounds.bottom < H * .42 && bounds.right > x && bounds.left < x + w)
+          y = Math.max(y, bounds.bottom + 10);
+    }
+    return { W, H, w, h, x, y };
+  }
   const upper = (value, limit = 38) => String(value || "").trim().replace(/\s+/g, " ").toLocaleUpperCase("pt-BR").slice(0, limit);
   function techniqueName(e) {
     return upper(e.techniqueName || techniqueNames[e.technique] || "Disparo de ki", 28);
-  }
-  function sound(e) {
-    const n = Number(e.id) || 0;
-    switch (e.type) {
-      case "hit":
-        if (e.projectile) return e.heavy ? "BOOOOM!!!" : "BAMMM!!";
-        if (e.heavy || e.combo >= 3) return "SMMSHH!!!";
-        return e.combo === 2 || n % 3 === 0 ? "PUNCHHH!!" : "THWACK!!";
-      case "cast": return e.charged ? "AHHHHH!!!" : "HAAAH!!";
-      case "transform": return "AAAAHHHH!!!";
-      case "parry": return "CLANG!!";
-      case "break": return "KRAAASH!!";
-      case "guard": return "THUD!!";
-      case "dodge": return "FWOOSH!!";
-      case "collisionBurst": return "BOOOOM!!!";
-      case "enemyAttack": return e.counter ? "HAAH!!" : "HYAAH!!";
-      case "slash": return e.combo === 3 ? "PUNCHHH!!" : "";
-      default: return "";
-    }
   }
   function panelLabel(e) {
     if (e.type === "cast") return techniqueName(e) + "!";
@@ -64,38 +62,38 @@
     return art;
   }
   for (const skin of ["goku", "krillin", "piccolo", "buu"]) artFor(skin);
-  function effect(e) {
+  function effect(e, renderer) {
     const hasPosition = Number.isFinite(e.x) && Number.isFinite(e.y);
     if (!hasPosition) return false;
     const now = performance.now() / 1000;
     const trainingText = /^(BOM TIMING|BUSQUE O RITMO|TREINO CONCLUÍDO)/.test(e.text || "");
-    const letter = trainingText ? upper(e.text, 28) : sound(e);
-    const atlasWord = !trainingText && !!window.UZMangaWords?.spawn(e);
+    const letter = trainingText ? upper(e.text, 28) : "";
+    const atlasWord = !trainingText && !!window.UZMangaWords?.spawn(e, renderer);
+    const stateText = e.type === "break" && /GUARDA|RUPTURA/.test(e.text || "")
+      ? "GUARDA QUEBRADA" : e.type === "parry" && /PERFEITO|CONTRA|ESQUIVA PRECISA/.test(e.text || "")
+        ? upper(e.text, 21) : "";
     const detail = e.type === "hit" && Number.isFinite(e.amount) ? String(e.amount)
-      : e.type === "cast" && (!atlasWord || e.technique === "ki") ? techniqueName(e)
-        : !atlasWord && ["transform", "parry", "break", "guard", "dodge"].includes(e.type)
-          ? upper(e.text, 27) : "";
-    const noteLetter = atlasWord ? "" : letter;
+      : stateText;
+    const noteLetter = letter;
     if ((noteLetter || detail) && !notes.some((n) => n.type === e.type && n.letter === noteLetter && now - n.born < .1 && Math.hypot(n.x - e.x, n.y - e.y) < 24)) {
-      if (notes.length >= 28) notes.shift();
+      if (notes.length >= 8) notes.shift();
       notes.push({ ...e, letter: noteLetter, detail, sprite: atlasWord,
-        born: now, life: e.type === "hit" ? .92 : 1.1 });
+        side: (Number(e.id) || 0) % 2 ? 1 : -1,
+        born: now, life: e.type === "hit" ? .55 : .7 });
     }
     const basicCast = e.type === "cast" && (e.technique === "ki" || !e.technique);
-    const dramatic = (e.type === "cast" && (!basicCast || e.charged || now - lastBasicCast > 3)) ||
-      ["transform", "collisionBurst"].includes(e.type) ||
-      e.type === "hit" && e.heavy || e.type === "slash" && e.combo === 3 ||
-      e.type === "enemyAttack" && e.counter;
-    if (dramatic && e.skin && !reduced.matches) {
-      // Reserve large panels for major moves; short attacks keep the battlefield clear.
-      const priority = e.type === "cast" || e.type === "transform" ? 3 : e.type === "hit" && e.heavy ? 2 : 1;
+    const dramatic = e.type === "transform" || e.type === "cast" && (!basicCast || e.charged) ||
+      e.type === "slash" && e.combo >= 3 || e.type === "enemyAttack" && e.counter;
+    if (dramatic && e.skin && now - lastPanelAt > (mobile.matches ? 3 : 2.6)) {
+      // A single strip accents techniques, finishers and counters without stacking.
+      const priority = e.type === "transform" || e.charged ? 3 : e.type === "cast" ? 2 : 1;
       const current = panels[0];
       const art = artFor(e.skin);
       if (art && (!current || now - current.born > current.life * .68 || priority > current.priority && now - current.born > .16)) {
         panels.length = 0;
         panels.push({ ...e, label: panelLabel(e), priority,
-          art, born: now, life: 1.2 });
-        if (basicCast) lastBasicCast = now;
+          art, born: now, life: mobile.matches ? 1.15 : 1.4, layout: panelLayout() });
+        lastPanelAt = now;
       }
     }
     return !!letter || !!detail || dramatic || atlasWord;
@@ -107,11 +105,11 @@
     for (let i = notes.length - 1; i >= 0; i--) {
       const n = notes[i], f = (time - n.born) / n.life;
       if (f >= 1 || f < 0) { notes.splice(i, 1); continue; }
-      const x = W / 2 + (n.x - renderer.cam.x) * zoom;
-      const y = H / 2 + (n.y - renderer.cam.y) * zoom - 38 - f * 55 - (n.sprite ? 52 : 0);
+      const x = W / 2 + (n.x - renderer.cam.x) * zoom + n.side * (n.type === 'hit' ? 34 : 65);
+      const y = H / 2 + (n.y - renderer.cam.y) * zoom - 31 - f * 32;
       if (x < -130 || x > W + 130 || y < -80 || y > H + 50) continue;
       const label = n.letter;
-      const size = n.type === "hit" ? n.heavy ? 35 : 28 : label.length > 18 ? 20 : 29;
+      const size = n.type === "hit" ? 18 : label.length > 18 ? 14 : 19;
       c.save();
       c.translate(x + (reduced.matches ? 0 : Math.sin(f * 15) * 1.8), y);
       c.rotate(n.heavy ? -.11 : -.04);
@@ -121,10 +119,10 @@
       const measured = c.measureText(label).width;
       const width = Math.min(220, measured);
       c.scale(Math.min(1, 220 / Math.max(1, measured)), 1);
-      c.globalAlpha = Math.min(1, (1 - f) * 2.2);
+      c.globalAlpha = .86 * Math.min(1, (1 - f) * 2.2);
       c.lineJoin = "round";
       if (label) {
-        c.strokeStyle = page; c.lineWidth = 7;
+        c.strokeStyle = page; c.lineWidth = 4;
         c.strokeText(label, 0, -size * .36);
         c.strokeStyle = ink; c.lineWidth = 1.5;
         c.strokeText(label, 0, -size * .36);
@@ -132,6 +130,16 @@
         c.fillText(label, 0, -size * .36);
       }
       if (n.detail && n.detail !== label) {
+        if (n.type === 'hit') {
+          c.font = "900 18px Impact, 'Barlow Condensed', sans-serif";
+          c.strokeStyle = ink;
+          c.lineWidth = 3;
+          c.strokeText(n.detail, 0, 0);
+          c.fillStyle = n.heavy ? '#ffe09b' : page;
+          c.fillText(n.detail, 0, 0);
+          c.restore();
+          continue;
+        }
         c.font = "900 11px 'Barlow Condensed', sans-serif";
         const detailWidth = Math.min(205, c.measureText(n.detail).width + 14);
         const detailY = n.sprite ? 0 : size * .2;
@@ -159,14 +167,13 @@
       if (f >= 1 || f < 0) { panels.splice(i, 1); continue; }
       const art = p.art;
       if (!art.image.complete || !art.image.naturalWidth) continue;
-      const w = Math.min(430, W - 30);
-      const h = Math.min(102, Math.max(78, H * .11));
-      const x = (W - w) / 2;
-      const y = W >= 960 ? 116 : W >= 680 ? 226 : 190;
+      if (!p.layout || p.layout.W !== W || p.layout.H !== H) p.layout = panelLayout();
+      const { w, h, x, y } = p.layout;
+      const scale = h / 54;
+      const enter = reduced.matches ? 1 : Math.min(1, f * 8);
       c.save();
-      c.globalAlpha = Math.min(1, f * 9, (1 - f) * 5);
-      c.translate(x - (1 - f) * 28, y);
-      c.rotate(-.012);
+      c.globalAlpha = .94 * Math.min(1, f * 10, (1 - f) * 6);
+      c.translate(x - (1 - enter) * w, y - (1 - enter) * 6);
       c.fillStyle = page; c.fillRect(-3, -3, w + 6, h + 6);
       c.save(); c.beginPath(); c.rect(0, 0, w, h); c.clip();
       if (art.generated) {
@@ -190,14 +197,15 @@
       c.lineTo(w, h); c.lineTo(w * .57, h); c.closePath(); c.fill();
       c.strokeStyle = ink; c.lineWidth = 2.4; c.strokeRect(0, 0, w, h);
       c.fillStyle = page;
-      c.font = `900 ${p.label.length > 19 ? 15 : p.label.length > 13 ? 18 : 23}px Impact, 'Barlow Condensed', sans-serif`;
+      c.font = `900 ${(p.label.length > 19 ? 10 : p.label.length > 13 ? 12 : 15) * scale}px Impact, 'Barlow Condensed', sans-serif`;
       c.textAlign = "right"; c.textBaseline = "middle";
-      c.fillText(p.label, w - 11, h * .79, w * .39);
+      c.fillText(p.label, w - 11 * scale, h * .79, w * .39);
       c.restore();
     }
     c.restore();
   }
   window.UZManga = { effect, draw, clear() {
     notes.length = 0; panels.length = 0; window.UZMangaWords?.clear();
+    lastPanelAt = -Infinity;
   } };
 })();

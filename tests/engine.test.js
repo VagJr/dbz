@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { Engine, distance } = require("../src/engine");
+const Economy = require("../shared/world-economy");
 const { CAMPAIGNS, worldData } = require("../shared/content");
 function setup() {
   const game = new Engine();
@@ -194,7 +195,7 @@ test("training rewards precise actions and ends after eight attempts", () => {
 test("attributes consume earned points and cannot be forged by property names", () => {
   const { game, p } = setup();
   assert.equal(game.attribute("p", "force"), false);
-  game.reward(p, 150);
+  game.reward(p, Economy.xpToNext(p.level));
   assert.equal(p.points, 3);
   assert.equal(game.attribute("p", "__proto__"), false);
   assert.equal(game.attribute("p", "vitality"), true);

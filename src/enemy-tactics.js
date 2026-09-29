@@ -1,4 +1,5 @@
 "use strict";
+const Hitboxes = require("../shared/hitboxes");
 
 // Combat roles are shared by every encounter, including procedural patrols.
 // Story bosses can replace these values with their phase-specific profile.
@@ -158,9 +159,10 @@ function steering(enemy, target, enemies, time) {
     uy = dy / d;
   // Wounded ranged fighters seek breathing room; melee escorts keep a flank.
   const wounded = enemy.hp / enemy.maxHp < 0.3;
+  const contactDistance = Math.max(24, Hitboxes.meleeReach(enemy, enemy.motorMove || {}) + Hitboxes.body(target).radius - 7);
   const desired =
-    (ai.desiredDistance || 165) + (wounded && ai.rangedRange ? 130 : 0);
-  const radial = Math.max(-0.85, Math.min(1, (d - desired) / 120));
+    (ai.rangedRange ? ai.desiredDistance || 295 : contactDistance) + (wounded && ai.rangedRange ? 130 : 0);
+  const radial = Math.max(-0.85, Math.min(1, (d - desired) / (ai.rangedRange ? 120 : 48)));
   const flankSide = enemy.brain?.flankUntil > time
     ? enemy.brain.flankSide
     : ai.orbit || 1;
@@ -171,7 +173,7 @@ function steering(enemy, target, enemies, time) {
         ? -1
         : 1
       : flankSide) || 1) *
-    (d < desired + 200 ? 0.68 : 0.28) *
+    (d < desired + 200 ? (ai.rangedRange ? .68 : .25) : .28) *
     (0.76 + 0.24 * Math.sin(phase));
   let x = ux * radial - uy * tangent;
   let y = uy * radial + ux * tangent;
@@ -180,8 +182,9 @@ function steering(enemy, target, enemies, time) {
     const ox = enemy.x - other.x,
       oy = enemy.y - other.y;
     const gap = Math.hypot(ox, oy);
-    if (gap > 1 && gap < 120) {
-      const push = (120 - gap) / 120;
+    const spacing = ai.rangedRange ? 120 : Hitboxes.body(enemy).radius + Hitboxes.body(other).radius + 14;
+    if (gap > 1 && gap < spacing) {
+      const push = (spacing - gap) / spacing;
       x += (ox / gap) * push * 1.65;
       y += (oy / gap) * push * 1.65;
     }

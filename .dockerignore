@@ -1,1 +1,11 @@
 fly.toml
+.git
+node_modules
+.preview-data
+data
+server.lock
+.env
+.env.*
+tests
+tools
+docs

@@ -1,3 +1,7 @@
+(function(root,factory){
+  if(typeof module==='object'&&module.exports)module.exports=factory();
+  else root.UZQuests=factory();
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
 "use strict";
 
 // Campanha data only: these coordinates are logical story landmarks and do
@@ -17,7 +21,7 @@ const LANDMARKS = Object.freeze({
   babidiShip:{id:'babidiShip',world:'earth',region:'Deserto de Yamcha',x:-8100,y:6900,radius:260},
   buuWastes:{id:'buuWastes',world:'sacred',region:'Mundo dos Kaioshins',x:2900,y:2700,radius:330},
   paozu: { id: "paozu", world: "earth", region: "Montanhas Paozu", x: 1700, y: 1740, radius: 300 },
-  bulma: { id: "bulma", world: "earth", region: "Montanhas Paozu", x: 1810, y: 1740, radius: 115 },
+  bulma: { id: "bulma", world: "earth", region: "Montanhas Paozu", x: 1700, y: 8250, radius: 115 },
   pilafTrail: { id: "pilafTrail", world: "earth", region: "Cidade do Oeste", x: 9600, y: 3100, radius: 220 },
   pilafHideout: { id: "pilafHideout", world: "earth", region: "Cidade do Oeste", x: 10100, y: 3650, radius: 260 },
   kameHouse: { id: "kameHouse", world: "earth", region: "Kame House", x: 3200, y: 4200, radius: 190 },
@@ -145,4 +149,5 @@ const QUEST_BY_ID = new Map(QUESTS.map((q) => [q.id, q]));
 const LANDMARK_BY_ID = new Map(Object.values(LANDMARKS).map((l) => [l.id, l]));
 const COLLECTIBLE_IDS = new Set(Object.values(LANDMARKS).filter((l) => l.item).map((l) => l.id));
 
-module.exports = { SAGAS, LANDMARKS, LANDMARK_BY_ID, ENEMY_PROFILES, BOSSES, BOSS_LANDMARKS, QUESTS, QUEST_BY_ID, COLLECTIBLE_IDS };
+return { SAGAS, LANDMARKS, LANDMARK_BY_ID, ENEMY_PROFILES, BOSSES, BOSS_LANDMARKS, QUESTS, QUEST_BY_ID, COLLECTIBLE_IDS };
+});

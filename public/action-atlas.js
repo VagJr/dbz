@@ -20,7 +20,7 @@
       : '';
     const move = e.combatAction.motion;
     return [
-      e.skin || 'soldier', e.form || '', colors, e.mode || 'ground',
+      e.skin || 'soldier', e.form || '', colors, e.mode || 'ground', e.boss ? 1 : 0,
       e.combatAction.key, move.pose || 'jab', move.side || 1,
       move.moving ? 1 : 0, move.boosted ? 1 : 0, move.airborne ? 1 : 0,
     ].join('|');
@@ -77,6 +77,7 @@
       Number.isFinite(m.start) && Number.isFinite(m.impact) &&
       Number.isFinite(m.end) && Number.isFinite(e.combatClock) &&
       duration > .12 && duration < 1.5 &&
+      !(e.z > 0 || e.grounded === false) &&
       scale <= 1.4 && Math.sin(e.angle || 0) <= .25 && !Art.reduceMotion &&
       !(navigator.deviceMemory && navigator.deviceMemory < 4);
     if (!canCache) return vectorFighter(c, e, t, scale);

@@ -1,5 +1,8 @@
 "use strict";
 const Motor = require("./enemy-motor");
+const Hitboxes = require("../shared/hitboxes");
+const Physics = require("../shared/physics");
+const Combat = require("../shared/combat");
 const delta = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -60,7 +63,7 @@ module.exports = (Engine) => {
     b.cooldown = b.nextOpening = this.time + 0.3;
   };
   Engine.prototype.dualImpact = function (a, b) {
-    const center = { world: a.world, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const center = { world: a.world, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (Hitboxes.height(a) + Hitboxes.height(b)) / 2 };
     this.repel(center, a, 850);
     this.repel(center, b, 850);
     a.bodyImpactAt = b.bodyImpactAt = this.time;
@@ -73,6 +76,7 @@ module.exports = (Engine) => {
   Engine.prototype.startClash = function (a, b, type, point, shots) {
     if (
       !this.canContest(a, b) ||
+      (type === "fists" && !Hitboxes.sameLayer(a, b)) ||
       a.clashId ||
       b.clashId ||
       a.clashCooldown > this.time ||
@@ -87,6 +91,11 @@ module.exports = (Engine) => {
       world: a.world,
       x: point.x,
       y: point.y,
+      z: point.z ?? (Hitboxes.attackHeight(a) + Hitboxes.attackHeight(b)) / 2,
+      visualZ: type === "beam" ? Math.max(0, (point.z ?? 0) -
+        ((shots?.[0]?.visualOffset ?? (Hitboxes.attackHeight(a)-Hitboxes.height(a))) +
+        (shots?.[1]?.visualOffset ?? (Hitboxes.attackHeight(b)-Hitboxes.height(b)))) / 2)
+        : (Hitboxes.height(a) + Hitboxes.height(b)) / 2,
       ids: [a.id, b.id],
       start: this.time,
       ends: this.time + (type === "beam" ? 2.4 : 1.8),
@@ -111,7 +120,7 @@ module.exports = (Engine) => {
       e.guardUntil = 0;
       e.pressureUntil = 0;
     }
-    this.emit("collisionBurst", point, {
+    this.emit("collisionBurst", { ...point, visualZ: c.visualZ }, {
       radius: type === "beam" ? 150 : 100,
       text: type === "beam" ? "DISPUTA DE KI" : "TROCAÇÃO",
       heavy: true,
@@ -180,6 +189,8 @@ module.exports = (Engine) => {
         y: c.y,
         originX: c.x,
         originY: c.y,
+        z: c.z,
+        originZ: c.z,
         angle,
         initialAngle: angle,
         trail: [],
@@ -211,11 +222,12 @@ module.exports = (Engine) => {
       for (let j = i + 1; j < candidates.length; j++) {
         const a = candidates[i].source,
           b = candidates[j].source;
+        const am = Combat.moves[a.moveAction?.key] || { range: a.telegraphRadius || 125, motion: a.motorMove?.motion },
+          bm = Combat.moves[b.moveAction?.key] || { range: b.telegraphRadius || 125, motion: b.motorMove?.motion };
         if (
           !this.canContest(a, b) ||
-          distance(a, b) > 140 ||
-          Math.cos(Math.atan2(b.y - a.y, b.x - a.x) - a.angle) < 0.5 ||
-          Math.cos(Math.atan2(a.y - b.y, a.x - b.x) - b.angle) < 0.5
+          !Hitboxes.meleeHit(a, b, { ...am, motion: a.moveAction?.motion || am.motion }) ||
+          !Hitboxes.meleeHit(b, a, { ...bm, motion: b.moveAction?.motion || bm.motion })
         )
           continue;
         a.clashEngagement = (a.clashEngagement || 0) + 1;
@@ -226,6 +238,7 @@ module.exports = (Engine) => {
             world: a.world,
             x: (a.x + b.x) / 2,
             y: (a.y + b.y) / 2,
+            z: (Hitboxes.attackHeight(a, am) + Hitboxes.attackHeight(b, bm)) / 2,
           })
         )
           a.clashEngagement = b.clashEngagement = 0;
@@ -247,7 +260,7 @@ module.exports = (Engine) => {
           s.initialAngle + clamp(delta(aim, s.initialAngle), -0.65, 0.65);
         s.angle += clamp(delta(goal, s.angle), -1.2 * dt, 1.2 * dt);
       }
-      s.trail.push({ x: s.x, y: s.y });
+      s.trail.push({ x: s.x, y: s.y, z: s.z });
       if (s.trail.length > 18) s.trail.shift();
     }
     // Swept relative segments prevent two fast beams crossing between server ticks.
@@ -267,10 +280,12 @@ module.exports = (Engine) => {
         if (!this.canContest(ap, bp)) continue;
         const dx = a.x - b.x,
           dy = a.y - b.y,
+          dz = (a.z ?? Hitboxes.attackHeight(ap)) - (b.z ?? Hitboxes.attackHeight(bp)),
           vx = (Math.cos(a.angle) * a.speed - Math.cos(b.angle) * b.speed) * dt,
-          vy = (Math.sin(a.angle) * a.speed - Math.sin(b.angle) * b.speed) * dt;
-        const u = clamp(-(dx * vx + dy * vy) / (vx * vx + vy * vy || 1), 0, 1);
-        if (Math.hypot(dx + vx * u, dy + vy * u) > a.r + b.r) continue;
+          vy = (Math.sin(a.angle) * a.speed - Math.sin(b.angle) * b.speed) * dt,
+          vz = ((a.vz || 0) - (b.vz || 0)) * dt;
+        const u = clamp(-(dx * vx + dy * vy + dz * vz) / (vx * vx + vy * vy + vz * vz || 1), 0, 1);
+        if (Math.hypot(dx + vx * u, dy + vy * u, dz + vz * u) > a.r + b.r) continue;
         const point = {
           world: a.world,
           x:
@@ -285,8 +300,12 @@ module.exports = (Engine) => {
               b.y +
               Math.sin(b.angle) * b.speed * dt * u) /
             2,
+          z: ((a.z ?? Hitboxes.attackHeight(ap)) + (a.vz || 0) * dt * u +
+            (b.z ?? Hitboxes.attackHeight(bp)) + (b.vz || 0) * dt * u) / 2,
         };
-        if (!this.clearSight(a, point) || !this.clearSight(b, point)) continue;
+        const aimPoint = { ...point, impactZ: point.z, visualOffset:
+          ((a.visualOffset ?? Physics.body(a).height*.59)+(b.visualOffset ?? Physics.body(b).height*.59))/2 };
+        if (!this.clearSight(a, aimPoint) || !this.clearSight(b, aimPoint)) continue;
         if (this.startClash(ap, bp, "beam", point, [{ ...a }, { ...b }]))
           a.life = b.life = 0;
       }
@@ -315,6 +334,7 @@ module.exports = (Engine) => {
         for (const e of [...this.players.values(), ...this.enemies])
           if (
             this.canContest(p, e) &&
+            Hitboxes.sameLayer(p, e, 45) &&
             distance(p, e) < 230 &&
             this.clearSight(p, e)
           ) {
@@ -391,7 +411,8 @@ module.exports = (Engine) => {
           a.state !== "dash" ||
           b.state !== "dash" ||
           !this.canContest(a, b) ||
-          distance(a, b) > 72 ||
+          !Hitboxes.sameLayer(a, b) ||
+          distance(a, b) > Hitboxes.body(a).radius + Hitboxes.body(b).radius + 12 ||
           a.vx * b.vx + a.vy * b.vy >= 0 ||
           a.vx * (b.x - a.x) + a.vy * (b.y - a.y) <= 0 ||
           b.vx * (a.x - b.x) + b.vy * (a.y - b.y) <= 0 ||
@@ -413,13 +434,15 @@ module.exports = (Engine) => {
         type: q.type,
         x: q.x,
         y: q.y,
+        z: q.z,
+        visualZ: q.visualZ,
         start: q.start,
         ends: q.ends,
         ids: q.ids,
         scores: q.scores,
         anchors: q.ids.map((id) => {
           const e = this.fighterById(id);
-          return e ? { x: e.x, y: e.y } : null;
+          return e ? { x: e.x, y: e.y, z: Hitboxes.height(e) } : null;
         }),
       }));
     s.self.clash = c

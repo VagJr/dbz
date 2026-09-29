@@ -7,12 +7,13 @@
   const title = document.createElement("section");
   title.id = "title-screen";
   title.setAttribute("aria-label", "Menu inicial de Universe Z");
-  title.innerHTML = `<div class="title-landscape" aria-hidden="true"></div><div class="title-atmosphere" aria-hidden="true"></div>
-    <div class="title-content"><small>UMA NOVA LENDA / UNIVERSO 7</small><img class="title-logo" src="/logo.svg" alt="Universe Z — Destroy the Galaxy">
+  title.innerHTML = `<div class="title-landscape" aria-hidden="true"></div><div class="title-atmosphere" aria-hidden="true"></div><div class="title-film" aria-hidden="true"></div>
+    <div class="title-key-art" aria-hidden="true"><div class="title-key-ring"></div><img src="${image("menu", 45)}" alt=""><span>CAPÍTULO ZERO / O DESPERTAR</span></div>
+    <div class="title-content"><small><span class="title-live-dot"></span> UMA NOVA LENDA / UNIVERSO 7</small><img class="title-logo" src="/logo.svg" alt="Universe Z — Destroy the Galaxy">
     <p>O poder é só o começo.<br>O universo é a sua jornada.</p><button id="start-game">START GAME <span>→</span></button>
-    <div class="title-actions"><button id="title-fullscreen">Tela cheia</button><button id="title-controls">Controles</button></div>
-    <small class="title-version">AVENTURA MULTIPLAYER · BETA 1.0</small></div><div class="title-chapters" aria-hidden="true">
-    <span><img src="${image("menu", 1)}" alt="">01 / O CHAMADO</span><span><img src="${image("menu", 8)}" alt="">02 / ALÉM DA TERRA</span><span><img src="${image("menu", 45)}" alt="">03 / SUPERE SEUS LIMITES</span></div>`;
+    <div class="title-actions"><button id="title-fullscreen">Tela cheia</button><button id="title-controls">Controles</button><a href="/divulgacao.html">Sobre o jogo ↗</a></div>
+    <small class="title-version">AVENTURA MULTIPLAYER · BETA EM DESENVOLVIMENTO</small></div><div class="title-chapters" aria-hidden="true">
+    <span><img src="${image("menu", 1)}" alt="">01 / O CHAMADO</span><span><img src="${image("menu", 8)}" alt="">02 / ALÉM DA TERRA</span><span><img src="${image("menu", 46)}" alt="">03 / SEU PRÓPRIO CAMINHO</span></div>`;
   document.body.append(title);
   const start = () => {
     title.hidden = true;
@@ -191,19 +192,26 @@
       row.prepend(im);
     }
   }
-  const panorama = (world) =>
-    root +
-    ({ earth: "paozu", namek: "namek", arena: "arena", otherworld: "kame" }[
-      world
-    ] || "paozu") +
-    "-background.jpg";
+  const panorama = (world, frame) => {
+    const scene = `${frame?.title || ""} ${frame?.speaker || ""}`.toLowerCase();
+    const setting = /namek|freeza|frieza/.test(scene)
+      ? "namek"
+      : /arena|torneio|duelo/.test(scene)
+        ? "arena"
+        : /kame|ilha/.test(scene)
+          ? "kame"
+          : ({ earth: "paozu", namek: "namek", arena: "arena", otherworld: "kame" }[world] || "paozu");
+    return `${root}${setting}-background.jpg`;
+  };
   window.UZProduction = {
     titleVisible: () => !title.hidden,
     decorate,
     scene(frame, index, world) {
       const cinema = document.querySelector(".cinematic");
-      cinema.style.setProperty("--cinema-art", `url("${panorama(world)}")`);
+      if (!cinema) return;
+      cinema.style.setProperty("--cinema-art", `url("${panorama(world, frame)}")`);
       cinema.dataset.shot = String(index % 3);
+      cinema.dataset.sceneTone = /namek|freeza|frieza/i.test(`${frame?.title || ""} ${frame?.speaker || ""}`) ? "namek" : "earth";
       cinema.classList.remove("shot-enter");
       requestAnimationFrame(() => cinema.classList.add("shot-enter"));
     },

@@ -43,8 +43,10 @@ test("surface has no former arena walls; movement is fast and reverses promptly"
   const { game, p } = setup();
   p.x = 3300;
   step(game, 30, { x: 1, y: 0, angle: 0 });
-  assert.ok(p.x > 4000);
-  assert.ok(p.vx > 900);
+  // The current controllable flight cruise is 460 units/s; it still crosses
+  // open terrain quickly while giving players room to steer precisely.
+  assert.ok(p.x > 3600);
+  assert.ok(p.vx > 400);
   step(game, 12, { x: -1, y: 0, angle: Math.PI });
   assert.ok(p.vx < 0);
   assert.ok(game.toggleFlight("p"));

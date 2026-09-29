@@ -2,6 +2,7 @@
 const C = require("../shared/combat");
 const { TECHNIQUES } = require("../shared/content");
 const Motion = require("./combat-motion");
+const Hitboxes = require("../shared/hitboxes");
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y),
   front = (a, b) => Math.cos(Math.atan2(b.y - a.y, b.x - a.x) - a.angle) > 0.35;
 module.exports = (Engine) => {
@@ -32,40 +33,73 @@ module.exports = (Engine) => {
   Engine.prototype.beginMove = function (p, key) {
     const t = this.time;
     const basic=["jab","link","finisher"].includes(key);
-    const exhausted=basic&&p.ki<(C.moves[key]?.ki||0);
-    if(exhausted)key="jab";
     const m=C.moves[key];
+    const kiFreePunch = ["jab", "link"].includes(key);
     if (
       !m ||
       p.moveAction ||
       p.stun > t ||
       p.state === "dead" ||
-      (!basic && p.ki < m.ki) ||
+      (!kiFreePunch && p.ki < m.ki) ||
       p.input.guard ||
       p.roundLocked
     )
       return false;
     if(p.aimReceived && t-p.inputAt<.25)p.angle=p.input.angle;
-    const aim = this.target(p, m.range);
-    if (!p.input.manualAim && aim && dist(p, aim) < 240 && front(p, aim))
+    const mobileMelee = !m.speed && p.input.mobileAssist && !p.input.manualAim;
+    const assistRange = m.speed ? Math.min(650, m.range) : m.range + m.step + 42;
+    const assisted = p.input.mobileAssist && !p.input.manualAim
+      ? this.combatTargets(p, assistRange)
+          .filter((e) => (!mobileMelee || Hitboxes.sameLayer(p, e)) && this.clearSight(p, e))
+          .sort((a, b) => dist(p, a) - dist(p, b))
+      : [];
+    const selected = assisted.find((e) => e.id === p.targetId);
+    const assistedTarget = selected && (!assisted[0] || dist(p, selected) <= dist(p, assisted[0]) + 72)
+      ? selected : assisted[0];
+    const aim = assistedTarget || this.target(p, m.range);
+    if (assistedTarget) p.targetId = assistedTarget.id;
+    if (assistedTarget || (!p.input.manualAim && aim && dist(p, aim) < 240 && front(p, aim)))
       p.angle = Math.atan2(aim.y - p.y, aim.x - p.x);
+    let magnetTargetId = null;
+    if (!m.speed && !mobileMelee) {
+      const candidates = this.combatTargets(p, m.range + m.step + 60)
+        .filter(e => Hitboxes.sameLayer(p, e) && this.clearSight(p, e))
+        .map(e => {
+          const targetAngle = Math.atan2(e.y - p.y, e.x - p.x);
+          const delta = Math.atan2(Math.sin(targetAngle - p.angle), Math.cos(targetAngle - p.angle));
+          return { e, targetAngle, delta, score: dist(p, e) + Math.abs(delta) * 170 };
+        })
+        .filter(c => Math.abs(c.delta) <= 0.48);
+      const target = candidates.sort((a, b) => {
+        const aBias = a.e.id === p.comboTargetId ? -45 : a.e.id === p.targetId ? -20 : 0;
+        const bBias = b.e.id === p.comboTargetId ? -45 : b.e.id === p.targetId ? -20 : 0;
+        return a.score + aBias - b.score - bBias;
+      })[0];
+      if (target && dist(p, target.e) <= m.range + m.step + 42) {
+        magnetTargetId = target.e.id;
+        p.angle += target.delta * 0.24;
+      }
+    }
     p.ki = Math.max(0,p.ki-m.ki);
-    const tempo=exhausted?2:1;
+    const tempo=1;
     p.attackSequence=(p.attackSequence||0)+1;
     p.lastCombatAt = t;
     p.chargeAt = null;
     p.meleeAt = null;
     p.queuedAttack = null;
     p.rhythmQueue = null;
+    p.rhythmTail = null;
     p.moveAction = {
       key,
       start: t,
       impact: t + m.startup*tempo,
       activeEnd: t + (m.startup+m.active)*tempo,
       end: t + (m.startup+m.active+m.recovery)*tempo,
-      exhausted,damageScale:exhausted?.4:1,
+      exhausted:false,damageScale:1,
       motion:Motion(p,key,p.attackSequence),
       angle: p.angle,
+      assistedTargetId: mobileMelee ? assistedTarget?.id : null,
+      magnetTargetId,
       hits: [],
       hit: false,
     };
@@ -76,7 +110,7 @@ module.exports = (Engine) => {
     p.attackAt = p.moveAction.impact;
     p.windupAt = t;
     p.pattern = "cone";
-    p.telegraphRadius = m.range;
+    p.telegraphRadius = m.speed ? m.range : Hitboxes.meleeReach(p, { ...m, motion: p.moveAction.motion });
     p.vx *= basic ? .9 : .3;
     p.vy *= basic ? .9 : .3;
     p.combo = key === "link" ? 2 : key === "finisher" ? 3 : 1;
@@ -103,7 +137,37 @@ module.exports = (Engine) => {
       p.chargeAt = null;
       p.meleeAt = null;
       p.rhythmQueue = null;
+      p.rhythmTail = null;
       return true;
+    }
+    if (!p.moveAction && p.rhythmQueue?.pressAt != null) {
+      const q = p.rhythmQueue;
+      const press = q.pressAt != null ? q : p.rhythmTail?.pressAt != null ? p.rhythmTail : null;
+      if (name === "attackRelease" && press?.kind === "melee") {
+        press.action = t - press.pressAt >= 0.45 ? "heavy" : "jab";
+        press.pressAt = null;
+        p.meleeAt = null;
+      } else if (name === "blast" && press?.kind === "ki") {
+        press.action = t - press.pressAt >= 0.55 ? "charged" : "ki";
+        press.pressAt = null;
+        p.chargeAt = null;
+      }
+      if (q.pressAt == null) {
+        const tail = p.rhythmTail;
+        p.rhythmQueue = null;
+        p.rhythmTail = null;
+        if (q.expires < t) return false;
+        const key = q.action === "charged" ? "charged"
+          : q.action === "heavy" ? "heavy"
+            : q.action === "ki" ? (p.comboConfirmed === 2 ? "weave" : "ki")
+              : this.nextCombo(p);
+        const began = this.beginMove(p, key);
+        if (began && tail) {
+          tail.expires = p.moveAction.end + C.buffer;
+          p.rhythmQueue = tail;
+        }
+        return began;
+      }
     }
     if (p.state === "dead" || p.roundLocked) return false;
     if (name === "dash" && p.stun > t) {
@@ -114,6 +178,7 @@ module.exports = (Engine) => {
       p.launch = null;
       p.moveAction = null;
       p.rhythmQueue = null;
+      p.rhythmTail = null;
       p.invuln = t + 0.25;
       p.counterUntil = 0;
       p.lastCombatAt = t;
@@ -131,17 +196,41 @@ module.exports = (Engine) => {
       return act.call(this, id, "attack");
     }
     if (p.moveAction) {
+      if (p.rhythmQueue) {
+        const q = p.rhythmQueue;
+        const press = q.pressAt != null ? q : p.rhythmTail?.pressAt != null ? p.rhythmTail : null;
+        if (name === "attackRelease" && press?.kind === "melee") {
+          press.action = t - press.pressAt >= 0.45 ? "heavy" : "jab";
+          press.pressAt = null;
+          p.meleeAt = null;
+          return true;
+        }
+        if (name === "blast" && press?.kind === "ki") {
+          press.action = t - press.pressAt >= 0.55 ? "charged" : "ki";
+          press.pressAt = null;
+          p.chargeAt = null;
+          return true;
+        }
+      }
       if (
         ["attack", "attackStart", "blast", "blastStart"].includes(name) &&
         (["jab","link","finisher"].includes(p.moveAction.key) || p.moveAction.end - t <= C.buffer ||
           (p.moveAction.hit && ["jab", "link"].includes(p.moveAction.key))) &&
-        !p.rhythmQueue
+        (!p.rhythmQueue || (p.rhythmQueue.pressAt == null && !p.rhythmTail))
       ) {
-        p.rhythmQueue = {
-          action: name.startsWith("blast") ? "ki" : "jab",
+        const kind = name.startsWith("blast") || name === "blast" ? "ki" : "melee";
+        const pressAt = name === "attackStart" ? t : name === "blastStart" ? t : null;
+        if (name === "attackStart") p.meleeAt = t;
+        if (name === "blastStart") p.chargeAt = t;
+        const entry = {
+          action: kind === "ki" ? "ki" : "jab",
+          kind,
+          pressAt,
           expires: p.moveAction.end + C.buffer,
         };
-        return false;
+        if (!p.rhythmQueue) p.rhythmQueue = entry;
+        else p.rhythmTail = entry;
+        return true;
       }
       if (
         [
@@ -197,6 +286,7 @@ module.exports = (Engine) => {
       p.meleeAt = null;
       p.chargeAt = null;
       p.rhythmQueue = null;
+      p.rhythmTail = null;
       const e = this.target(p, 400),
         chase =
           p.comboConfirmed === 3 &&
@@ -255,6 +345,9 @@ module.exports = (Engine) => {
         y: p.y,
         originX: p.x,
         originY: p.y,
+        z: Hitboxes.attackHeight(p, move),
+        originZ: Hitboxes.attackHeight(p, move),
+        visualOffset: Hitboxes.attackHeight(p, move) - Hitboxes.height(p),
         angle: move.angle,
         speed: m.speed,
         r: m.heavy ? 18 : 9,
@@ -284,31 +377,49 @@ module.exports = (Engine) => {
       return;
     }
     if (!move.stepped) {
+      const assisted = move.assistedTargetId && this.enemies.find((e) => e.id === move.assistedTargetId && !e.dead && e.world === p.world);
+      const contactDistance = Hitboxes.meleeReach(p, { ...m, motion: move.motion }) + (assisted ? Hitboxes.body(assisted).radius : 0) - 3;
+      const extra = assisted && Hitboxes.sameLayer(p, assisted) && dist(p, assisted) <= m.range + m.step + 42 && this.clearSight(p, assisted)
+        ? Math.min(42, Math.max(0, dist(p, assisted) - contactDistance - m.step))
+        : 0;
       this.move(
         p,
-        Math.cos(move.angle) * m.step,
-        Math.sin(move.angle) * m.step,
+        Math.cos(move.angle) * (m.step + extra),
+        Math.sin(move.angle) * (m.step + extra),
       );
       move.stepped = true;
       this.emit("slash", p, { angle: move.angle, combo: p.combo });
     }
-    const targets = this.combatTargets(p, m.range).filter(
-      (e) => front({ ...p, angle: move.angle }, e) && this.clearSight(p, e),
-    );
-    const e = targets.find((e) => e.id === p.targetId) || targets[0];
-    if (!e || move.hits.length) return;
+    const strike = { ...m, motion: move.motion };
+    const targets = this.combatTargets(p, m.range + 12)
+      .filter((e) => this.clearSight(p, e))
+      .map((e) => ({ e, contact: Hitboxes.meleeHit(p, e, strike, move.angle) }))
+      .filter((candidate) => candidate.contact);
+    const selected = targets.find((candidate) => candidate.e.id === p.targetId) ||
+      targets.sort((a, b) => dist(p, a.e) - dist(p, b.e))[0];
+    if (move.resolved) return;
+    if (!selected || move.hits.length) {
+      move.resolved = true;
+      move.result = "miss";
+      return;
+    }
+    const { e, contact } = selected;
     move.hits.push(e.id);
     const hp = e.hp,
-      blocked = e.state === "guard" && front(e, p);
-    p.attackData = { posture: m.posture*(move.exhausted?.4:1), stun: move.exhausted?.05:m.stun, baseDamage: m.damage*move.damageScale };
+      blocked = e.state === "guard" && Hitboxes.guardArc(e, { ...p, attackData: { contact } });
+    p.attackData = { posture: m.posture*(move.exhausted?.4:1), stun: move.exhausted?.05:m.stun, baseDamage: m.damage*move.damageScale, contact, finisher: move.key === "finisher" };
     p.heavyStrike = move.key === "heavy";
     const counter = p.counterUntil > t ? 1.25 : 1;
     p.counterUntil = 0;
     this.damage(p, e, m.damage * move.damageScale * this.combatMultiplier(p) * counter, !!m.heavy);
     p.attackData = null;
     p.heavyStrike = false;
+    move.resolved = true;
+    move.targetId = e.id;
+    move.damage = Math.max(0, hp - e.hp);
     if (e.hp < hp && !blocked) {
       move.hit = true;
+      move.result = "hit";
       p.comboConfirmed = p.combo;
       p.confirmedAt = t;
       p.comboTargetId = e.id;
@@ -329,6 +440,7 @@ module.exports = (Engine) => {
       }
       if (move.key === "finisher") e.chaseUntil = t + 0.8;
     } else {
+      move.result = blocked ? "blocked" : e.invuln > t ? "evaded" : "no-damage";
       p.comboConfirmed = 0;
       p.comboTargetId = null;
     }
@@ -383,7 +495,7 @@ module.exports = (Engine) => {
       b.juggleCount = 1;
     }
     b.juggleAt = t;
-    const guarding = b.state === "guard" && front(b, a),
+    const guarding = b.state === "guard" && Hitboxes.guardArc(b, a),
       hp = b.hp,
       oldStun = b.stun;
     if (!isPlayer && guarding && a.attackData) {
@@ -412,6 +524,7 @@ module.exports = (Engine) => {
       if (b.moveAction) {
         b.moveAction = null;
         b.rhythmQueue = null;
+        b.rhythmTail = null;
         b.comboConfirmed = 0;
         b.chargeAt = null;
         b.meleeAt = null;
@@ -442,8 +555,48 @@ module.exports = (Engine) => {
         if (p.stun > this.time || p.state === "dead") {
           p.moveAction = null;
           p.rhythmQueue = null;
+          p.rhythmTail = null;
         } else {
-          if(this.time<m.impact && ["jab","link","finisher"].includes(m.key) && p.aimReceived && this.time-p.inputAt<.25)m.angle=p.input.angle;
+          if (this.time < m.impact && !C.moves[m.key].speed) {
+            const reach = C.moves[m.key].range + C.moves[m.key].step + 42;
+            if (p.input.mobileAssist && !p.input.manualAim) {
+              const candidates = this.combatTargets(p, reach)
+                .filter(e => Hitboxes.sameLayer(p, e) && this.clearSight(p, e))
+                .sort((a, b) => dist(p, a) - dist(p, b));
+              const selected = candidates.find(e => e.id === p.targetId || e.id === m.assistedTargetId);
+              const target = selected && (!candidates[0] || dist(p, selected) <= dist(p, candidates[0]) + 72)
+                ? selected : candidates[0];
+              if (target) {
+                p.targetId = target.id;
+                m.assistedTargetId = target.id;
+                m.angle = Math.atan2(target.y - p.y, target.x - p.x);
+              }
+            } else if (p.aimReceived && this.time - p.inputAt < 0.25) {
+              m.angle = p.input.angle;
+              const candidates = this.combatTargets(p, reach)
+                .filter(e => Hitboxes.sameLayer(p, e) && this.clearSight(p, e))
+                .map(e => {
+                  const angle = Math.atan2(e.y - p.y, e.x - p.x);
+                  const delta = Math.atan2(Math.sin(angle - m.angle), Math.cos(angle - m.angle));
+                  return { e, angle, delta, score: dist(p, e) + Math.abs(delta) * 170 };
+                })
+                .filter(c => Math.abs(c.delta) <= 0.48)
+                .sort((a, b) => {
+                  const aBias = a.e.id === p.comboTargetId ? -45 : a.e.id === p.targetId ? -20 : 0;
+                  const bBias = b.e.id === p.comboTargetId ? -45 : b.e.id === p.targetId ? -20 : 0;
+                  return a.score + aBias - b.score - bBias;
+                });
+              const target = candidates[0];
+              if (target && dist(p, target.e) <= reach) {
+                m.magnetTargetId = target.e.id;
+                m.angle += target.delta * 0.24;
+              }
+            } else if (m.assistedTargetId) {
+              const target = this.combatTargets(p, reach)
+                .find(e => e.id === m.assistedTargetId && Hitboxes.sameLayer(p, e) && this.clearSight(p, e));
+              if (target) m.angle = Math.atan2(target.y - p.y, target.x - p.x);
+            }
+          }
           p.angle = m.angle;
           p.state =
             this.time < m.impact
@@ -492,10 +645,17 @@ module.exports = (Engine) => {
     }
     for (const p of this.players.values()) {
       const m = p.moveAction;
-      if (!m) continue;
+      if (!m) {
+        if (p.rhythmQueue?.expires < this.time) {
+          p.rhythmQueue = null;
+          p.rhythmTail = null;
+        }
+        continue;
+      }
       if (p.stun > this.time || p.state === "dead") {
         p.moveAction = null;
         p.rhythmQueue = null;
+        p.rhythmTail = null;
         continue;
       }
       p.angle = m.angle;
@@ -507,6 +667,7 @@ module.exports = (Engine) => {
             : "recover";
       const cancel =
         p.rhythmQueue &&
+        p.rhythmQueue.pressAt == null &&
         m.hit &&
         ["jab", "link"].includes(m.key) &&
         this.time >= m.activeEnd + 1 / 30;
@@ -515,16 +676,23 @@ module.exports = (Engine) => {
         p.moveAction = null;
         p.state = "idle";
         const q = p.rhythmQueue;
-        p.rhythmQueue = null;
-        if (q && q.expires >= this.time)
-          this.beginMove(
-            p,
-            q.action === "ki"
-              ? p.comboConfirmed === 2
-                ? "weave"
-                : "ki"
-              : this.nextCombo(p),
-          );
+        if (q && q.expires >= this.time && q.pressAt == null) {
+          const tail = p.rhythmTail;
+          p.rhythmQueue = null;
+          p.rhythmTail = null;
+          const key = q.action === "charged" ? "charged"
+            : q.action === "heavy" ? "heavy"
+              : q.action === "ki" ? (p.comboConfirmed === 2 ? "weave" : "ki")
+                : this.nextCombo(p);
+          const began = this.beginMove(p, key);
+          if (began && tail) {
+            tail.expires = p.moveAction.end + C.buffer;
+            p.rhythmQueue = tail;
+          }
+        } else if (!q || q.expires < this.time) {
+          p.rhythmQueue = null;
+          p.rhythmTail = null;
+        }
       }
     }
   };
@@ -537,6 +705,9 @@ module.exports = (Engine) => {
         ? {
             name: C.moves[q.moveAction.key].name,
             confirmed: q.moveAction.hit,
+            result: q.moveAction.result || null,
+            targetId: q.moveAction.targetId || null,
+            damage: q.moveAction.damage || 0,
             exhausted:q.moveAction.exhausted,
             motion:q.moveAction.motion,
             key: q.moveAction.key,
@@ -549,6 +720,9 @@ module.exports = (Engine) => {
         : null;
     s.self.combatAction = expose(p);
     s.self.comboConfirmed = p.comboConfirmed || 0;
+    s.self.queuedAction = p.rhythmQueue
+      ? { action: p.rhythmQueue.action, kind: p.rhythmQueue.kind, expires: p.rhythmQueue.expires, count: 1 + (p.rhythmTail ? 1 : 0), tailKind: p.rhythmTail?.kind || null }
+      : null;
     s.self.counterUntil = p.counterUntil || 0;
     const enemyById = new Map(this.enemies.map(e => [e.id, e]));
     for (const e of s.enemies) {

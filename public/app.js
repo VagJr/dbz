@@ -32,6 +32,9 @@
   window.UZSandboxUI?.connect(socket);
   window.UZBetaUI?.connect(socket,type=>openPanel(type));
   window.UZPartyUI?.connect(socket);
+  window.UZWorldEconomyUI?.init({socket, notice});
+  window.UZLivingNpcsUI?.init({socket, notice});
+  window.UZSurfaceAtlasUI?.init({socket, notice});
   let seenDialogue=null;
   let state = null,
     id = null,
@@ -49,8 +52,18 @@
     tutorialStart = null;
   const keys = new Set(),
     touch = { x: 0, y: 0 },
-    held = { guard: false, charge: false, boost: false },
+    held = { guard: false, charge: false, boost: false, ascend: false, descend: false },
     pointer = { x: innerWidth / 2 + 100, y: innerHeight / 2, used: false };
+  const desktopControls = new UZDesktopControls();
+  let mobileAimTargetId = null;
+  try {
+    desktopControls.setMode(localStorage.getItem("uz-desktop-movement-v1"));
+  } catch {}
+  function setDesktopMovement(mode) {
+    desktopControls.setMode(mode);
+    try { localStorage.setItem("uz-desktop-movement-v1", desktopControls.mode); } catch {}
+    sendCombatInput(true);
+  }
   let savedToken = "";
   try {
     savedToken = localStorage.getItem("uz-token") || "";
@@ -229,6 +242,9 @@
     window.UZSandboxUI?.update(next);
     window.UZBetaUI?.update(next);
     window.UZPartyUI?.update(next);
+    window.UZWorldEconomyUI?.update(next);
+    window.UZLivingNpcsUI?.update(next);
+    window.UZSurfaceAtlasUI?.update(next);
     const p = state.self;
     if (panels.get("character")?.open) {
       const signature = JSON.stringify([p.stats, p.points, p.power, p.level, p.zenni, p.sandbox?.equipment, p.sandbox?.inventory, p.techniques, p.equipped, p.appearance]);
@@ -296,7 +312,7 @@
     tell.hidden = enemy.state !== "windup";
     if (!tell.hidden) {
       const remaining = Math.max(0, enemy.attackAt - state.time);
-      tell.textContent = (enemy.counterStrike ? "CONTRA-ATAQUE" : enemy.pattern === "beam" ? "DISPARO" : enemy.pattern === "ring" ? "ONDA" : "GOLPE") + " · " + remaining.toFixed(1) + "s";
+      tell.textContent = (enemy.counterStrike ? "CONTRA-ATAQUE" : enemy.pattern === "beam" ? "DISPARO DE KI" : enemy.pattern === "ring" ? "ATAQUE EM ÁREA" : enemy.pattern === "rush" ? "INVESTIDA" : "ATAQUE FRONTAL") + " · " + remaining.toFixed(1) + "s";
       card.style.setProperty("--tell", Math.min(100, Math.max(0, 100 * (state.time - enemy.windupAt) / Math.max(0.1, enemy.attackAt - enemy.windupAt))) + "%");
     }
     if (card.dataset.skin !== enemy.skin) {
@@ -315,7 +331,7 @@
     $("hp-value").textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
     $("ki-value").textContent = `${Math.floor(p.ki)} KI`;
     $("xp-fill").style.width =
-      `${Math.min(100, (p.xp / (p.level * 130)) * 100)}%`;
+      `${Math.min(100, (p.xp / (state.economy?.progression?.next || p.level * 130)) * 100)}%`;
     $("power").textContent = compact(p.power) + " BP";
     $("focus-value").textContent = Math.floor(p.focus) + "% · R";
     $("awaken-button").disabled = p.focus < 100;
@@ -323,6 +339,10 @@
       UZ.TECHNIQUES.find((t) => t.id === p.equipped)?.name || "Disparo de ki";
     if (window.UZUI) { UZUI.equipped(p.equipped); UZUI.state(p); }
     if (window.FlightUI) FlightUI.update(p);
+    if (p.surfaceRoute?.world === p.world) {
+      $("route-name").textContent = p.surfaceRoute.name;
+      $("route-distance").textContent = p.surfaceRoute.distance + ' m · rota local';
+    }
     $("flight-label").textContent =
       p.world === "space"
         ? "ENTRAR · F"
@@ -334,6 +354,9 @@
         ? "Pousar na superfície; perto de um planeta, entrar na atmosfera (F)"
         : "Voltar a voar (F)";
     $("flight-button").classList.toggle("grounded", p.mode === "ground");
+    $("touch-ascend").hidden = $("touch-descend").hidden = true;
+    $("touch-boost").textContent = p.mode === "ground" ? "PULAR" : "BOOST";
+    $("touch-boost").setAttribute("aria-label", p.mode === "ground" ? "Pular" : "Acelerar o voo");
     portrait($("hud-portrait"), p.skin, 0.92, p.form);
     $("quest-title").textContent = p.storyObjective?.title || p.chapter?.title || "Uma lenda sem fim";
     const world = UZ.getWorld(p.chapter?.world || p.world);
@@ -365,7 +388,9 @@
       if(!box){box=document.createElement('div');box.id='lore-objective';box.className = "lore-objective"; box.setAttribute("role", "status");document.body.append(box);}
       const q=p.loreObjective;box.textContent=q.name+' · '+UZ.getWorld(q.world).name+' — '+q.text+' '+(q.world===p.world?Math.round(Math.hypot(q.targetX-p.x,q.targetY-p.y))+' m':'Abra o atlas (M).');
     }
-    const guide=p.guide,storyNear=guide?.interactable&&guide.world===p.world&&Number.isFinite(guide.targetX)&&Math.hypot(p.x-guide.targetX,p.y-guide.targetY)<=guide.radius;
+    const afterlife=p.afterlife?.pending===true,
+      enmaNear=afterlife&&p.world==='otherworld'&&Math.hypot(p.x-p.afterlife.enmaX,p.y-p.afterlife.enmaY)<155;
+    const guide=p.guide,storyNear=!afterlife&&guide?.interactable&&guide.world===p.world&&Number.isFinite(guide.targetX)&&Math.hypot(p.x-guide.targetX,p.y-guide.targetY)<=guide.radius;
     const map = renderer.data,
       near = !!loreSite || (p.loreObjective?.id==='kaio'&&p.world==='otherworld'&&Math.hypot(p.x-p.loreObjective.targetX,p.y-p.loreObjective.targetY)<90) || Math.hypot(p.x - map.mentor.x, p.y - map.mentor.y) < 135,
       orb =
@@ -378,9 +403,9 @@
         p.world === "earth" &&
         p.orbs.length === 7 &&
         Math.hypot(p.x - 1700, p.y - 1740) < 180;
-    $("interaction").hidden = !(storyNear || near || orb || wish) || !!scene;
-    $("train-button").hidden = !near;
-    $("interact-label").textContent = storyNear ? (guide.type==='collect'?'Investigar pista':'Conversar com '+guide.speaker) : wish
+    $("interaction").hidden = !(enmaNear || (!afterlife && (storyNear || near || orb || wish))) || !!scene;
+    $("train-button").hidden = afterlife || !near;
+    $("interact-label").textContent = enmaNear ? 'Pedir retorno a Enma' : storyNear ? (guide.type==='collect'?'Investigar pista':'Conversar com '+guide.speaker) : wish
       ? "Invocar Shenlong"
       : orb
         ? "Coletar esfera"
@@ -394,7 +419,7 @@
     }
     $("event-banner").hidden = !state.event;
     $("event-banner").textContent = state.event
-      ? `✦ Invasão · ${UZ.getWorld(state.event.world).name}`
+      ? `✦ ${state.event.title || "Invasão"} · ${UZ.getWorld(state.event.world).name}`
       : "";
     $("death-screen").hidden = p.state !== "dead";
     $("training").hidden = !p.training;
@@ -405,6 +430,14 @@
       $("rhythm-cursor").style.left =
         `${Math.max(0, Math.min(100, 50 + (state.time - p.training.beat) * 36))}%`;
     document.querySelectorAll(".action[data-action]").forEach((b) => {
+      const queued = p.queuedAction;
+      const isQueued = !!queued && [queued.kind, queued.tailKind].some(kind => kind &&
+        (kind === "ki" ? b.dataset.action === "blast" : b.dataset.action === "attack"));
+      b.classList.toggle("queued", isQueued);
+      const move = p.combatAction;
+      b.classList.toggle("confirmed", b.dataset.action === "attack" &&
+        !!move?.confirmed && ["jab", "link", "finisher", "heavy"].includes(move.key));
+      b.dataset.combatResult = b.dataset.action === "attack" && move?.result || "";
       const remaining = Math.max(
           0,
           (p.cooldowns[b.dataset.action] || 0) - state.time,
@@ -502,13 +535,14 @@
       c.scale(2, 2);
       // This is the very same live rig the map draws, at the actor's current
       // direction and animation state. The camera rotation is optional.
-      Art.fighter(c, { ...actor, x: 135, y: 133,
+      Art.fighter(c, { ...actor, x: 135, y: 133, previewModel: true,
         angle: (actor.angle || 0) + modelAngleOffset,
         combatClock: actor.combatClock ?? clock }, clock, 3.15);
       c.fillStyle = "#e8f5ef";
       c.font = "700 8px system-ui";
       c.textAlign = "center";
       const label = actor.mode === "flight" ? "EM VOO" :
+        actor.grounded === false ? (actor.vz > 0 ? "PULANDO" : "EM QUEDA") :
         actor.state === "run" ? "EM MOVIMENTO" :
         actor.state === "guard" ? "EM DEFESA" :
         ["attack", "windup"].includes(actor.state) ? "EM COMBATE" : "NO MUNDO";
@@ -883,6 +917,17 @@
         r.append(el("span", name), control);
         body.append(r);
       };
+      const movement = el("select");
+      movement.setAttribute("aria-label", "Modo de movimento no computador");
+      for (const [value, label] of [["hybrid", "Mouse + teclado"], ["screen", "WASD na tela"]]) {
+        const option = el("option", label);
+        option.value = value;
+        movement.append(option);
+      }
+      movement.value = desktopControls.mode;
+      movement.onchange = () => setDesktopMovement(movement.value);
+      row("Movimento no PC · Z", movement);
+      body.append(el("p", "Mouse + teclado: W segue a mira; A/D desviam para os lados e S recua, mantendo o rumo enquanto a tecla está segurada. WASD na tela: as direções ficam fixas e o mouse orienta os ataques. Z alterna durante o jogo.", "panel-note"));
       row(
         "Áudio",
         button(Sound.enabled ? "Desativar" : "Ativar", () => {
@@ -940,26 +985,31 @@
     if (type === "help") {
       const grid = el("div", undefined, "help-grid");
       for (const [key, title, description] of [
-        ["Y / botão Alvo", "Selecionar adversário", "Alterne alvos próximos ou clique/toque no inimigo. O anel dourado mostra a seleção. Aproxime-se pelo movimento; cada golpe só avança um passo."],
+        ["TAB / botão Alvo", "Selecionar adversário", "Alterne alvos próximos ou clique/toque no inimigo. O anel dourado mostra a seleção. No celular, os golpes contra NPCs recebem uma pequena ajuda de mira e aproximação."],
         [
           "WASD / joystick",
           "Movimento livre",
-          "Mantenha distância e observe a área vermelha antes do ataque inimigo.",
+          "Mouse + teclado: W segue a mira, A/D desviam lateralmente e S recua. O desvio e o recuo mantêm seu rumo enquanto você segura a tecla, mesmo virando a mira. Z alterna para WASD fixo na tela; a escolha fica em Ajustes. No celular, o joystick move livremente e a mira acompanha NPCs próximos.",
         ],
         [
-          "J / clique / toque",
+          "Clique esquerdo / J / toque",
           "Combo de três",
           "Acertos confirmados devolvem parte do Ki gasto; o finalizador dá um bônus pequeno. Derrotar inimigos recupera um pouco de vida e Ki. Errar ou bater na guarda quebra a sequência. Segure 450 ms para um golpe pesado (18 Ki).",
         ],
         [
-          "K / clique direito",
+          "Clique direito / K",
           "Técnica de ki",
           "Toque para disparar; segure para concentrar. Dois golpes e uma técnica rápida produzem Ruptura de ki (+6 ki), pressionando a guarda.",
         ],
         [
-          "ESPAÇO",
+          "ALT ESQUERDO",
           "Esquiva & ruptura",
           "Em posição neutra, esquive por 20 ki. Durante atordoamento, rompa a sequência por 45 ki (recarga de 12 s). Golpes comprometidos precisam terminar.",
+        ],
+        [
+          "ESPAÇO / botão PULAR",
+          "Pulo & voo",
+          "No chão, Espaço pula. F alterna entre solo e voo; todos os lutadores voam no mesmo plano para facilitar a leitura do combate aéreo. Shift acelera o voo.",
         ],
         [
           "G · SHIFT",
@@ -982,10 +1032,12 @@
           "Marque o destino no Atlas. V sobe à órbita; voe seguindo a seta. Perto do planeta, F entra na atmosfera. Na superfície, F alterna voo e caminhada. Em Yardrat, aprenda a retornar a pontos descobertos por teleporte.",
         ],
         [
-          "E / T / C / M",
+          "E / T / C / B",
           "Sua jornada",
-          "Converse, treine, desenvolva o personagem e abra o atlas.",
+          "Converse, treine, desenvolva o personagem e abra a mochila.",
         ],
+        ["M / N / L", "Exploração", "M abre o mapa local, N o atlas estelar e L a jornada."],
+        ["O / P / H / ENTER", "Comunidade e ajuda", "O abre profissões, P abre o grupo, H mostra estes controles e Enter abre o chat."],
       ]) {
         const d = el("div", undefined, "help-item");
         d.append(el("kbd", key), el("strong", title), el("p", description));
@@ -1031,22 +1083,33 @@
   function action(a) {
     if (!state || window.UZWindows.blocksPlay() || scene || !socket.connected || typing()) return;
     sendCombatInput(true);
-    realtime.intent(a, performance.now() / 1000, UZCombat.moves);
+    const requestedAt = performance.now();
+    realtime.intent(a, requestedAt, UZCombat.moves);
     window.UZVFX?.intent(a, state.self, renderer);
-    socket.emit("action", a);
+    socket.emit("action", a, result => {
+      if (result?.ok === false) realtime.rejectIntent(a, requestedAt);
+      if (result?.queued) {
+        for (const kind of [result.queued.kind, result.queued.tailKind]) {
+          if (kind) document.querySelector(`.action[data-action="${kind === "ki" ? "blast" : "attack"}"]`)?.classList.add("queued");
+        }
+      }
+    });
   }
   function resetInput() {
     if (id) socket.emit("action", "cancelCharge");
     keys.clear();
+    desktopControls.reset();
     realtime.input = { x: 0, y: 0, angle: state?.self.angle || 0 };
     realtime.hold = null;
     realtime.pending = null;
     touch.x = touch.y = 0;
-    held.guard = held.charge = held.boost = false;
+    held.guard = held.charge = held.boost = held.ascend = held.descend = false;
     pointer.used = false;
     document
       .querySelectorAll(".action")
-      .forEach((b) => b.classList.remove("pressed"));
+      .forEach((b) => { b.classList.remove("pressed", "queued"); b._uzPointers?.clear(); });
+    chargePointers.clear();
+    boostPointers.clear();
     $("stick").firstElementChild.style.transform = "";
     if (id)
       socket.emit("input", {
@@ -1055,6 +1118,8 @@
         angle: state?.self.angle || 0,
         guard: false,
         charge: false,
+        ascend: false,
+        descend: false,
       });
   }
   function interact() {
@@ -1102,9 +1167,10 @@
       if (e.code === "Escape") e.target.blur();
       return;
     }
-    if (e.target.closest("button,a,select,summary") && ["Enter","Space"].includes(e.code)) return;
+    if (e.target.closest("button,a,select,summary") && ["Enter","Space","Tab"].includes(e.code)) return;
     // Keep browser-reserved modifier shortcuts out of the game's control map.
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const dodgeModifier = e.code === "AltLeft" && !e.ctrlKey && !e.metaKey;
+    if (e.metaKey || e.ctrlKey || e.altKey && !dodgeModifier) return;
     if (scene) {
       if (["Space", "Enter"].includes(e.code)) {
         e.preventDefault();
@@ -1112,26 +1178,43 @@
       }
       return;
     }
+    if (!state) return;
     if (e.code === "Escape") {
       if (window.UZWindows.blocksPlay()) return;
-      if (!window.UZWindows.closeTop() && state) window.UZBetaUI?.open("journey");
+      window.UZWindows.closeTop();
       return;
     }
     if (window.UZWindows.blocksPlay()) return;
-    if (["Space", "KeyG", "KeyY"].includes(e.code))
+    if (["Space", "KeyG", "KeyY", "Tab"].includes(e.code) || dodgeModifier)
       e.preventDefault();
     keys.add(e.code);
     sendCombatInput();
     if (e.repeat) return;
+    if (e.code === "KeyZ" && !matchMedia("(pointer: coarse)").matches) {
+      setDesktopMovement(desktopControls.mode === "hybrid" ? "screen" : "hybrid");
+      notice(desktopControls.mode === "hybrid" ? "Movimento: mouse + teclado" : "Movimento: WASD na tela");
+      const option = document.querySelector('select[aria-label="Modo de movimento no computador"]');
+      if (option) option.value = desktopControls.mode;
+    }
     if (e.code === "KeyJ") action("attackStart");
-    if (e.code === "KeyY") action("cycleTarget");
+    if (e.code === "Tab" || e.code === "KeyY") action("cycleTarget");
     if (e.code === "KeyK") action("blastStart");
-    if (e.code === "Space") action("dash");
+    if (e.code === "Space" && state.self.mode !== "flight") action("jump");
+    if (dodgeModifier) action("dash");
     if (e.code === "KeyR") action("form");
     if (e.code === "KeyX") action("kaioken");
     if (e.code === "KeyE") interact();
     if (e.code === "KeyT") socket.emit("train");
-    if (e.code === "KeyM") togglePanel("atlas");
+    if (e.code === "KeyM") {
+      if (state?.self.world === "space") togglePanel("atlas");
+      else window.UZSurfaceAtlasUI?.open();
+    }
+    if (e.code === "KeyN") togglePanel("atlas");
+    if (e.code === "KeyB" || e.code === "KeyI") window.UZSandboxUI?.open("inventory");
+    if (e.code === "KeyL") window.UZBetaUI?.open("journey");
+    if (e.code === "KeyO") window.UZWorldEconomyUI?.open("professions");
+    if (e.code === "KeyP") window.UZPartyUI?.open();
+    if (e.code === "KeyH") togglePanel("help");
     if (e.code === "KeyF") action("flight");
     if (e.code === "KeyV") action("orbit");
     if (e.code === "KeyC") togglePanel("character");
@@ -1160,7 +1243,7 @@
   $("world").addEventListener("contextmenu", (e) => e.preventDefault());
   $("world").addEventListener("pointerdown", (e) => {
     if(e.pointerType!=="touch"){pointer.x=e.clientX;pointer.y=e.clientY;pointer.used=true;}
-    if(state){const wx=renderer.cam.x+(e.clientX-innerWidth/2)/renderer.zoom,wy=renderer.cam.y+(e.clientY-innerHeight/2)/renderer.zoom;const hit=[...state.enemies,...state.players.filter(p=>p.id!==state.self.id&&p.pvp)].find(a=>Math.hypot(a.x-wx,a.y-wy)<65);if(hit)action('target:'+hit.id);}
+    if(state){const wx=renderer.cam.x+(e.clientX-innerWidth/2)/renderer.zoom,wy=renderer.cam.y+(e.clientY-innerHeight/2)/renderer.zoom;const hit=[...state.enemies,...state.players.filter(p=>p.id!==state.self.id&&p.pvp)].find(a=>Math.hypot(a.x-wx,a.y-(a.z||0)-wy)<65);if(hit)action('target:'+hit.id);}
     if (e.pointerType === "touch") return;
     document.activeElement?.blur();
     if (e.button === 0) action("attackStart");
@@ -1174,27 +1257,38 @@
   });
   for (const b of document.querySelectorAll("[data-action]")) {
     const a = b.dataset.action;
+    const pointers = new Set();
+    b._uzPointers = pointers;
+    const clear = (e, cancelled = false) => {
+      if (e && !pointers.has(e.pointerId)) return;
+      if (e) pointers.delete(e.pointerId);
+      if (pointers.size) return;
+      b.classList.remove("pressed");
+      if (a === "guard") {
+        held.guard = false;
+        sendCombatInput(true);
+      } else if (a === "blast") {
+        action(cancelled ? "cancelCharge" : "blast");
+      } else if (a === "attack") {
+        action(cancelled ? "cancelCharge" : "attackRelease");
+      }
+    };
     b.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      b.setPointerCapture(e.pointerId);
+      if (pointers.has(e.pointerId)) return;
+      const first = pointers.size === 0;
+      pointers.add(e.pointerId);
+      try { b.setPointerCapture(e.pointerId); } catch {}
       b.classList.add("pressed");
-      if (a === "guard") held.guard = true;
-      else action(a === "blast" ? "blastStart" : a === "attack" ? "attackStart" : a);
-      if (a === "guard") sendCombatInput();
+      if (!first) return;
+      if (a === "guard") {
+        held.guard = true;
+        sendCombatInput(true);
+      } else action(a === "blast" ? "blastStart" : a === "attack" ? "attackStart" : a);
     });
-    const release = (e) => {
-      b.classList.remove("pressed");
-      if (a === "guard") held.guard = false;
-      else if (a === "blast" && e.type === "pointerup") action("blast");
-      else if(a === "attack") action(e.type === "pointerup" ? "attackRelease" : "cancelCharge");
-      if (a === "guard") sendCombatInput();
-    };
-    b.addEventListener("pointerup", release);
-    b.addEventListener("pointercancel", release);
-    b.addEventListener("lostpointercapture", () => {
-      if (a === "guard") held.guard = false;
-      b.classList.remove("pressed");
-    });
+    b.addEventListener("pointerup", e => clear(e));
+    b.addEventListener("pointercancel", e => clear(e, true));
+    b.addEventListener("lostpointercapture", e => clear(e, true));
   }
   const stick = $("stick");
   let stickPointer = null;
@@ -1225,46 +1319,100 @@
   stick.onpointerup = releaseStick;
   stick.onpointercancel = releaseStick;
   stick.onlostpointercapture = releaseStick;
+  const chargePointers = new Set();
   $("touch-charge").onpointerdown = (e) => {
+    e.preventDefault();
+    if (chargePointers.has(e.pointerId)) return;
+    chargePointers.add(e.pointerId);
     held.charge = true;
-    e.target.setPointerCapture(e.pointerId);
-    sendCombatInput();
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    sendCombatInput(true);
   };
-  $("touch-charge").onpointerup =
-    $("touch-charge").onpointercancel =
-    $("touch-charge").onlostpointercapture =
-      () => { held.charge = false;sendCombatInput(); };
+  const releaseCharge = e => {
+    if (e && !chargePointers.has(e.pointerId)) return;
+    if (e) chargePointers.delete(e.pointerId);
+    held.charge = chargePointers.size > 0;
+    sendCombatInput(true);
+  };
+  $("touch-charge").onpointerup = releaseCharge;
+  $("touch-charge").onpointercancel = $("touch-charge").onlostpointercapture = e => releaseCharge(e);
+  const boostPointers = new Set();
   $("touch-boost").onpointerdown = (e) => {
-    held.boost = true;
-    e.target.setPointerCapture(e.pointerId);
-    sendCombatInput();
+    e.preventDefault();
+    if (boostPointers.has(e.pointerId)) return;
+    const first = boostPointers.size === 0;
+    boostPointers.add(e.pointerId);
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    if (!first) return;
+    if (state?.self.mode === "ground") action("jump");
+    else { held.boost = true; sendCombatInput(true); }
   };
-  $("touch-boost").onpointerup =
-    $("touch-boost").onpointercancel =
-    $("touch-boost").onlostpointercapture =
-      () => { held.boost = false;sendCombatInput(); };
+  const releaseBoost = e => {
+    if (e && !boostPointers.has(e.pointerId)) return;
+    if (e) boostPointers.delete(e.pointerId);
+    if (boostPointers.size) return;
+    held.boost = false;
+    sendCombatInput(true);
+  };
+  $("touch-boost").onpointerup = releaseBoost;
+  $("touch-boost").onpointercancel = $("touch-boost").onlostpointercapture = e => releaseBoost(e);
+  for (const name of ["ascend", "descend"]) {
+    const button = $("touch-" + name);
+    button.onpointerdown = e => {
+      e.preventDefault();
+      if (!state || state.self.mode !== "flight") return;
+      held[name] = true;
+      try { button.setPointerCapture(e.pointerId); } catch {}
+      button.classList.add("pressed");
+      sendCombatInput();
+    };
+      button.onpointerup = button.onpointercancel = button.onlostpointercapture = () => {
+      held[name] = false;
+      button.classList.remove("pressed");
+        sendCombatInput(true);
+    };
+  }
   function sendCombatInput(reliable = false) {
     if (!state || !socket.connected) return;
     const disabled =
       !!scene || window.UZWindows.blocksPlay() || typing();
-    let x = disabled
-        ? 0
-        : (keys.has("KeyD") ? 1 : 0) -
-          (keys.has("KeyA") ? 1 : 0) +
-          touch.x,
-      y = disabled
-        ? 0
-        : (keys.has("KeyS") ? 1 : 0) -
-          (keys.has("KeyW") ? 1 : 0) +
-          touch.y;
+    const mobileControls = matchMedia("(pointer: coarse)").matches;
+    const strafe = (keys.has("KeyD") ? 1 : 0) - (keys.has("KeyA") ? 1 : 0);
+    const forward = (keys.has("KeyW") ? 1 : 0) - (keys.has("KeyS") ? 1 : 0);
+    let x = disabled ? 0 : strafe + touch.x,
+      y = disabled ? 0 : -forward + touch.y;
     let angle = state.self.angle;
     if (!disabled) {
-      if (pointer.used)
-        angle = Math.atan2(
-          renderer.cam.y + (pointer.y-innerHeight/2)/renderer.zoom - state.self.y,
-          renderer.cam.x + (pointer.x-innerWidth/2)/renderer.zoom - state.self.x,
-        );
-      else if (Math.hypot(x, y) > 0.1) angle = Math.atan2(y, x);
+      if (pointer.used && !mobileControls) {
+        const predicted = realtime.predicted?.id === state.self.id && realtime.predicted.world === state.self.world;
+        const position = predicted ? realtime.predicted : state.self;
+        const dx = renderer.cam.x + (pointer.x - innerWidth / 2) / renderer.zoom - position.x - (predicted ? realtime.offset.x : 0);
+        const dy = renderer.cam.y + (pointer.y - innerHeight / 2) / renderer.zoom - position.y + (position.z || 0) - (predicted ? realtime.offset.y - (realtime.offset.z || 0) : 0);
+        // Keep a steady facing when the cursor crosses the character's center.
+        angle = Math.hypot(dx, dy) * renderer.zoom >= 24
+          ? Math.atan2(dy, dx) : realtime.input.angle ?? state.self.angle;
+      }
+      else if (mobileControls) {
+        const self = state.self;
+        const reference = Math.hypot(x, y) > 0.1 ? Math.atan2(y, x) : self.angle;
+        const candidates = [...state.enemies, ...state.players]
+          .filter(e => e.id !== self.id && !e.dead && e.state !== "dead" &&
+            (state.enemies.includes(e) || ((self.pvp && e.pvp) || (self.duelId && self.duelId === e.duelId))) &&
+            Math.hypot(e.x - self.x, e.y - self.y) <= 620 &&
+            Math.abs((e.z || 0) - (self.z || 0)) < 110)
+          .map(e => {
+            const angle = Math.atan2(e.y - self.y, e.x - self.x);
+            const delta = Math.atan2(Math.sin(angle - reference), Math.cos(angle - reference));
+            return { e, angle, score: Math.hypot(e.x - self.x, e.y - self.y) + Math.abs(delta) * 150 };
+          })
+          .sort((a, b) => a.score - b.score);
+        const selected = candidates.find(c => c.e.id === mobileAimTargetId || c.e.id === self.targetId);
+        const target = selected && (!candidates[0] || selected.score <= candidates[0].score + 85)
+          ? selected : candidates[0];
+        mobileAimTargetId = target?.e.id || null;
+        if (target) angle = target.angle;
+        else if (Math.hypot(x, y) > 0.1) angle = Math.atan2(y, x);
+      } else if (Math.hypot(x, y) > 0.1) angle = Math.atan2(y, x);
       else {
         let target = state.enemies.find(e => e.id === state.self.targetId);
         if (!target) {
@@ -1281,13 +1429,23 @@
           angle = Math.atan2(target.y - state.self.y, target.x - state.self.x);
       }
     }
+    if (disabled || mobileControls) desktopControls.reset();
+    else {
+      const movement = desktopControls.vector(strafe, forward, angle, pointer.used,
+        keys.has("KeyA") || keys.has("KeyD") || keys.has("KeyS"));
+      x = movement.x + touch.x;
+      y = movement.y + touch.y;
+    }
     const magnitude = Math.max(1, Math.hypot(x, y));
     const input = {
       x: x / magnitude,
       y: y / magnitude,
       angle,
       guard: !disabled && (keys.has("KeyG") || held.guard),
-      manualAim:!disabled&&pointer.used,
+      manualAim:!disabled&&pointer.used&&!mobileControls,
+      mobileAssist:!disabled&&mobileControls,
+      ascend: false,
+      descend: false,
       charge: !disabled && (keys.has("KeyQ") || held.charge),
       boost:
         !disabled &&

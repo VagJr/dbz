@@ -66,6 +66,31 @@ test("whiff cannot teleport to a rival or confirm a combo", () => {
   assert.equal(a.comboConfirmed, 0);
   assert.equal(g.nextCombo(a), "jab");
 });
+test("mobile melee assist faces a nearby NPC and adds only a short step", () => {
+  const { g, a } = arena();
+  const npc = g.spawn("space", "Treino", "vegeta", a.x - 145, a.y, false, {
+    hp: 1000, maxHp: 1000, mode: "flight", cooldown: Infinity, nextOpening: Infinity,
+  });
+  a.targetId = npc.id;
+  g.input(a.id, { x: 0, y: 0, angle: 0, mobileAssist: true });
+  const start = a.x;
+  assert.equal(g.act(a.id, "attack"), true);
+  step(g, 4);
+  assert.ok(npc.hp < 1000);
+  assert.ok(a.x < start && a.x > start - 65);
+});
+test("mobile melee assist leaves a distant NPC out of reach", () => {
+  const { g, a } = arena();
+  const npc = g.spawn("space", "Distante", "vegeta", a.x - 400, a.y, false, {
+    hp: 1000, maxHp: 1000, mode: "flight", cooldown: Infinity, nextOpening: Infinity,
+  });
+  a.targetId = npc.id;
+  g.input(a.id, { x: 0, y: 0, angle: 0, mobileAssist: true });
+  g.act(a.id, "attack");
+  step(g, 4);
+  assert.equal(npc.hp, 1000);
+  assert.ok(a.x < 80030);
+});
 test("a confirmed fast strike buffers only one followup and cancels recovery after impact", () => {
   const { g, a, b } = arena();
   g.act(a.id, "attack");

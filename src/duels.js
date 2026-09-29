@@ -1,5 +1,6 @@
 "use strict";
 const C = require("../shared/combat");
+const Physics = require("../shared/physics");
 const ready = (p, t) =>
   p &&
   !p.duelId &&
@@ -10,6 +11,7 @@ const ready = (p, t) =>
   !p.moveAction &&
   p.state !== "dead" &&
   p.mode === "ground" &&
+  p.grounded !== false &&
   t - Math.max(p.lastHit ?? -99, p.lastCombatAt ?? -99) > 5;
 const savedKeys = [
   "x",
@@ -20,6 +22,7 @@ const savedKeys = [
   "ki",
   "pvp",
   "mode",
+  "z", "vz", "groundZ", "grounded", "flightZ", "forcedFall",
   "form",
   "level",
   "stats",
@@ -82,6 +85,8 @@ module.exports = (Engine) => {
       p.y = m.y;
       p.angle = i ? 0 : Math.PI;
       p.vx = p.vy = 0;
+      const floor = Physics.surface(p, this.physicsColliders(p), p.x, p.y, Math.max(0, p.z || 0) + Physics.STEP_HEIGHT);
+      p.z = p.groundZ = floor; p.vz = 0; p.grounded = true; p.forcedFall = false;
       p.stun = 0;
       p.invuln = 0;
       p.juggleCount = 0;

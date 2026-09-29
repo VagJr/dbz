@@ -18,18 +18,47 @@ class Store {
   async acquire() {
     await fs.mkdir(this.directory, { recursive: true });
     const lock = path.join(this.directory, "server.lock");
-    try {
-      this.lock = await fs.open(lock, "wx", 0o600);
-      await this.lock.writeFile(
-        JSON.stringify({ pid: process.pid, startedAt: Date.now() }),
-      );
-    } catch (e) {
-      if (e.code === "EEXIST")
-        throw Error(
-          "Há um server.lock neste diretório. Encerre a instância anterior ou verifique o PID antes de remover um lock obsoleto.",
-        );
-      throw e;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        this.lock = await fs.open(lock, "wx", 0o600);
+        try {
+          await this.lock.writeFile(
+            JSON.stringify({ pid: process.pid, startedAt: Date.now() }),
+          );
+        } catch (error) {
+          await this.lock.close();
+          this.lock = null;
+          await fs.unlink(lock).catch(() => {});
+          throw error;
+        }
+        return;
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+        const message = "Há um server.lock neste diretório. Encerre a instância anterior ou verifique o PID antes de remover um lock obsoleto.";
+        let contents;
+        try { contents = await fs.readFile(lock, "utf8"); }
+        catch (readError) {
+          if (readError.code === "ENOENT") continue;
+          throw readError;
+        }
+        let owner;
+        try { owner = JSON.parse(contents); } catch { throw Error(message); }
+        if (!Number.isSafeInteger(owner.pid) || owner.pid <= 0) throw Error(message);
+        try {
+          process.kill(owner.pid, 0);
+          throw Error(message);
+        } catch (probeError) {
+          if (probeError.code !== "ESRCH") throw probeError;
+        }
+        // Only retire the exact stale file we inspected. A new owner may have
+        // acquired the path while the old process was being checked.
+        if (await fs.readFile(lock, "utf8").catch(() => null) !== contents) continue;
+        await fs.unlink(lock).catch((unlinkError) => {
+          if (unlinkError.code !== "ENOENT") throw unlinkError;
+        });
+      }
     }
+    throw Error("Não foi possível adquirir o lock do servidor após verificar a instância anterior.");
   }
   async release() {
     if (this.lock) {

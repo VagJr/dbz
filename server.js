@@ -418,15 +418,49 @@ async function start(options = {}) {
     socket.on("input", (data) => {
       if (!limited("input", 100)) engine.input(socket.id, data);
     });
-    socket.on("action", (action) => {
-      if (!limited("action", 64) && typeof action === "string")
-        engine.act(socket.id, action);
+    socket.on("action", (action, ack) => {
+      if (typeof action !== "string" || limited("action", 64)) {
+        if (typeof ack === "function") ack({ ok: false });
+        return;
+      }
+      const accepted = engine.act(socket.id, action);
+      const player = engine.players.get(socket.id);
+      if (typeof ack === "function") ack({
+        ok: accepted !== false,
+        queued: player?.rhythmQueue
+          ? { action: player.rhythmQueue.action, kind: player.rhythmQueue.kind, count: 1 + (player.rhythmTail ? 1 : 0), tailKind: player.rhythmTail?.kind || null }
+          : null,
+      });
     });
-    socket.on("interact", () => {
-      if (!limited("interact", 2)) {
+    socket.on("interact", async () => {
+      if (token && !limited("interact", 2)) {
         const message = engine.interact(socket.id);
         if (message) socket.emit("notice", message);
+        try { await persist(); } catch { socket.emit("notice", "Salvamento indisponível. Mundo pausado."); }
       }
+    });
+    socket.on("npc:action", async (data, ack) => {
+      const reply = typeof ack === "function" ? ack : () => {};
+      if (!token || limited("npc:action", 3) || !data ||
+          typeof data.npcId !== "string" || data.npcId.length > 50 ||
+          !["talk", "follow", "release", "train"].includes(data.action))
+        return reply({ ok: false, message: "Ação indisponível. Aguarde um instante." });
+      const p = engine.players.get(socket.id);
+      const message = p?.afterlife?.pending && data.npcId === "enma" && data.action === "talk"
+        ? engine.interact(socket.id)
+        : engine.livingNpcAction(socket.id, data.npcId, data.action);
+      audit(p, "npc:" + data.action, { ok: true });
+      try {
+        await persist();
+        reply({ ok: true, message });
+        if (socket.connected) socket.emit("snapshot", snapshotFor(socket.id));
+      } catch { reply({ ok: false, message: "Salvamento indisponível. Mundo pausado." }); }
+    });
+    socket.on("surface:route", (data, ack) => {
+      const reply = typeof ack === "function" ? ack : () => {};
+      if (!token || limited("surface:route", 3) || typeof data?.siteId !== "string")
+        return reply({ ok: false, message: "Aguarde um instante antes de marcar outra rota." });
+      reply(engine.surfaceRoute(socket.id, data.siteId));
     });
     socket.on("route", (world) => {
       if (!limited("route", 3) && engine.route(socket.id, world))

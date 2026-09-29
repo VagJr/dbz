@@ -94,7 +94,7 @@
           {
             type: "clashPulse",
             x: p.x + Math.cos(p.angle) * 24,
-            y: p.y + Math.sin(p.angle) * 24,
+            y: p.y - (p.z || 0) + Math.sin(p.angle) * 24,
           },
           renderer,
         );

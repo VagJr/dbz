@@ -1,0 +1,81 @@
+@media (pointer: coarse) {
+  body,
+  body * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  select,
+  [contenteditable],
+  [contenteditable] * {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+  }
+
+  img,
+  canvas {
+    -webkit-user-drag: none;
+    user-drag: none;
+  }
+
+  #world,
+  #hud .touch-stick,
+  #hud .touch-charge,
+  #hud .touch-boost {
+    touch-action: none;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
+}
+
+.pwa-install-card {
+  position: fixed;
+  z-index: 10000;
+  inset-inline: max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  max-width: 420px;
+  margin-inline: auto;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 28px;
+  gap: 12px;
+  align-items: start;
+  padding: 15px;
+  border: 1px solid #49dcf4;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #102638, #07121e 78%);
+  box-shadow: 0 10px 35px #000b, 0 0 18px #39dafa44;
+  color: #e7f1ff;
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+.pwa-install-card img { width: 48px; height: 48px; border-radius: 11px; }
+.pwa-install-card strong { display: block; color: #fff; font-size: 16px; }
+.pwa-install-card p { margin: 4px 0 10px; color: #b8ccdb; }
+.pwa-install-card .pwa-install-action {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(120deg, #ffe07a, #ff9d3c);
+  color: #091522;
+  font: 700 14px system-ui, sans-serif;
+  cursor: pointer;
+}
+.pwa-install-card .pwa-install-close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #b8ccdb;
+  font: 24px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.pwa-install-card button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }

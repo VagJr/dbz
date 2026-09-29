@@ -1,0 +1,772 @@
+/* Mobile game skin: art stays at the edges and leaves the arena readable. */
+.mobile-character-open,
+.mobile-radar-open { display: none; }
+@media (max-width: 760px), (pointer: coarse) and (max-height: 600px) {
+  :root {
+    --mg-ink: #061523;
+    --mg-metal: #8ab9c1;
+    --mg-gold: #ffd084;
+    --mg-blue: #39c8ef;
+  }
+  body:has(#hud:not([hidden])) .topbar {
+    background: linear-gradient(180deg, #061725e8, #06172554 76%, transparent) !important;
+  }
+  body:has(#hud:not([hidden])) .topbar .location {
+    top: calc(5px + var(--mobile-safe-top)) !important;
+    transform: none !important;
+    padding: 3px 9px 3px 11px;
+    color: #eaf8f4;
+    border-left: 2px solid var(--mg-gold);
+    background: linear-gradient(90deg, #092737da, transparent);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  }
+  #hud .player-card {
+    display: flex !important;
+    align-items: center;
+    gap: 6px !important;
+    top: calc(43px + var(--mobile-safe-top)) !important;
+    left: calc(7px + var(--mobile-safe-left)) !important;
+    width: min(65vw, 260px) !important;
+    height: 76px;
+    padding: 5px 8px 5px 5px !important;
+    border: 1px solid #8bcbd0a8 !important;
+    border-left: 3px solid #ffb555 !important;
+    border-radius: 7px 17px 7px 9px !important;
+    background:
+      linear-gradient(118deg, #d76b2732 0 12%, transparent 12% 25%, #154f6390 25% 28%, transparent 28%),
+      linear-gradient(110deg, #071a2af5 4%, #122f40dc 70%, #092335b8) !important;
+    box-shadow: inset 0 1px #dbf8eb59, inset 0 -3px #020c16a6, 0 7px 22px #0009 !important;
+    clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 16px, 100% 100%, 0 100%);
+    pointer-events: none;
+  }
+  #hud .player-card::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 34px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #ffcb65);
+    box-shadow: 0 0 8px #fcb65d;
+  }
+  #hud .player-card .portrait-small {
+    display: block !important;
+    position: relative;
+    width: 59px !important;
+    min-width: 59px;
+    height: 64px;
+    margin: 0 !important;
+    padding: 3px !important;
+    overflow: visible !important;
+    border: 2px solid #dbebdd !important;
+    border-bottom-color: #eebf6f !important;
+    border-radius: 10px 4px 12px 4px !important;
+    background: radial-gradient(circle at 54% 24%, #3c7585, #081b2d 82%) !important;
+    box-shadow: inset 0 0 0 2px #102c3e, 0 0 11px #56ccda49;
+    clip-path: polygon(0 16%, 16% 0, 100% 0, 100% 84%, 84% 100%, 0 100%);
+  }
+  #hud .player-card .portrait-small canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    object-position: center;
+    border-radius: 5px;
+  }
+  #hud .player-card .portrait-small > span {
+    bottom: -2px !important;
+    right: -1px !important;
+    min-width: 20px;
+    padding: 1px 3px !important;
+    color: #202d32;
+    background: #ffcf77 !important;
+    border: 1px solid #fff3c0;
+    border-radius: 3px !important;
+    font: 900 9px/12px system-ui !important;
+    text-align: center;
+  }
+  #hud .player-card .vitals {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: center;
+    padding: 0 2px 0 0 !important;
+  }
+  #hud .player-card .name-row {
+    height: 17px;
+    min-height: 17px;
+    margin: 0 0 2px !important;
+    align-items: baseline;
+  }
+  #hud .player-card .name-row strong {
+    color: #ffdfac !important;
+    font: 900 12px/16px 'Barlow Condensed', system-ui !important;
+    letter-spacing: .4px;
+    text-shadow: 0 1px 2px #000;
+  }
+  #hud .player-card .name-row small {
+    color: #80e5ed !important;
+    font: 800 6px/11px system-ui !important;
+    letter-spacing: .55px;
+  }
+  #hud .player-card .bar,
+  #hud .player-card .bar.ki {
+    width: 100% !important;
+    height: 15px !important;
+    margin: 2px 0 0 !important;
+    padding: 2px !important;
+    background: linear-gradient(#e1f8e8, #5c9c9f 46%, #e1bb74 51%, #3a7181) !important;
+    border: 0 !important;
+    clip-path: polygon(0 50%, 7px 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 7px 100%);
+  }
+  #hud .player-card .bar.ki { height: 12px !important; }
+  #hud .player-card .vital-track { inset: 2px !important; }
+  #hud .player-card .bar span {
+    font: 900 8px/13px 'Barlow Condensed', system-ui !important;
+    color: #fff !important;
+    letter-spacing: .2px;
+    text-shadow: 0 1px 2px #000 !important;
+  }
+  #hud .player-card .bar.ki span { font-size: 7px !important; line-height: 10px !important; }
+  #hud .player-card .xp-bar {
+    height: 3px !important;
+    margin: 3px 7px 0 !important;
+    border-radius: 4px;
+    background: #081923 !important;
+  }
+  #hud .player-card .xp-bar i { background: linear-gradient(90deg, #f4a842, #ffe099) !important; }
+  #hud .mobile-character-open {
+    display: block;
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    left: 0;
+    width: 65px;
+    height: 76px;
+    border: 0;
+    background: transparent;
+    pointer-events: auto;
+  }
+  #hud .radar-card {
+    top: calc(45px + var(--mobile-safe-top)) !important;
+    right: calc(8px + var(--mobile-safe-right)) !important;
+    width: 85px !important;
+    height: 85px;
+  }
+  #hud .radar-card::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -4px;
+    border: 2px solid #a8d0bf;
+    border-radius: 50%;
+    background: radial-gradient(circle, #122f35, #071929);
+    box-shadow: inset 0 0 0 3px #0c3b46, 0 0 0 2px #f0bd6b99, 0 7px 18px #0009;
+  }
+  #hud #radar {
+    display: block;
+    width: 79px !important;
+    height: 79px !important;
+    margin: 3px auto 0 !important;
+    border: 0 !important;
+    border-radius: 50%;
+    clip-path: circle(49%);
+    box-shadow: none !important;
+    background: #124235;
+  }
+  #hud .mobile-radar-open {
+    display: block;
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    pointer-events: auto;
+  }
+  #hud #flight-button {
+    margin-top: 9px !important;
+    min-height: 28px !important;
+    height: 28px !important;
+    width: 85px !important;
+    color: #e6f8e9;
+    border: 1px solid #a9e1d0a6;
+    border-radius: 4px 4px 13px 13px !important;
+    background: linear-gradient(#194c58dc, #092330ec) !important;
+    box-shadow: 0 4px 12px #0008;
+    font: 900 9px/1 'Barlow Condensed', system-ui !important;
+    letter-spacing: .5px;
+  }
+  #hud .quest-card {
+    top: calc(127px + var(--mobile-safe-top)) !important;
+    left: calc(8px + var(--mobile-safe-left)) !important;
+    width: min(59vw, 239px) !important;
+    max-width: none !important;
+    height: 39px !important;
+    min-height: 39px !important;
+    max-height: 39px !important;
+    padding: 3px 37px 3px 31px !important;
+    border: 1px solid #a8cbd1a3 !important;
+    border-left: 3px solid #ffbf62 !important;
+    border-radius: 5px 16px 5px 5px !important;
+    background: linear-gradient(95deg, #082333ea, #183f4ce1 70%, #0c2a39b5) !important;
+    box-shadow: inset 0 1px #e9f2e133, 0 4px 16px #0009 !important;
+  }
+  #hud .quest-card::before {
+    display: block !important;
+    content: "✦" !important;
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    width: 23px;
+    height: 26px;
+    color: #ffe6a8;
+    background: radial-gradient(circle, #c77d39, #66452b);
+    border: 1px solid #efc985;
+    border-radius: 5px;
+    text-align: center;
+    font: 900 18px/25px system-ui;
+  }
+  #hud .quest-card h3 {
+    font: 800 11px/31px 'Barlow Condensed', system-ui !important;
+    letter-spacing: .4px;
+    color: #f9ecca;
+  }
+  #hud .quest-card .eyebrow button {
+    width: 35px !important;
+    height: 37px !important;
+    min-width: 35px !important;
+    min-height: 37px !important;
+    color: #ffdb97;
+  }
+  #hud .target-card,
+  body.combat-focus #hud .target-card {
+    top: calc(172px + var(--mobile-safe-top)) !important;
+    left: calc(8px + var(--mobile-safe-left)) !important;
+    width: min(58vw, 229px) !important;
+    min-height: 43px;
+    padding: 4px 7px 7px !important;
+    border: 1px solid #fd9e77a4 !important;
+    border-left: 3px solid #ff7359 !important;
+    background: linear-gradient(90deg, #321d25e8, #0b2735d8) !important;
+    box-shadow: 0 3px 14px #0009;
+  }
+  #hud .target-card .target-readout strong { color: #fff0d2; }
+  #hud .target-card .target-health { height: 6px; border: 1px solid #f0c3ad77; border-radius: 2px; }
+  #hud .nav-telemetry {
+    top: calc(178px + var(--mobile-safe-top)) !important;
+    right: calc(8px + var(--mobile-safe-right)) !important;
+    width: 85px !important;
+  }
+  #hud .nav-telemetry button {
+    width: 85px !important;
+    min-height: 33px !important;
+    color: #fff4d2;
+    border: 1px solid #f9c57d9a;
+    border-radius: 5px 5px 13px 13px !important;
+    background: linear-gradient(#5b3f2be8, #122a39e8) !important;
+    box-shadow: 0 4px 12px #0008;
+    font: 900 9px/1 'Barlow Condensed', system-ui !important;
+  }
+  #hud .mobile-menu-toggle,
+  #hud .mobile-chat-toggle {
+    width: 49px !important;
+    min-width: 49px !important;
+    height: 49px !important;
+    min-height: 49px !important;
+    border: 2px solid #addce1b9 !important;
+    border-bottom-color: #e6b66d !important;
+    border-radius: 50% !important;
+    color: #fff2d1;
+    background: radial-gradient(circle at 33% 27%, #376a78, #0a2534 75%) !important;
+    box-shadow: inset 0 0 0 3px #081624, 0 4px 14px #0009, 0 0 12px #2bd0e536 !important;
+    text-shadow: 0 2px #000;
+  }
+  #hud .mobile-menu-toggle { left: calc(13px + var(--mobile-safe-left)); }
+  #hud .mobile-chat-toggle { left: calc(70px + var(--mobile-safe-left)); }
+  body.mobile-menu-open #hud .bottom-nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: min(310px, calc(100vw - 20px)) !important;
+    padding: 10px !important;
+    gap: 6px !important;
+    border: 1px solid #8dc9d4b7;
+    border-top: 2px solid #ffd284;
+    border-radius: 13px 13px 6px 6px;
+    background:
+      linear-gradient(160deg, #071c2cf0, #0c3440ec),
+      url('/assets/ui/generated/menu/44.png') center/cover !important;
+    box-shadow: 0 14px 40px #000c, inset 0 1px #f6e2ad4d !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav button {
+    position: relative;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: end;
+    height: 69px !important;
+    min-height: 69px !important;
+    padding: 3px 2px 5px !important;
+    overflow: hidden;
+    border: 1px solid #b5e1e480 !important;
+    border-bottom-color: #ffca798f !important;
+    border-radius: 8px !important;
+    background: linear-gradient(160deg, #204450, #071c2c) !important;
+    box-shadow: inset 0 1px #c8f7fa42, 0 3px 8px #0008 !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav button::before {
+    width: 43px !important;
+    height: 43px !important;
+    flex: none;
+    margin: 0 auto !important;
+    background: var(--nav-art) center/contain no-repeat !important;
+    filter: drop-shadow(0 2px 4px #000);
+  }
+  body.mobile-menu-open #hud .bottom-nav button span {
+    display: block;
+    width: 100%;
+    color: #f4e8cb !important;
+    font: 800 9px/11px 'Barlow Condensed', system-ui !important;
+    letter-spacing: .2px;
+    text-shadow: 0 1px 2px #000;
+    text-align: center;
+  }
+  #hud .action-dock .action,
+  #hud .action-dock .awaken,
+  #hud .touch-charge,
+  #hud .touch-boost {
+    border: 2px solid #b9dae1a8 !important;
+    border-bottom-color: #ffce86b8 !important;
+    border-radius: 50% !important;
+    background: radial-gradient(circle at 32% 25%, #2e5a68dc, #071b2bdc 77%) !important;
+    box-shadow: inset 0 0 0 3px #071928aa, 0 4px 12px #0009, 0 0 12px #49c7db2f !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #hud .action-dock .action::before,
+  #hud .action-dock .awaken::before {
+    opacity: 1 !important;
+    background-image: var(--button-art) !important;
+    background-position: center !important;
+    background-size: 94% 94% !important;
+    background-repeat: no-repeat !important;
+  }
+  #hud .action-dock [data-action="attack"] {
+    border-color: #ffdb92 !important;
+    background: radial-gradient(circle at 35% 27%, #a95b27, #312432 70%, #0c1727) !important;
+    box-shadow: inset 0 0 0 3px #5f3b24, 0 0 18px #ffc15a9a, 0 5px 14px #000c !important;
+  }
+  #hud .action-dock .action.pressed,
+  #hud .touch-charge:active,
+  #hud .touch-boost:active {
+    filter: brightness(1.3);
+    transform: scale(.94);
+  }
+  #hud .touch-stick {
+    border: 3px solid #b3e1e5ad !important;
+    border-bottom-color: #ecc688ba !important;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, #4ee7e51e 0 38%, transparent 39%),
+      radial-gradient(circle, #234e62a8, #071c2ac7 73%) !important;
+    box-shadow: inset 0 0 0 5px #071a2880, 0 5px 18px #0009 !important;
+  }
+  #hud .touch-stick span {
+    border: 2px solid #cceced !important;
+    border-radius: 50%;
+    background: radial-gradient(circle at 31% 27%, #5fb3b3, #13394a 74%) !important;
+    box-shadow: inset 0 0 0 3px #143643, 0 3px 10px #0009 !important;
+  }
+  #hud .touch-charge {
+    color: #a8f4fb !important;
+    font: 900 11px/1 'Barlow Condensed', system-ui !important;
+    letter-spacing: .4px;
+    text-shadow: 0 1px 2px #000, 0 0 7px #30d2f5;
+  }
+  #hud .touch-boost {
+    color: #fff0c3 !important;
+    font: 900 10px/1 'Barlow Condensed', system-ui !important;
+    letter-spacing: .2px;
+    text-shadow: 0 1px 2px #000, 0 0 7px #f8a93d;
+  }
+  dialog.mmo-window,
+  dialog#sandbox-panel.mmo-window,
+  dialog#party-panel.mmo-window,
+  dialog#world-economy-panel.mmo-window,
+  dialog#surface-atlas-panel.mmo-window {
+    width: min(308px, 78vw) !important;
+    max-width: min(308px, 78vw) !important;
+    max-height: min(52dvh, 465px) !important;
+    border: 1px solid #a6d9d7a8 !important;
+    border-top: 2px solid #ffcc7a !important;
+    border-radius: 10px 17px 8px 8px !important;
+    background: linear-gradient(155deg, #092635fa, #071725f7 65%, #112935f6) !important;
+    box-shadow: 0 13px 36px #000c, inset 0 1px #f6e5ac4d !important;
+  }
+  dialog.mmo-window > header {
+    background:
+      linear-gradient(95deg, #153c4f 10%, #0c2534da 62%, #65452a8c),
+      url('/assets/ui/generated/menu/44.png') right/cover !important;
+    border-bottom: 1px solid #ddb8759e !important;
+  }
+  dialog.mmo-window > header h2,
+  dialog.mmo-window h2 {
+    color: #f9e8c3 !important;
+    text-shadow: 0 2px 4px #000;
+  }
+  dialog.mmo-window .window-tools button {
+    border: 1px solid #a3d7d686 !important;
+    border-radius: 50% !important;
+    background: #071e2dcf !important;
+    color: #ffdfac;
+  }
+  dialog.mmo-window > nav {
+    background: linear-gradient(90deg, #0d3140, #071923) !important;
+    border-bottom: 1px solid #a4d9d543;
+  }
+  dialog.mmo-window > nav button {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    max-width: 49px !important;
+    border-radius: 7px !important;
+    background: radial-gradient(circle, #245363, #091d2c) !important;
+    border: 1px solid #8bbbc17e !important;
+    box-shadow: inset 0 1px #d7f9f64d;
+  }
+  dialog.mmo-window > nav .tab-art {
+    width: 38px !important;
+    height: 38px !important;
+    object-fit: contain;
+    aspect-ratio: 1;
+  }
+  dialog.mmo-window > .panel-body,
+  dialog.mmo-window > .beta-body,
+  dialog.mmo-window > .sandbox-body,
+  dialog.mmo-window .economy-body,
+  dialog.mmo-window .surface-map-body,
+  dialog.mmo-window .party-body {
+    max-height: calc(52dvh - 98px) !important;
+    padding: 8px !important;
+    color: #d8eff0;
+    background: linear-gradient(180deg, #1031424a, transparent 95px) !important;
+  }
+  dialog.mmo-window[data-kind="atlas"] > .panel-body::before,
+  dialog.mmo-window[data-kind="campaigns"] > .panel-body::before,
+  dialog.mmo-window[data-kind="settings"] > .panel-body::before,
+  dialog#sandbox-panel .sandbox-body::before,
+  dialog#beta-hub .beta-body::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: 67px;
+    margin-bottom: 9px;
+    border: 1px solid #b2d7d078;
+    border-radius: 7px;
+    background:
+      linear-gradient(90deg, #082637b5, transparent 80%),
+      var(--mg-scene, url('/assets/ui/generated/paozu-background.jpg')) center/cover;
+    box-shadow: inset 0 0 0 2px #081d2b77, 0 4px 12px #0008;
+  }
+  dialog.mmo-window[data-kind="atlas"] { --mg-scene: url('/assets/ui/generated/menu/44.png'); }
+  dialog.mmo-window[data-kind="campaigns"] { --mg-scene: url('/assets/ui/generated/menu/39.png'); }
+  dialog.mmo-window[data-kind="settings"] { --mg-scene: url('/assets/ui/generated/menu/40.png'); }
+  dialog#sandbox-panel { --mg-scene: url('/assets/ui/generated/menu/36.png'); }
+  dialog#beta-hub { --mg-scene: url('/assets/ui/generated/menu/42.png'); }
+  dialog.mmo-window .beta-section,
+  dialog.mmo-window .sandbox-section,
+  dialog.mmo-window .beta-card,
+  dialog.mmo-window .sandbox-row,
+  dialog.mmo-window .place-row {
+    border: 1px solid #80b9bd5a !important;
+    border-left: 2px solid #e7c185aa !important;
+    border-radius: 6px !important;
+    background: linear-gradient(110deg, #173c4ba6, #071e2a99) !important;
+    box-shadow: inset 0 1px #d9f3e620;
+  }
+  dialog.mmo-window .sandbox-row,
+  dialog.mmo-window .beta-roster-row,
+  dialog.mmo-window .place-row {
+    grid-template-columns: 50px minmax(0, 1fr) !important;
+    min-height: 60px !important;
+    gap: 8px !important;
+    margin: 5px 0 !important;
+    padding: 6px !important;
+  }
+  dialog.mmo-window .sandbox-row > img,
+  dialog.mmo-window .row-art,
+  dialog.mmo-window .section-art {
+    width: 48px !important;
+    height: 48px !important;
+    object-fit: contain;
+    border-radius: 5px;
+  }
+  dialog.mmo-window .inventory-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  dialog.mmo-window .item-slot {
+    border: 1px solid #aadadd8c !important;
+    border-bottom-color: #f4d18aa3 !important;
+    border-radius: 6px !important;
+    background: radial-gradient(circle at 50% 75%, #376176, #081c2d 80%) !important;
+    box-shadow: inset 0 1px #e2f7e542;
+  }
+  dialog.mmo-window button,
+  dialog.mmo-window select { touch-action: manipulation; }
+  dialog.mmo-window .beta-button,
+  dialog.mmo-window .sandbox-button,
+  dialog.mmo-window .economy-action,
+  dialog.mmo-window .surface-map-button {
+    min-height: 38px !important;
+    border-color: #8bcad199 !important;
+    border-radius: 5px !important;
+    background: linear-gradient(#19485b, #0b2c3d) !important;
+    color: #f5e6c4 !important;
+  }
+  #hud .interaction:not([hidden]) button,
+  #sandbox-context:not([hidden]) {
+    border: 1px solid #ffe0a3a8 !important;
+    border-radius: 8px !important;
+    background: linear-gradient(120deg, #7c522ebf, #102e3ce8) !important;
+    box-shadow: 0 4px 14px #0009;
+  }
+}
+
+@media (orientation: landscape) and (pointer: coarse) and (max-height: 600px) {
+  #hud .mobile-menu-toggle { left: auto !important; right: calc(95px + var(--mobile-safe-right)) !important; }
+  #hud .mobile-chat-toggle { left: auto !important; right: calc(151px + var(--mobile-safe-right)) !important; }
+  #hud .player-card { top: calc(38px + var(--mobile-safe-top)) !important; width: 214px !important; height: 64px; }
+  #hud .player-card .portrait-small { width: 48px !important; min-width: 48px; height: 54px; }
+  #hud .player-card .mobile-character-open { width: 54px; height: 64px; }
+  #hud .player-card .bar { height: 12px !important; }
+  #hud .player-card .bar.ki { height: 10px !important; }
+  #hud .radar-card { top: calc(39px + var(--mobile-safe-top)) !important; width: 70px !important; height: 70px; }
+  #hud #radar { width: 65px !important; height: 65px !important; }
+  #hud #flight-button { width: 70px !important; min-height: 25px !important; height: 25px !important; margin-top: 6px !important; }
+  #hud .quest-card { top: calc(109px + var(--mobile-safe-top)) !important; left: calc(8px + var(--mobile-safe-left)) !important; width: 214px !important; }
+  #hud .target-card, body.combat-focus #hud .target-card { top: calc(155px + var(--mobile-safe-top)) !important; }
+  #hud .nav-telemetry { top: calc(149px + var(--mobile-safe-top)) !important; width: 70px !important; }
+  #hud .nav-telemetry button { width: 70px !important; }
+  body.mobile-menu-open #hud .bottom-nav {
+    left: calc(235px + var(--mobile-safe-left)) !important;
+    top: calc(43px + var(--mobile-safe-top)) !important;
+    bottom: auto !important;
+    width: min(310px, 42vw) !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav button { height: 52px !important; min-height: 52px !important; }
+  body.mobile-menu-open #hud .bottom-nav button::before { width: 32px !important; height: 32px !important; }
+  dialog.mmo-window,
+  dialog#sandbox-panel.mmo-window,
+  dialog#party-panel.mmo-window,
+  dialog#world-economy-panel.mmo-window,
+  dialog#surface-atlas-panel.mmo-window {
+    top: calc(43px + var(--mobile-safe-top)) !important;
+    width: min(310px, 42vw) !important;
+    max-width: min(310px, 42vw) !important;
+    max-height: 58dvh !important;
+  }
+}
+
+/* Mission information is available on demand. Combat and the playable center stay clear. */
+@media (max-width: 760px), (pointer: coarse) and (max-height: 600px) {
+  body:has(#hud:not([hidden])) .beta-waypoint:not([hidden]),
+  body:has(#hud:not([hidden])) .tutorial-card:not([hidden]),
+  body:has(#hud:not([hidden])) #lore-objective:not([hidden]) {
+    display: none !important;
+  }
+  #hud .quest-card {
+    cursor: pointer;
+    touch-action: manipulation;
+    background:
+      linear-gradient(92deg, #0a2638f2 0%, #184a5ab9 63%, #071d2b9a),
+      url('/assets/ui/generated/menu/01.png') right center/auto 100% no-repeat !important;
+  }
+  #hud .quest-card .mobile-objective-expand {
+    position: absolute;
+    z-index: 4;
+    top: 0;
+    left: 0;
+    width: calc(100% - 38px);
+    height: 39px;
+    min-height: 39px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  #hud .quest-card .mobile-objective-expand:focus-visible { outline: 2px solid #fff0a8; outline-offset: -2px; }
+  #hud .quest-card::before {
+    content: "" !important;
+    background: url('/assets/ui/generated/hud/22.png') center 68%/47px auto no-repeat !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  #hud .quest-card::after {
+    content: "⌄";
+    position: absolute;
+    top: 7px;
+    right: 38px;
+    color: #ffe2a1;
+    font: 900 15px/1 system-ui;
+    pointer-events: none;
+  }
+  #hud .quest-card[aria-expanded="true"]::after { content: "⌃"; }
+  #hud .mobile-objective-extra { display: none !important; }
+  body.mobile-objective-open #hud .quest-card {
+    z-index: 31 !important;
+    height: auto !important;
+    max-height: min(33dvh, 190px) !important;
+    padding-bottom: 9px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+    border-color: #f8d691b0 !important;
+    box-shadow: 0 10px 25px #000b, inset 0 1px #fff8d54d !important;
+  }
+  body.mobile-objective-open #hud .quest-card h3 { line-height: 25px !important; }
+  body.mobile-objective-open #hud .quest-card > p {
+    display: block !important;
+    margin: 5px 0 !important;
+    color: #f5ead0;
+    font: 600 10px/1.35 system-ui !important;
+  }
+  body.mobile-objective-open #hud .quest-progress { display: flex !important; }
+  body.mobile-objective-open #hud .mobile-objective-extra {
+    display: block !important;
+    margin-top: 5px;
+    border-top: 1px solid #b7dbe05a;
+  }
+  #hud .mobile-objective-extra .mobile-objective-note {
+    display: block !important;
+    margin: 5px 0 !important;
+    color: #cbe9e9;
+    font: 500 9px/1.4 system-ui !important;
+  }
+  #hud .mobile-objective-extra .mobile-objective-dismiss {
+    width: auto !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    margin: 1px 0 5px;
+    padding: 2px 8px;
+    color: #ffdd99;
+    background: #163a47;
+    border: 1px solid #f5c57a80;
+    border-radius: 4px;
+    font: 700 9px system-ui;
+  }
+  body.combat-focus #hud .quest-card,
+  body.combat-focus #hud .mobile-objective-extra { display: none !important; }
+  body:has(dialog.mmo-window[data-side="left"][open]) #hud .quest-card { display: none !important; }
+  body.combat-focus #toast:not([hidden]),
+  body:has(dialog.mmo-window[open]) #toast:not([hidden]) { display: none !important; }
+
+  /* The original utility panel changes its id to game-panel-*, so keep every
+     variation small and anchored at an edge, including the mission journal. */
+  dialog.mmo-window[open],
+  dialog#game-panel-campaigns.mmo-window[open],
+  dialog#panel.mmo-window[open],
+  dialog#sandbox-panel.mmo-window[open],
+  dialog#party-panel.mmo-window[open],
+  dialog#world-economy-panel.mmo-window[open],
+  dialog#surface-atlas-panel.mmo-window[open],
+  dialog#beta-hub.mmo-window[open] {
+    position: fixed !important;
+    inset: auto !important;
+    top: calc(130px + var(--mobile-safe-top)) !important;
+    left: calc(8px + var(--mobile-safe-left)) !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: min(262px, 68vw) !important;
+    max-width: min(262px, 68vw) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: min(46dvh, calc(100dvh - 360px - var(--mobile-safe-top) - var(--mobile-safe-bottom))) !important;
+    margin: 0 !important;
+    transform: none !important;
+    border-radius: 8px 16px 8px 8px !important;
+  }
+  dialog.mmo-window[data-side="right"][open] {
+    left: auto !important;
+    right: calc(8px + var(--mobile-safe-right)) !important;
+  }
+  dialog#game-panel-campaigns.mmo-window[open] { width: min(250px, 65vw) !important; }
+  dialog.mmo-window > header,
+  dialog#game-panel-campaigns.mmo-window > header {
+    background:
+      linear-gradient(90deg, #0b2b3ced 24%, #153f4bd2 70%, #6b432a86),
+      url('/assets/ui/generated/menu/01.png') right center/auto 100% no-repeat !important;
+  }
+  dialog#game-panel-campaigns.mmo-window > .panel-body::before {
+    background:
+      linear-gradient(90deg, #071d2b6b, transparent 85%),
+      url('/assets/ui/generated/menu/01.png') center/cover !important;
+  }
+  dialog#game-panel-campaigns.mmo-window .chapter-row {
+    position: relative;
+    min-height: 65px !important;
+    margin: 5px 0 !important;
+    padding: 7px 8px 7px 39px !important;
+    border-left: 3px solid #9ad8df !important;
+    background:
+      linear-gradient(90deg, #0e3241f5 0%, #0c2938e3 65%, #0b1f2aa5),
+      url('/assets/ui/generated/menu/44.png') right center/auto 100% no-repeat !important;
+  }
+  dialog#game-panel-campaigns.mmo-window .chapter-row.current { border-left-color: #ffd480 !important; }
+  dialog#game-panel-campaigns.mmo-window .chapter-number {
+    top: 9px !important;
+    bottom: auto !important;
+    left: 6px !important;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 26%, #fff3aa, #bd722c 55%, #333452);
+    text-align: center;
+    font: 900 13px/26px system-ui !important;
+    color: #10232d !important;
+  }
+  dialog#game-panel-campaigns.mmo-window .chapter-row p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  #hud .mobile-menu-toggle span,
+  #hud .mobile-chat-toggle span {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    font-size: 0;
+  }
+  #hud .mobile-menu-toggle svg,
+  #hud .mobile-chat-toggle svg {
+    width: 25px;
+    height: 25px;
+    fill: #e3f9f6;
+    filter: drop-shadow(0 0 5px #5af1f0a3);
+  }
+}
+
+@media (orientation: landscape) and (pointer: coarse) and (max-height: 600px) {
+  #hud .quest-card { max-height: 39px !important; }
+  body.mobile-objective-open #hud .quest-card { max-height: min(31dvh, 126px) !important; }
+  dialog.mmo-window[open],
+  dialog#game-panel-campaigns.mmo-window[open],
+  dialog#panel.mmo-window[open],
+  dialog#sandbox-panel.mmo-window[open],
+  dialog#party-panel.mmo-window[open],
+  dialog#world-economy-panel.mmo-window[open],
+  dialog#surface-atlas-panel.mmo-window[open],
+  dialog#beta-hub.mmo-window[open] {
+    top: calc(42px + var(--mobile-safe-top)) !important;
+    width: min(292px, 39vw) !important;
+    max-width: min(292px, 39vw) !important;
+    max-height: min(58dvh, calc(100dvh - 90px - var(--mobile-safe-top) - var(--mobile-safe-bottom))) !important;
+  }
+  dialog#game-panel-campaigns.mmo-window[open] { width: min(270px, 36vw) !important; }
+  #hud .mobile-menu-toggle,
+  #hud .mobile-chat-toggle { width: 44px !important; height: 44px !important; min-width: 44px !important; min-height: 44px !important; }
+}

@@ -3,6 +3,8 @@
   const windows = new Map();
   let layer = 40;
   const storageKey = "uz-window-layout-v1";
+  const mobileLayout = () =>
+    matchMedia("(max-width: 760px), (pointer: coarse) and (max-height: 600px)").matches;
   let saved = {};
   try {
     saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
@@ -50,6 +52,7 @@
       head.append(tools);
       let drag = null;
       head.addEventListener("pointerdown", (e) => {
+        if (mobileLayout()) return;
         if (e.button !== 0 || e.target.closest("button,a,input,select")) return;
         const r = panel.getBoundingClientRect();
         drag = { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -81,30 +84,39 @@
   }
   function open(panel, side = "left") {
     register(panel, side);
+    if (mobileLayout()) {
+      for (const other of windows.values()) {
+        if (other !== panel && other.open) other.close();
+      }
+      panel.style.removeProperty("left");
+      panel.style.removeProperty("top");
+    }
     const wasOpen = panel.open;
     const focus = document.activeElement;
     if (!wasOpen) {
       panel.show();
-      const position = saved[panel.id];
-      if (position) {
-        panel.style.left = `${position.x}px`;
-        panel.style.top = `${position.y}px`;
-      } else {
-        const offset =
-          [...windows.values()].filter(
-            (p) => p !== panel && p.open && p.dataset.side === side,
-          ).length * 28;
-        panel.style.left = `${side === "right" ? innerWidth - panel.offsetWidth - 16 - offset : 16 + offset}px`;
-        const anchor = document.querySelector(
-          side === "right" ? ".radar-card" : ".player-card",
-        );
-        const safeTop = Math.max(
-          110,
-          (anchor?.getBoundingClientRect().bottom || 124) + 8,
-        );
-        panel.style.top = `${Math.max(12, Math.min(safeTop + offset, innerHeight - panel.offsetHeight - 12))}px`;
+      if (!mobileLayout()) {
+        const position = saved[panel.id];
+        if (position) {
+          panel.style.left = `${position.x}px`;
+          panel.style.top = `${position.y}px`;
+        } else {
+          const offset =
+            [...windows.values()].filter(
+              (p) => p !== panel && p.open && p.dataset.side === side,
+            ).length * 28;
+          panel.style.left = `${side === "right" ? innerWidth - panel.offsetWidth - 16 - offset : 16 + offset}px`;
+          const anchor = document.querySelector(
+            side === "right" ? ".radar-card" : ".player-card",
+          );
+          const safeTop = Math.max(
+            110,
+            (anchor?.getBoundingClientRect().bottom || 124) + 8,
+          );
+          panel.style.top = `${Math.max(12, Math.min(safeTop + offset, innerHeight - panel.offsetHeight - 12))}px`;
+        }
+        clamp(panel);
       }
-      clamp(panel);
       // Opening a utility window must not take keyboard focus from combat.
       if (focus?.isConnected && !focus.closest("dialog"))
         focus.focus({ preventScroll: true });
@@ -122,7 +134,7 @@
     return true;
   }
   addEventListener("resize", () => {
-    for (const p of windows.values()) if (p.open) clamp(p);
+    if (!mobileLayout()) for (const p of windows.values()) if (p.open) clamp(p);
   });
   window.UZWindows = { register, open, blocksPlay, closeTop };
   // The live fills use the full inner width of each angular HUD track.

@@ -391,7 +391,18 @@
         c.fill();
         c.restore();
       }
-      Art.fighter(c, { ...e, x: 0, y: 0 }, t, z * (e.boss ? 1.22 : 1));
+      Art.fighter(c, { ...e, x: 0, y: 0, z: 0, groundZ: 0 }, t, z * (e.boss ? 1.22 : 1));
+      if (e.halo) {
+        c.save();
+        c.strokeStyle = '#f8e8a7';
+        c.lineWidth = Math.max(1.4, 2.6 * z);
+        c.shadowColor = '#ffeaa9';
+        c.shadowBlur = this.reduced ? 0 : 11;
+        c.beginPath();
+        c.ellipse(0, -56 * z, 17 * z, 5 * z, -0.12, 0, TAU);
+        c.stroke();
+        c.restore();
+      }
       if(e.maxHp){c.fillStyle='#172636';c.fillRect(-18,23,36,3);c.fillStyle=e.id===p.id?'#7fe0bd':'#ee7779';c.fillRect(-18,23,36*Math.max(0,e.hp/e.maxHp),3);}
       if(e.state==='windup'){
         c.rotate(e.angle);c.strokeStyle='#ff8079';c.lineWidth=1.5;c.beginPath();c.moveTo(0,0);c.arc(0,0,(e.pattern==='beam'?400:85)*z,-.85,.85);c.closePath();c.stroke();
@@ -455,8 +466,8 @@
           : p.altitude > 0.1
             ? "ENTRADA NA ATMOSFERA"
             : p.mode === "ground"
-              ? "SUPERFÍCIE"
-              : "VOO LIVRE";
+              ? p.grounded === false ? p.vz > 0 ? "PULANDO" : "EM QUEDA" : "SUPERFÍCIE"
+              : "VOO · PLANO DE COMBATE";
       $("flight-speed").textContent =
         Math.round(Math.hypot(p.vx, p.vy)) + " u/s";
       $("route-name").textContent = n?.name || "Explore o universo";

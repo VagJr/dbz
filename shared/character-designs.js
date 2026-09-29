@@ -64,6 +64,7 @@ shugesh|4e392f|dcc184|c99272|192331|short|armor|wide,tail,scouter
 pilaf|39869b|cb4259|84c0cc|none|none|robe|small,cap,pointed
 tao|d691bc|262e3a|d5a27d|161e27|braid|robe|moustache
 kingkai|24304b|d8be54|88bdcf|none|none|robe|wide,antenna,glasses
+enma|ede6cf|302b35|cb6865|20212b|short|robe|wide,large,horns,beard,cap
 kaioshin|715280|d4a667|c2a4d7|e6eaf1|crest|kai|pointed,earrings
 yakon|486345|b0b67d|718f52|none|none|alien|large,spines,claws
 spopovich|a16c3a|373441|d7ae87|none|none|bare|large,majin

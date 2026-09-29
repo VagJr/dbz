@@ -51,7 +51,9 @@ function originAllowed(origin, host, cfg) {
   try {
     const u = new URL(origin);
     return (
-      ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname) &&
+      u.origin === origin &&
+      u.protocol === "http:" &&
+      (["localhost", "[::1]"].includes(u.hostname) || net.isIP(u.hostname)) &&
       u.host === host
     );
   } catch {
@@ -110,6 +112,14 @@ function headers(req, res, next, cfg) {
       "ws://127.0.0.1:*",
       "ws://[::1]:*",
     );
+  if (!cfg?.production && typeof req.headers.host === "string") {
+    try {
+      const url = new URL(`http://${req.headers.host}`);
+      if (url.host === req.headers.host &&
+          (["localhost", "[::1]"].includes(url.hostname) || net.isIP(url.hostname)))
+        socketOrigins.push(`ws://${url.host}`);
+    } catch {}
+  }
   res.setHeader(
     "Content-Security-Policy",
     `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${[...new Set(socketOrigins)].join(" ")}; font-src 'self' https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`,

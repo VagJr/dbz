@@ -138,6 +138,7 @@
       this.world = id;
       this.data = UZ.worldData(id);
       this.cam = { x: 1700, y: 1740 };
+      this.camZ = 0;
       this.entities.clear();
       this.effects = [];
       this.trails = [];
@@ -347,6 +348,9 @@
       this.groundTerrain = land;
     }
     effect(e) {
+      // Project a copy; networking and collisions retain the physical coordinates.
+      const displayZ = Number.isFinite(e.visualZ) ? e.visualZ : e.z;
+      if (Number.isFinite(displayZ) && displayZ !== 0) e = { ...e, y: e.y - displayZ };
       const manga = window.UZManga?.effect(e, this);
       if (!window.UZVFX?.effect(e, this) && !manga) this.effects.push({ ...e, age: 0 });
       if (this.effects.length > 96) this.effects.splice(0, this.effects.length - 96);
@@ -381,8 +385,16 @@
       const combatClock=(state?.time||0)+Math.min(.1,t-(this.snapshotArrived||t));
       const zoom = this.zoom,
         target = me || { x: 1700, y: 1730 };
+      // Keep the support plane in view. Following the full jump height made a
+      // tall leap look stationary because the camera cancelled its projection.
+      const supportHeight = Math.max(0, target.groundZ || 0);
+      const airHeight = Math.max(0, (target.z || 0) - supportHeight);
+      const cameraLift = supportHeight * .86 + (target.mode === "flight"
+        ? airHeight * .76
+        : Math.min(airHeight, 270) * .18 + Math.max(0, airHeight - 270) * .72);
+      this.camZ = (this.camZ || 0) + (cameraLift - (this.camZ || 0)) * Math.min(1, dt * 4);
       this.cam.x += (target.x - this.cam.x) * Math.min(1, dt * 13);
-      this.cam.y += (target.y - this.cam.y) * Math.min(1, dt * 13);
+      this.cam.y += (target.y - this.camZ - this.cam.y) * Math.min(1, dt * 13);
       c.setTransform(dpr, 0, 0, dpr, 0, 0);
       const bg = c.createRadialGradient(
         W * 0.55,
@@ -427,6 +439,7 @@
       c.setLineDash([]);
       for (const b of map.buildings)
         Art.landmark ? Art.landmark(c, b, this.world, t) : station(c, b, t);
+      Art.sandboxTerrain?.(c, this, state, t);
       // High-contrast objects and objective markers retain the sparse original composition.
       if (this.world === "earth")
         for (const o of map.orbs) {
@@ -449,17 +462,14 @@
         state: "idle",
         angle: Math.PI * 0.2,
       };
-      const npc = [
-        {
-          id: "patrol",
-          name: "Patrulha galáctica",
-          skin: "trunks",
-          x: 1880 + Math.sin(t * 0.17) * 100,
-          y: 1690 + Math.cos(t * 0.17) * 60,
-          state: "run",
-          angle: t * 0.17 + Math.PI / 2,
-        },
-      ];
+      const npc = Array.isArray(state?.npcs)
+        ? [...new Map(state.npcs
+            .filter(person => person && Number.isFinite(person.x) && Number.isFinite(person.y) &&
+              (!person.world || person.world === this.world))
+            .map(person => [person.id, person])).values()]
+        : [];
+      const mentorCovered = npc.some(person =>
+        person.name === mentor.name && Math.hypot(person.x - mentor.x, person.y - mentor.y) < 150);
       const enemies = state?.enemies || [
         {
           id: "preview1",
@@ -491,7 +501,7 @@
             Math.min(1, (state.time - e.windupAt) / (e.attackAt - e.windupAt)),
           );
           c.save();
-          c.translate(e.x, e.y);
+          c.translate(e.x, e.y - (e.z || 0));
           c.rotate(e.angle);
           c.strokeStyle = e.counterStrike?'#f8ca70':'#ff6565aa';
           c.fillStyle = "#ee3b4b18";
@@ -514,8 +524,18 @@
           c.globalAlpha = ratio * 0.5;
           c.fillStyle = "#f96173";
           c.fill();
-          c.globalAlpha=1;c.rotate(-e.angle);c.fillStyle='#fff2df';c.font='bold 11px sans-serif';c.textAlign='center';
-          c.fillText(e.counterStrike?'CONTRA-ATAQUE':e.pattern==='beam'?'DISPARO':e.pattern==='ring'?'ONDA':'GOLPE',0,-52);
+          // The painted warning area carries ordinary strikes. Text is reserved
+          // for a distinct defensive response or a dangerous attack shape.
+          const warning = e.counterStrike ? 'CONTRA' : e.pattern === 'beam'
+            ? 'DISPARO DE KI' : e.pattern === 'ring' ? 'ATAQUE EM ÁREA' : '';
+          if (warning) {
+            c.globalAlpha = 1;
+            c.rotate(-e.angle);
+            c.fillStyle = '#fff2df';
+            c.font = 'bold 11px sans-serif';
+            c.textAlign = 'center';
+            c.fillText(warning, 0, -52);
+          }
           c.restore();
         }
       this.trails = this.trails.filter((a) => a.age < 0.2);
@@ -525,8 +545,19 @@
         Art.fighter(c, a, t, a.scale);
         c.globalAlpha = 1;
       }
+      // Small physical fragments reuse the terrain palette and stay bounded by the snapshot.
+      for (const piece of (state?.physicsDebris || []).slice(0, 48)) {
+        const radius = Math.max(2, Math.min(10, piece.size || 4));
+        ellipse(c, piece.x + 2, piece.y + 3, radius * 1.2, radius * .55, "#17223035");
+        c.save();c.translate(piece.x, piece.y - (piece.z || 0));c.rotate(piece.angle || 0);
+        poly(c, [[-radius, 0], [-radius * .45, -radius], [radius * .6, -radius * .65],
+          [radius, radius * .2], [radius * .15, radius * .7]], "#96836c");
+        line(c, [[-radius * .45, -radius], [radius * .6, -radius * .65]], "#d1b998", 1);
+        c.restore();
+      }
+      window.UZWildlifeArt?.drawAll(c, state?.wildlife || [], t, this);
       const all = [
-        mentor,
+        ...(mentorCovered ? [] : [mentor]),
         ...npc,
         ...enemies,
         ...(state?.players || [
@@ -544,21 +575,28 @@
         ]),
       ];
       const ids = new Set();
+      all.sort((a, b) => a.y - b.y);
       for (const e of all) {
         ids.add(e.id);
         if (
           Math.abs(e.x - this.cam.x) > W / zoom / 2 + 100 ||
-          Math.abs(e.y - this.cam.y) > H / zoom / 2 + 100
+          Math.abs(e.y - (e.z || 0) - this.cam.y) > H / zoom / 2 + 120
         )
           continue;
         let p = this.entities.get(e.id);
         if (!p || Math.hypot(p.x - e.x, p.y - e.y) > 260)
-          p = { x: e.x, y: e.y };
+          p = { x: e.x, y: e.y, z: e.z || 0 };
         const speed = e.id === me?.id ? 28 : 16;
         p.x += (e.x - p.x) * (state?.presentation ? 1 : Math.min(1, dt * speed));
         p.y += (e.y - p.y) * (state?.presentation ? 1 : Math.min(1, dt * speed));
+        // Physics remains immediate for hits; only the drawn model limits rare
+        // network corrections so a jump never skips several visible frames.
+        const targetZ=e.z||0, deltaZ=targetZ-(p.z||0);
+        const maxVerticalStep=Math.max(0,dt)*(e.mode==='flight'?900:650);
+        p.z=Math.max(e.groundZ||0,(p.z||0)+Math.max(-maxVerticalStep,Math.min(maxVerticalStep,deltaZ)));
         this.entities.set(e.id, p);
-        const scale = e.boss ? 1.22 : 1;
+        // Size, width and boss scaling come from the same rig geometry as hits.
+        const scale = 1;
         if (["run", "dash"].includes(e.state) && !this.reduced && this.trails.length < 120 &&
           (!p.trailAt || t - p.trailAt > .045)) {
           this.trails.push({ ...e, ...p, scale, age: 0 });
@@ -568,14 +606,14 @@
           c.strokeStyle = "#3be1f69c";
           c.lineWidth = 1;
           c.beginPath();
-          c.arc(p.x, p.y, 28, t * 0.4, t * 0.4 + 4.9);
+          c.arc(p.x, p.y - (e.groundZ || 0), UZPhysics.body(e).radius + 5, t * 0.4, t * 0.4 + 4.9);
           c.stroke();
         }
         if (e.mode === "flight" && e.id === me?.id) {
           const speed = Math.hypot(e.vx || 0, e.vy || 0);
           if (speed > 170) {
             c.save();
-            c.translate(p.x, p.y);
+            c.translate(p.x, p.y - p.z);
             c.rotate(Math.atan2(e.vy, e.vx));
             const alpha = Math.min(0.72, (speed - 150) / 1450);
             c.globalAlpha = alpha;
@@ -612,22 +650,36 @@
           }
         }
         Art.fighter(c, { ...e, ...p, combatClock }, t, scale);
+        Art.openForeground?.(c, this, { ...e, ...p, renderScale: scale });
+        if (e.halo) {
+          c.save();
+          c.translate(p.x, p.y - p.z);
+          c.strokeStyle = '#ffedac';
+          c.lineWidth = 2.4;
+          c.shadowColor = '#ffe29b';
+          c.shadowBlur = this.reduced ? 0 : 10;
+          c.beginPath();
+          c.ellipse(0, -49, 16, 5, -0.15, 0, Math.PI * 2);
+          c.stroke();
+          c.restore();
+        }
         if (e.id === "mentor") {
           c.shadowBlur = 10;
           c.shadowColor = "#ffb02f";
-          this.label(c, "◇", e.x, e.y - 47, "#ffbd45", 18);
+          this.label(c, "◇", p.x, p.y - p.z - 47, "#ffbd45", 18);
           c.shadowBlur = 0;
-          this.label(c, e.name, e.x, e.y + 39, "#eac791", 11);
+          this.label(c, e.name, p.x, p.y - p.z + 39, "#eac791", 11);
         } else if (e.name) {
+          const isNpc = typeof e.id === "string" && e.id.startsWith("npc:");
           const tint = e.boss
             ? "#ff676f"
             : e.id === me?.id
               ? "#64e8fc"
-              : e.id === "patrol"
-                ? "#728aa5"
+              : isNpc
+                ? e.companion ? "#8ee7bd" : e.characterId === "enma" ? "#d6adff" : "#ffd28e"
                 : "#b1bbd1";
           c.save();
-          c.translate(e.x + 22, e.y - 27);
+          c.translate(p.x + 22, p.y - p.z - 27);
           line(
             c,
             [
@@ -642,6 +694,16 @@
           c.font = "600 10px 'DM Sans',sans-serif";
           c.fillStyle = tint;
           c.fillText(e.name.slice(0, 20), 3, -7);
+          if (isNpc && me && Math.hypot(e.x - me.x, e.y - me.y) < 240) {
+            const activity = {
+              sleep: "DESCANSANDO", eat: "REFEIÇÃO", train: "TREINANDO", work: "TRABALHANDO",
+              duty: "EM SERVIÇO", adventure: "EXPLORANDO", social: "CONVERSANDO",
+              travel: "VIAJANDO", accompany: "ACOMPANHANDO", respond: "ATENDENDO EVENTO",
+            }[e.activity] || "CONVERSAR";
+            c.font = "700 8px 'DM Sans',sans-serif";
+            c.fillStyle = e.companion ? "#8ee7bd" : "#ffe5b9";
+            c.fillText(activity, 3, 18);
+          }
           if (e.hp !== undefined) {
             c.fillStyle = "#33496566";
             c.fillRect(3, 4, 61, 3);
@@ -659,20 +721,23 @@
         if (!ids.has(eid)) this.entities.delete(eid);
       for(const q of state?.clashes||[]) {
         c.save();const phase=this.reduced?0:Math.sin(t*35),r=22+phase*4;
+        const clashY=q.y-(q.visualZ??q.z??0);
         if(q.type==='beam')for(const [i,p]of q.anchors.entries())if(p){
-          const dx=q.x-p.x,dy=q.y-p.y,len=Math.hypot(dx,dy)||1,offset=this.reduced?0:Math.sin(t*28+i)*8;
-          const points=[[p.x,p.y],[p.x+dx*.5-dy/len*offset,p.y+dy*.5+dx/len*offset],[q.x,q.y]];
+          const anchorY=p.y-(p.visualZ??p.z??0);
+          const dx=q.x-p.x,dy=clashY-anchorY,len=Math.hypot(dx,dy)||1,offset=this.reduced?0:Math.sin(t*28+i)*8;
+          const points=[[p.x,anchorY],[p.x+dx*.5-dy/len*offset,anchorY+dy*.5+dx/len*offset],[q.x,clashY]];
           line(c,points,i?'#ff647b':'#38dcff',25);line(c,points,'#faffff',6);
         }
         c.shadowBlur=this.reduced?0:25;c.shadowColor='#c5f7ff';
-        ellipse(c,q.x,q.y,r*1.4,r,'#e5ffff');
-        for(let i=0;i<8;i++){const a=i*Math.PI/4+(this.reduced?0:t*3);line(c,[[q.x+Math.cos(a)*r,q.y+Math.sin(a)*r],[q.x+Math.cos(a+.2)*(r+28),q.y+Math.sin(a+.2)*(r+28)]],i%2?'#ffda78':'#72edff',3);}
+        ellipse(c,q.x,clashY,r*1.4,r,'#e5ffff');
+        for(let i=0;i<8;i++){const a=i*Math.PI/4+(this.reduced?0:t*3);line(c,[[q.x+Math.cos(a)*r,clashY+Math.sin(a)*r],[q.x+Math.cos(a+.2)*(r+28),clashY+Math.sin(a+.2)*(r+28)]],i%2?'#ffda78':'#72edff',3);}
         c.restore();
       }
       for (const s of state?.shots || []) {
-        if(s.trail?.length>1){const points=[...s.trail.map(p=>[p.x,p.y]),[s.x,s.y]];c.save();c.shadowColor=s.hostile?'#ff6279':'#48eaff';c.shadowBlur=this.reduced?0:20;line(c,points,s.hostile?'#ff6279':'#48eaff',23);line(c,points,'#edffff',6);c.restore();}
+        const shotHeight = UZPhysics.displayHeight?.(s) ?? (s.z || 0);
+        if(s.trail?.length>1){const points=[...s.trail.map(p=>[p.x,p.y-(UZPhysics.displayHeight?.({...s,z:p.z??s.z})??(p.z??s.z??0))]),[s.x,s.y-shotHeight]];c.save();c.shadowColor=s.hostile?'#ff6279':'#48eaff';c.shadowBlur=this.reduced?0:20;line(c,points,s.hostile?'#ff6279':'#48eaff',23);line(c,points,'#edffff',6);c.restore();}
         c.save();
-        c.translate(s.x, s.y);
+        c.translate(s.x, s.y - shotHeight);
         c.rotate(s.angle);
         const colors = {
           hostile: ["#ff746b", "#fff0cf"],
@@ -830,14 +895,17 @@
         }
         c.restore();
       }
-      if (me?.guide&&me.guide.world===me.world&&Number.isFinite(me.guide.targetX) || me?.legacyCampaign&&me.chapter) {
-        const goal = me.guide?{x:me.guide.targetX,y:me.guide.targetY}:me.questPhase === 2 ? map.arena : map.mentor;
+      if (me && (me.surfaceRoute?.world === me.world ||
+          me.guide?.world === me.world && Number.isFinite(me.guide.targetX) ||
+          me.legacyCampaign && me.chapter)) {
+        const localRoute = me.surfaceRoute?.world === me.world ? me.surfaceRoute : null;
+        const goal = localRoute || (me.guide?{x:me.guide.targetX,y:me.guide.targetY}:me.questPhase === 2 ? map.arena : map.mentor);
         if (Math.hypot(goal.x - me.x, goal.y - me.y) > 190) {
           const ang = Math.atan2(goal.y - me.y, goal.x - me.x);
           c.save();
-          c.translate(me.x + Math.cos(ang) * 130, me.y + Math.sin(ang) * 130);
+          c.translate(me.x + Math.cos(ang) * 130, me.y - (me.z || 0) + Math.sin(ang) * 130);
           c.rotate(ang);
-          c.shadowColor = "#ffd832";
+          c.shadowColor = localRoute ? "#8fddff" : "#ffd832";
           c.shadowBlur = 12;
           poly(
             c,
@@ -847,15 +915,41 @@
               [-4, 0],
               [-8, 7],
             ],
-            "#f9ce43",
+            localRoute ? "#8fddff" : "#f9ce43",
           );
           c.restore();
         }
       }
       c.restore();
+      if (me && npc.length) {
+        let near = null, nearDistance = 225;
+        for (const person of npc) {
+          const d = Math.hypot(person.x - me.x, person.y - me.y);
+          if (d < nearDistance && !person.companion) { near = person; nearDistance = d; }
+        }
+        if (near) {
+          const message = near.characterId === "enma" && me.afterlife?.pending
+            ? "E · PEDIR AUTORIZAÇÃO AO REI ENMA"
+            : near.activity === "sleep"
+              ? `${near.name} está descansando · E conversar`
+              : `E · CONVERSAR COM ${near.name.toUpperCase()}`;
+          c.save();
+          c.font = "700 12px 'DM Sans',sans-serif";
+          const width = Math.min(W - 30, c.measureText(message).width + 38);
+          const x = (W - width) / 2, y = H - 132;
+          c.fillStyle = "#0d1c2be8";
+          c.strokeStyle = near.characterId === "enma" ? "#c99beb" : "#ffc981";
+          c.lineWidth = 1.5;
+          c.beginPath(); c.roundRect(x, y, width, 34, 10); c.fill(); c.stroke();
+          c.fillStyle = "#fff0d3";
+          c.textAlign = "center";
+          c.fillText(message, W / 2, y + 22);
+          c.restore();
+        }
+      }
       // Warn about committed attackers outside the camera, without moving their aim.
       for(const e of state?.enemies||[])if(e.state==='windup'){
-        const sx=W/2+(e.x-this.cam.x)*zoom,sy=H/2+(e.y-this.cam.y)*zoom;
+        const sx=W/2+(e.x-this.cam.x)*zoom,sy=H/2+(e.y-(e.z||0)-this.cam.y)*zoom;
         if(sx<22||sx>W-22||sy<35||sy>H-35){const x=Math.max(22,Math.min(W-22,sx)),y=Math.max(140,Math.min(H-170,sy)),a=Math.atan2(sy-H/2,sx-W/2);c.save();c.translate(x,y);c.rotate(a);c.fillStyle='#ffbd87';c.beginPath();c.moveTo(12,0);c.lineTo(-7,-8);c.lineTo(-7,8);c.closePath();c.fill();c.rotate(-a);c.font='bold 11px sans-serif';c.textAlign='center';c.fillText(Math.max(0,e.attackAt-state.time).toFixed(1)+'s',0,22);c.restore();}
       }
       this.radar(state);
@@ -906,7 +1000,11 @@
       };
       for (const e of state.enemies)
         point(e, e.boss ? "#ff5277" : "#f09153", e.boss ? 3 : 2);
+      for (const person of state.npcs || [])
+        if (person.world === me.world || !person.world)
+          point(person, person.companion ? "#8ee7bd" : "#ffd28e", person.companion ? 3 : 2);
       point(this.data.mentor, "#46ecdd", 3);
+      if (me.surfaceRoute?.world === me.world) point(me.surfaceRoute, "#8fddff", 4);
       if (me.world === "earth")
         for (const o of this.data.orbs)
           if (!me.orbs.includes(o.id)) point(o, "#ffb621", 3);

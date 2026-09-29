@@ -1,102 +1,38 @@
 "use strict";
-const W = require("../shared/open-world");
-const cache = new Map();
-function obstacles(world, x, y) {
-  const cx = Math.floor(x / W.CHUNK),
-    cy = Math.floor(y / W.CHUNK),
-    out = [];
-  for (let dx = -1; dx <= 1; dx++)
-    for (let dy = -1; dy <= 1; dy++) {
-      const key = world + ":" + (cx + dx) + ":" + (cy + dy);
-      if (!cache.has(key)) {
-        cache.set(
-          key,
-          W.features(world, cx + dx, cy + dy).filter(
-            (o) =>
-              o.kind === "mountain" ||
-              (o.kind === "prop" &&
-                (o.sheet === "nature" || (o.sprite >= 126 && o.sprite <= 167))),
-          ),
-        );
-        if (cache.size > 256) cache.delete(cache.keys().next().value);
-      }
-      out.push(...cache.get(key));
-    }
-  return out;
+const Physics = require("../shared/physics");
+function cover(engine,e,x=e.x,y=e.y) {
+  return engine.physicsColliders ? engine.physicsColliders(e,x,y) : Physics.colliders(e.world,x,y);
 }
-function collision(engine, e, x, y, pad = 16) {
-  if (e.world === "space" || e.mode === "flight") return false;
-  return obstacles(e.world, x, y).some(
-    (o) =>
-      !engine.worldMemory?.["debris:" + o.id] &&
-      Math.hypot(x - o.x, (y - o.y) * 1.45) < o.radius * 0.76 + pad,
-  );
+function collision(engine,e,x,y,pad=Physics.body(e).radius) {
+  return Physics.blocked(e,x,y,cover(engine,e,x,y),pad);
 }
-function sight(engine, a, b) {
-  if (a.world !== b.world) return false;
-  if (a.world === "space" || a.mode === "flight" || b.mode === "flight")
-    return true;
-  const dx = b.x - a.x,
-    dy = (b.y - a.y) * 1.45,
-    len = dx * dx + dy * dy;
-  if (len < 1) return true;
-  return !obstacles(a.world, (a.x + b.x) / 2, (a.y + b.y) / 2).some((o) => {
-    if (engine.worldMemory?.["debris:" + o.id]) return false;
-    const f = Math.max(
-      0,
-      Math.min(1, ((o.x - a.x) * dx + (o.y - a.y) * 1.45 * dy) / len),
-    );
-    return (
-      f > 0.03 &&
-      f < 0.97 &&
-      Math.hypot(a.x + dx * f - o.x, a.y * 1.45 + dy * f - o.y * 1.45) <
-        o.radius * 0.76
-    );
-  });
+function sight(engine,a,b) {
+  if(a.world!==b.world)return false;
+  if(a.world==="space")return true;
+  return Physics.sight(a,b,cover(engine,a,(a.x+b.x)/2,(a.y+b.y)/2));
 }
 module.exports = (Engine) => {
-  const move = Engine.prototype.move;
-  Engine.prototype.clearSight = function (a, b) {
-    return sight(this, a, b);
+  Engine.prototype.clearSight = function(a,b) {return sight(this,a,b);};
+  Engine.prototype.move = function(e,dx,dy) {
+    Physics.move(e,dx,dy,cover(this,e));
+    e.physicsMovedAt=this.time;
   };
-  Engine.prototype.move = function (e, dx, dy) {
-    if (e.mode === "flight" || e.world === "space")
-      return move.call(this, e, dx, dy);
-    const n = Math.min(160, Math.max(1, Math.ceil(Math.hypot(dx, dy) / 22)));
-    for (let i = 0; i < n; i++) {
-      const nx = e.x + dx / n,
-        ny = e.y + dy / n;
-      if (!collision(this, e, nx, ny)) move.call(this, e, dx / n, dy / n);
-      else {
-        if (!collision(this, e, nx, e.y)) move.call(this, e, dx / n, 0);
-        if (!collision(this, e, e.x, ny)) move.call(this, e, 0, dy / n);
-      }
+  Engine.prototype.tacticalStep = function(e,target,desired,dt,speed) {
+    Physics.ensure(e);
+    const strength=Math.min(1,Math.hypot(desired.x,desired.y));
+    const weight=Math.sqrt(Physics.body(e).mass/80), blend=1-Math.exp(-18*dt/weight);
+    if(strength<.04) {e.vx*=Math.exp(-12*dt);e.vy*=Math.exp(-12*dt);return;}
+    speed*=strength;
+    const angle=Math.atan2(desired.y,desired.x), look=Physics.body(e).radius+42;
+    for(const offset of [0,e.ai?.orbit*.55||.55,-(e.ai?.orbit*.55||.55),1.2,-1.2,Math.PI/2,-Math.PI/2]) {
+      const a=angle+offset,x=Math.cos(a),y=Math.sin(a);
+      if(collision(this,e,e.x+x*look,e.y+y*look))continue;
+      e.vx+=(x*speed-e.vx)*blend;e.vy+=(y*speed-e.vy)*blend;
+      this.move(e,e.vx*dt,e.vy*dt);
+      return;
     }
-  };
-  Engine.prototype.tacticalStep = function (e, target, desired, dt, speed) {
-    const strength = Math.min(1, Math.hypot(desired.x, desired.y));
-    if (strength < 0.04) return;
-    speed *= strength;
-    const look = 75;
-    const angle = Math.atan2(desired.y, desired.x);
-    for (const offset of [
-      0,
-      e.ai?.orbit * 0.55 || 0.55,
-      -(e.ai?.orbit * 0.55 || 0.55),
-      1.2,
-      -1.2,
-      Math.PI / 2,
-      -Math.PI / 2,
-    ]) {
-      const a = angle + offset,
-        x = Math.cos(a),
-        y = Math.sin(a);
-      if (!collision(this, e, e.x + x * look, e.y + y * look)) {
-        this.move(e, x * dt * speed, y * dt * speed);
-        return;
-      }
-    }
+    e.vx*=Math.exp(-16*dt);e.vy*=Math.exp(-16*dt);
   };
 };
-module.exports.collision = collision;
-module.exports.sight = sight;
+module.exports.collision=collision;
+module.exports.sight=sight;

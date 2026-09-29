@@ -1,0 +1,208 @@
+/* Illustrated navigation: the artwork is the button, with clear touch targets. */
+dialog#sandbox-panel.mmo-window > nav {
+  gap: 3px !important;
+  padding: 4px 6px 6px !important;
+  background: transparent !important;
+  border-bottom: 1px solid #9ed3d525;
+  scrollbar-width: thin;
+}
+dialog#sandbox-panel.mmo-window > nav button {
+  position: relative;
+  flex: 1 0 32px;
+  min-width: 32px !important;
+  max-width: none !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 3px 0 5px !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible;
+  outline-offset: -1px;
+  -webkit-tap-highlight-color: transparent;
+}
+dialog#sandbox-panel.mmo-window > nav .tab-art {
+  width: 32px !important;
+  height: 32px !important;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px #0009);
+  transition: transform .16s ease;
+}
+dialog#sandbox-panel.mmo-window > nav button::after,
+#hud .bottom-nav button::after {
+  content: "";
+  position: absolute;
+  left: 27%;
+  right: 27%;
+  bottom: 0;
+  height: 2px;
+  border-radius: 100%;
+  background: #f8cf7a;
+  opacity: 0;
+  transform: scaleX(.45);
+  transition: opacity .16s ease, transform .16s ease;
+  pointer-events: none;
+}
+dialog#sandbox-panel.mmo-window > nav button[aria-pressed="true"]::after,
+#hud .bottom-nav button[aria-expanded="true"]::after,
+#hud .bottom-nav button[aria-pressed="true"]::after,
+#hud .bottom-nav button.party-alert::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+dialog#sandbox-panel.mmo-window > nav button[aria-pressed="true"] .tab-art {
+  filter: drop-shadow(0 0 3px #f8cf7a70) drop-shadow(0 2px 2px #0009);
+}
+/* Dedicated transparent chest artwork avoids cropping a rectangular banner. */
+dialog#sandbox-panel.mmo-window > nav button:is([data-tab="inventory"], [data-tab="craft"], [data-tab="build"], [data-tab="contracts"]) .tab-art {
+  visibility: hidden;
+}
+dialog#sandbox-panel.mmo-window > nav button:is([data-tab="inventory"], [data-tab="craft"], [data-tab="build"], [data-tab="contracts"])::before {
+  content: "";
+  position: absolute;
+  inset: 4px 0 auto;
+  width: 32px;
+  height: 32px;
+  margin: 0 auto;
+  background: var(--tab-icon) center/contain no-repeat;
+  filter: drop-shadow(0 2px 2px #0009);
+  pointer-events: none;
+}
+dialog#sandbox-panel.mmo-window > nav [data-tab="inventory"] {
+  --tab-icon: url('/assets/ui/inventory.svg');
+}
+dialog#sandbox-panel.mmo-window > nav [data-tab="craft"] { --tab-icon: url('/assets/ui/generated/combat/45.png'); }
+dialog#sandbox-panel.mmo-window > nav [data-tab="build"] { --tab-icon: url('/assets/ui/generated/combat/44.png'); }
+dialog#sandbox-panel.mmo-window > nav [data-tab="contracts"] { --tab-icon: url('/assets/ui/generated/hud/42.png'); }
+
+#hud .bottom-nav {
+  padding: 3px !important;
+  gap: 5px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+#hud .bottom-nav button {
+  position: relative;
+  width: 43px !important;
+  min-width: 43px !important;
+  height: 55px !important;
+  min-height: 55px !important;
+  padding: 1px 0 4px !important;
+  gap: 2px !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible;
+  outline-offset: 2px;
+  -webkit-tap-highlight-color: transparent;
+}
+#hud .bottom-nav button::before {
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 auto !important;
+  background: var(--nav-art) center/contain no-repeat !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 2px 3px #000b);
+  transition: transform .16s ease;
+}
+#hud .bottom-nav span {
+  width: 100%;
+  color: #f2ead6 !important;
+  font: 600 8px/9px 'Barlow Condensed', system-ui !important;
+  text-align: center;
+  text-shadow: 0 1px 2px #000, 0 0 3px #000;
+}
+/* Each shortcut now reads as a distinct illustrated object. */
+#hud .bottom-nav .micro-bag::before {
+  background: url('/assets/ui/inventory.svg') center/contain no-repeat !important;
+}
+#hud .bottom-nav [data-panel="campaigns"] { --nav-art: url('/assets/ui/generated/hud/42.png') !important; }
+#hud .bottom-nav [data-panel="character"] { --nav-art: url('/assets/ui/generated/combat/22.png') !important; }
+#hud .bottom-nav .economy-launcher { --nav-art: url('/assets/ui/generated/hud/41.png') !important; }
+#hud .bottom-nav #surface-map-launcher { --nav-art: url('/assets/ui/generated/combat/46.png') !important; }
+#hud .bottom-nav :is([data-panel="atlas"], .party-launcher)::before {
+  clip-path: circle(48%);
+  background-size: 112% !important;
+}
+dialog#sandbox-panel.mmo-window > nav button:focus-visible,
+#hud .bottom-nav button:focus-visible {
+  outline: 2px solid #f8d991 !important;
+}
+@media (hover: hover) {
+  dialog#sandbox-panel.mmo-window > nav button:hover .tab-art,
+  #hud .bottom-nav button:hover::before {
+    transform: translateY(-2px) !important;
+  }
+}
+@media (max-width: 760px), (pointer: coarse) and (max-height: 600px) {
+  dialog#sandbox-panel.mmo-window > nav button {
+    flex-basis: 44px;
+    min-width: 44px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+  }
+  dialog#sandbox-panel.mmo-window > nav .tab-art,
+  dialog#sandbox-panel.mmo-window > nav button::before {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav {
+    padding: 8px !important;
+    gap: 8px !important;
+    border: 0 !important;
+    border-radius: 22px !important;
+    background: radial-gradient(ellipse, #061722ed 30%, #061722b8 68%, transparent) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav button {
+    width: 100% !important;
+    min-width: 44px !important;
+    height: 62px !important;
+    min-height: 62px !important;
+    padding: 1px 0 5px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    justify-content: center;
+    overflow: visible;
+  }
+  body.mobile-menu-open #hud .bottom-nav button::before {
+    width: 42px !important;
+    height: 42px !important;
+    background-size: contain !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav .micro-bag::before {
+    background: url('/assets/ui/inventory.svg') center/contain no-repeat !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav :is([data-panel="atlas"], .party-launcher)::before {
+    background-size: 112% !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav button span {
+    font: 700 10px/11px 'Barlow Condensed', system-ui !important;
+  }
+}
+@media (max-height: 500px) and (pointer: coarse) {
+  body.mobile-menu-open #hud .bottom-nav { gap: 5px !important; }
+  body.mobile-menu-open #hud .bottom-nav button {
+    height: 54px !important;
+    min-height: 54px !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav button::before {
+    width: 35px !important;
+    height: 35px !important;
+  }
+  body.mobile-menu-open #hud .bottom-nav button span { font-size: 9px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog#sandbox-panel.mmo-window > nav .tab-art,
+  dialog#sandbox-panel.mmo-window > nav button::after,
+  #hud .bottom-nav button::before,
+  #hud .bottom-nav button::after { transition: none; }
+}
